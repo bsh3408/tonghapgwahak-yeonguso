@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제출기록 미리보기 (수파베이스 연결 전 테스트용)</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#ffffff; --line:#e2e4e9; --text:#1f2430; --sub:#6b7280;
+    --accent:#3fae95; --danger:#c1544c; --gold:#c99622; }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Pretendard','맑은 고딕',sans-serif;background:var(--bg);color:var(--text);padding:24px;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--sub);font-size:13.5px;margin-bottom:18px;line-height:1.6;}
+  .banner{background:#fbf7ec;border:1px solid #eee0bd;border-radius:10px;padding:12px 16px;font-size:13px;
+    color:#7a5c1c;margin-bottom:18px;line-height:1.7;}
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .btn{border:none;border-radius:8px;padding:8px 14px;font-size:13.5px;cursor:pointer;font-weight:600;}
+  .btn-refresh{background:var(--accent);color:#fff;}
+  .btn-clear{background:#fdeeee;color:var(--danger);}
+  .count{font-size:13px;color:var(--sub);margin-left:auto;}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px;}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{background:#f7f8fa;font-weight:700;color:var(--sub);font-size:12px;white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  .pass{color:var(--accent);font-weight:700;}
+  .fail{color:var(--danger);font-weight:700;}
+  .warn{color:var(--gold);font-weight:700;}
+  .empty{padding:40px;text-align:center;color:var(--sub);}
+  .mono{font-family:'D2Coding','Consolas',monospace;font-size:11.5px;color:var(--sub);}
+  details{cursor:pointer;}
+  details summary{color:var(--accent);font-size:12px;}
+  .star{color:var(--gold);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 제출기록 미리보기</h1>
+  <div class="sub">수파베이스에 아직 연결하지 않은 상태에서, 학생이 게임을 제출하면 실제로 어떤 데이터가
+    쌓이는지 미리 확인하는 화면입니다. (이 로컬 서버의 임시 저장소 <code>data/_submissions_mock.json</code>를 보여줍니다)</div>
+  <div class="banner">
+    실제 수파베이스에 연결하면 이 화면 대신 <b>Supabase 대시보드</b> 또는 <b>자동 동기화된 구글시트</b>에서
+    똑같은 형태의 표를 보게 됩니다. 지금은 전체 흐름(학생 이름 입력 → 게임 → 제출 → 자동 저장)이
+    설계대로 동작하는지 확인하는 용도입니다.
+  </div>
+  <div class="toolbar">
+    <button class="btn btn-refresh" id="refreshBtn">↻ 새로고침</button>
+    <button class="btn btn-clear" id="clearBtn">🗑 테스트 기록 전체 삭제</button>
+    <span class="count" id="countLabel"></span>
+  </div>
+  <div id="tablewrap"></div>
+  <h2 style="font-size:15px;margin:26px 0 10px">✏️ 서술형 답안 기록 (문항별로 따로 표시)</h2>
+  <div id="opinionwrap"></div>
+</div>
+<script>
+const _chapterPromptCache = {};
+async function chapterPromptMap(chapterId){
+  if(_chapterPromptCache[chapterId]) return _chapterPromptCache[chapterId];
+  const m = String(chapterId||'').match(/^ch(\d+)/);
+  if(!m) return {};
+  try{
+    const res = await fetch('data/ch'+m[1]+'.json', {cache:'no-store'});
+    const data = await res.json();
+    const map = {};
+    data.rounds.forEach(r=>{ map[r.id] = r.title; });
+    _chapterPromptCache[chapterId] = map;
+    return map;
+  }catch(e){ return {}; }
+}
+
+async function loadSubmissions(){
+  const wrap = document.getElementById('tablewrap');
+  wrap.innerHTML = '<div class="empty">불러오는 중...</div>';
+  try{
+    const res = await fetch('/api/mock-submissions', {cache:'no-store'});
+    const list = await res.json();
+    render(list);
+    await renderOpinions(list);
+  }catch(e){
+    wrap.innerHTML = `<div class="empty">불러오기 실패: ${e.message}</div>`;
+  }
+}
+
+function render(list){
+  const wrap = document.getElementById('tablewrap');
+  document.getElementById('countLabel').textContent = `총 ${list.length}건`;
+  if(list.length===0){
+    wrap.innerHTML = '<div class="empty">아직 제출된 기록이 없습니다.<br>단원 게임을 끝까지 완료하면 여기에 나타납니다.</div>';
+    return;
+  }
+  const sorted = [...list].sort((a,b)=> (b.created_at||'').localeCompare(a.created_at||''));
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>제출시각</th><th>이름</th><th>반-번호</th><th>단원</th><th>점수</th><th>통과</th>
+        <th>+1점 대상</th><th>소요시간</th><th>창이탈</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.map(rowHtml).join('')}
+      </tbody>
+    </table>`;
+}
+
+function rowHtml(r){
+  const dt = r.created_at ? new Date(r.created_at).toLocaleString('ko-KR') : '-';
+  const sec = r.total_sec!=null ? `${Math.floor(r.total_sec/60)}:${String(r.total_sec%60).padStart(2,'0')}` : '-';
+  const leaveCls = (r.leave_count||0) > 2 ? 'warn' : '';
+  return `<tr>
+    <td class="mono">${esc(dt)}</td>
+    <td>${esc(r.student_name)}</td>
+    <td>${esc(r.class_no)}</td>
+    <td>${esc(r.chapter_title || r.chapter_id)}</td>
+    <td>${r.score}/${r.total}</td>
+    <td class="${r.passed?'pass':'fail'}">${r.passed?'통과':'미통과'}</td>
+    <td>${r.perfect_clear?'<span class="star">★ 대상</span>':'-'}</td>
+    <td>${sec}</td>
+    <td class="${leaveCls}">${r.leave_count||0}회</td>
+  </tr>`;
+}
+
+/* 서술형 답안을 문항 하나당 행 하나로 펼쳐서 보여준다(여러 문항이 한 셀에 뭉쳐 보이지 않게) */
+async function renderOpinions(list){
+  const wrap = document.getElementById('opinionwrap');
+  const sorted = [...list].sort((a,b)=> (b.created_at||'').localeCompare(a.created_at||''));
+  const rows = [];
+  for(const r of sorted){
+    const entries = Object.entries(r.opinion_answers||{});
+    if(!entries.length) continue;
+    const promptMap = await chapterPromptMap(r.chapter_id);
+    entries.forEach(([roundId, text])=>{
+      rows.push({ r, roundId, title: promptMap[roundId] || roundId, text });
+    });
+  }
+  if(!rows.length){ wrap.innerHTML = '<div class="empty">아직 작성된 서술형 답안이 없습니다.</div>'; return; }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>제출시각</th><th>이름</th><th>반-번호</th><th>단원</th><th>문항</th><th>답안</th></tr></thead>
+      <tbody>
+        ${rows.map(x=>`<tr>
+          <td class="mono">${esc(x.r.created_at ? new Date(x.r.created_at).toLocaleString('ko-KR') : '-')}</td>
+          <td>${esc(x.r.student_name)}</td>
+          <td>${esc(x.r.class_no)}</td>
+          <td>${esc(x.r.chapter_title || x.r.chapter_id)}</td>
+          <td>${esc(x.title)}</td>
+          <td style="white-space:pre-wrap;max-width:420px">${esc(x.text) || '<span style="color:var(--sub)">(작성 안 함)</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+document.getElementById('refreshBtn').addEventListener('click', loadSubmissions);
+document.getElementById('clearBtn').addEventListener('click', async ()=>{
+  if(!confirm('테스트 제출기록을 전부 삭제할까요? (되돌릴 수 없습니다)')) return;
+  await fetch('/api/mock-submissions', {method:'DELETE'});
+  loadSubmissions();
+});
+
+loadSubmissions();
+</script>
+</body>
+</html>

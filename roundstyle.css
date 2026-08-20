@@ -1,0 +1,124 @@
+:root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
+ --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font-size:16.5px;line-height:1.65;
+ font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer}
+/* 크롬북(터치스크린 포함) 환경 대응: 버튼 연타 시 텍스트가 선택되거나 탭 지연이 생기지 않도록 */
+button,.clsbtn,.pairbtn,.opt,.card.pool,.navbtn,.prevbtn,.resetbtn,.rmbtn{
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:720px;margin:0 auto;padding:14px 16px 60px}
+#top{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:2px solid var(--line);
+ padding:12px 16px;margin:0 -16px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.title{font-weight:900;font-size:17px;flex:1}
+.leavebadge{background:#fff;border:2px solid var(--line);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:800;color:var(--dim)}
+.leavebadge.warn{border-color:var(--red);color:var(--red);background:#fff0ee;animation:pulse .5s}
+.topback{background:#fff;border:2px solid var(--line);border-radius:20px;padding:5px 12px;font-size:11.5px;
+ font-weight:800;color:var(--dim);text-decoration:none;white-space:nowrap;appearance:none;-webkit-appearance:none;margin:0}
+.topback:active{transform:translateY(1px)}
+.engmodal{position:fixed;inset:0;z-index:200;background:rgba(60,50,40,.42);display:flex;align-items:center;justify-content:center;padding:16px}
+.engmodal .card{max-width:360px;width:100%;margin-bottom:0;text-align:center}
+@keyframes pulse{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+.steps{display:flex;gap:5px;margin-top:8px;width:100%}
+.step{flex:1;height:7px;border-radius:4px;background:var(--line)}
+.step.done{background:var(--mint2)}
+.step.now{background:var(--gold)}
+.stepcap{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim2);margin-top:4px;width:100%}
+.notice{background:#fff3d6;border:1.5px solid #edd49a;border-radius:12px;padding:13px 15px;font-size:15.5px;
+ color:#8a6417;font-weight:700;margin-bottom:14px;line-height:1.7}
+.notice b{color:#7a5c1c}
+/* 제시문(인용된 자료·기사)을 지시문과 시각적으로 구분하는 상자 */
+.passagebox{background:var(--paper);border:1.5px dashed var(--line2);border-radius:12px;padding:15px 17px;
+ font-size:15px;color:var(--txt);font-weight:500;line-height:1.85;margin-bottom:14px;white-space:pre-wrap}
+.card{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px;box-shadow:0 3px 0 var(--line2)}
+h3{margin:0 0 10px;font-size:14px;font-weight:800;color:var(--dim)}
+h3.qtext{font-size:17.5px;color:var(--txt);line-height:1.5;margin-bottom:14px}
+h4{margin:0 0 6px;font-size:13px;color:var(--dim);font-weight:800}
+
+/* classify */
+.clsrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1.5px solid var(--line)}
+.clsrow:last-child{border-bottom:none}
+.clsitem{font-weight:700;font-size:16px;flex:1}
+.clsbtns{display:flex;gap:6px;flex-wrap:wrap}
+.clsbtn{padding:9px 13px;background:#fff;border:2px solid var(--line);border-radius:9px;font-size:13.5px;font-weight:800;color:var(--dim)}
+.clsbtn.picked{border-color:var(--gold);background:#fff8e8;color:#a5822c}
+
+/* matchpairs */
+.matchwrap{position:relative}
+.matchsvg{position:absolute;top:0;left:0;pointer-events:none;z-index:1}
+.pairgrid{display:grid;grid-template-columns:1fr 1fr;gap:36px;position:relative;z-index:2}
+.paircol{display:flex;flex-direction:column;gap:8px}
+.pairbtn{padding:13px;background:#fff;border:2px solid var(--line);border-radius:11px;font-size:15px;font-weight:700;text-align:left;transition:all .15s}
+.pairbtn.active{border-color:var(--gold);background:#fff8e8;box-shadow:0 0 0 3px #fff3d6}
+.pairbtn.done{font-weight:800}
+.hint{font-size:11.5px;color:var(--dim2);margin-top:10px;text-align:center}
+
+/* nav row prev button */
+.prevbtn{padding:14px 18px;background:#fff;border:2px solid var(--line);border-radius:14px;color:var(--dim);font-weight:800;font-size:15px;flex:0 0 auto}
+.prevbtn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ordering (pool/seq) */
+.pool{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:44px}
+.card.disabled{opacity:.32;pointer-events:none}
+button.card{background:#fff;border:2px solid var(--line);border-radius:12px;padding:11px 15px;font-weight:800;font-size:15px;box-shadow:0 2px 0 var(--line2)}
+.seqwrap{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.seqrow{display:flex;align-items:center;gap:10px;background:#f8f4ea;border-radius:11px;padding:10px 12px;margin-bottom:7px}
+.seqrow .num{width:26px;height:26px;border-radius:50%;background:var(--mint2);color:#fff;font-size:12.5px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.seqrow .lbl{flex:1;font-weight:700;font-size:15px}
+.seqrow button.rmbtn{background:#fff;border:1.5px solid var(--line);border-radius:8px;width:26px;height:26px;font-size:13px}
+.seqempty{text-align:center;color:var(--dim2);font-size:12.5px;padding:14px 0}
+.btnrow{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.btnrow .navbtn{flex:1;margin-top:0;min-width:120px}
+.resetbtn{padding:14px 18px;background:#fff;border:2px solid var(--line);border-radius:14px;color:var(--dim);font-weight:800;font-size:15px}
+
+/* quiz/combo option */
+.opt{display:block;width:100%;text-align:left;padding:14px 16px;background:#fff;border:2px solid var(--line);
+ border-radius:13px;font-size:15.5px;font-weight:700;margin-bottom:9px}
+.opt.picked{border-color:var(--gold);background:#fff8e8}
+.statementbox{background:#f8f4ea;border-radius:12px;padding:14px}
+.stmt{font-size:15.5px;padding:5px 0}
+
+/* opinion */
+textarea{width:100%;min-height:110px;padding:13px;border:2px solid var(--line);border-radius:14px;font-size:15.5px;
+ line-height:1.75;resize:vertical;font-family:inherit;color:var(--txt);outline:none}
+textarea:focus{border-color:var(--mint)}
+.counter{font-size:11px;color:var(--dim2);text-align:right;margin-top:4px}
+.counter.ok{color:var(--mint2);font-weight:700}
+
+.navbtn{width:100%;padding:14px;background:var(--mint2);border:none;border-radius:14px;color:#fff;font-weight:900;
+ font-size:16px;margin-top:14px;box-shadow:0 3px 0 #2d8b76}
+.navbtn:disabled{background:#d5cec3;box-shadow:0 3px 0 #c0b8ab;cursor:not-allowed}
+.navbtn:not(:disabled):active{transform:translateY(2px);box-shadow:0 1px 0 #2d8b76}
+
+/* 결과 */
+.resulthead{text-align:center;padding:6px 0 4px}
+.resulthead .big{font-size:19px;font-weight:900;margin-top:6px}
+.resulthead .score{font-size:32px;font-weight:900;color:var(--mint2);margin-top:4px}
+.metricgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.metric{background:#fff;border:2px solid var(--line);border-radius:12px;padding:10px 12px}
+.metric .k{font-size:10.5px;color:var(--dim2);font-weight:700}
+.metric .v{font-size:17px;font-weight:900;color:var(--mint2);margin-top:2px}
+.metric .v.warn{color:var(--red)}
+.resultrow{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px}
+.resultrow .lbl{flex:1;font-weight:700}
+.answerblock{background:#fff;border:2px solid var(--line);border-radius:13px;padding:12px 13px;margin-bottom:9px}
+.answerblock p{margin:0;font-size:13.5px;line-height:1.75;white-space:pre-wrap}
+.finalnotice{background:#fff3d6;border:2px solid #edd49a;border-radius:14px;padding:14px 15px;font-size:12.5px;
+ color:#7a5c1c;font-weight:700;line-height:1.8;margin-top:16px}
+
+/* 학생 정보 입력 게이트 */
+.gateinput{width:100%;padding:13px 15px;border:2px solid var(--line);border-radius:13px;font-size:16px;
+ font-family:inherit;color:var(--txt);outline:none;margin-bottom:10px}
+.gateinput:focus{border-color:var(--mint)}
+.gateerr{color:var(--red);font-size:12.5px;font-weight:700;margin:-4px 0 10px;display:none}
+.gateerr.show{display:block}
+
+.backlink{display:block;text-align:center;text-decoration:none;padding:14px;border-radius:14px;
+ font-weight:800;font-size:15px;background:#fff;color:var(--txt);border:2px solid var(--line);margin-top:10px}
+
+/* 결과 저장(수파베이스 동기화) 상태 배지 */
+.syncbadge{display:inline-block;font-size:11.5px;font-weight:800;border-radius:20px;padding:5px 12px;
+ margin:8px 0 2px;background:#f1ece2;color:var(--dim)}
+.syncbadge.ok{background:#e6f7ea;color:#3f9a5c}
+.syncbadge.err{background:#fdeeee;color:var(--red)}

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>화석, 오래된 순서대로!</title>
+<style>
+:root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
+ --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-size:14.5px;line-height:1.65;
+ font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:720px;margin:0 auto;padding:14px 16px 60px}
+.top{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:2px solid var(--line);
+ padding:12px 16px;margin:0 -16px 16px}
+.title{font-weight:900;font-size:15.5px}
+.notice{background:#fff3d6;border:1.5px solid #edd49a;border-radius:12px;padding:11px 13px;font-size:12.5px;
+ color:#a5822c;font-weight:700;margin-bottom:14px;line-height:1.7}
+.notice b{color:#7a5c1c}
+h3{margin:0 0 8px;font-size:13px;font-weight:800;color:var(--dim)}
+.pool{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;min-height:52px}
+.card{background:#fff;border:2px solid var(--line);border-radius:12px;padding:9px 13px;display:flex;
+ align-items:center;gap:8px;font-weight:800;font-size:13px;box-shadow:0 2px 0 var(--line2)}
+.card:not(.disabled):active{transform:translateY(2px);box-shadow:0 0 0 var(--line2)}
+.card .ic{font-size:18px}
+.card .kb{font-size:9.5px;font-weight:800;border-radius:5px;padding:1px 6px;margin-left:2px}
+.card .kb.animal{background:#e6f0fb;color:#3f6fa8}
+.card .kb.plant{background:#e6f7ea;color:#3f9a5c}
+.card .kb.trace{background:#f1ece2;color:#8d8175}
+.card.disabled{opacity:.32;pointer-events:none}
+.seqwrap{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.seqrow{display:flex;align-items:center;gap:10px;background:#f8f4ea;border-radius:11px;padding:9px 12px;margin-bottom:7px}
+.seqrow .num{width:24px;height:24px;border-radius:50%;background:var(--mint2);color:#fff;font-size:11.5px;
+ font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.seqrow .lbl{flex:1;font-weight:700;font-size:13px}
+.seqrow button{background:#fff;border:1.5px solid var(--line);border-radius:8px;width:26px;height:26px;font-size:13px}
+.seqempty{text-align:center;color:var(--dim2);font-size:12.5px;padding:14px 0}
+.btnrow{display:flex;gap:8px;margin-top:6px}
+.navbtn{flex:1;padding:13px;background:var(--mint2);border:none;border-radius:14px;color:#fff;font-weight:900;
+ font-size:14.5px;box-shadow:0 3px 0 #2d8b76}
+.navbtn:disabled{background:#d5cec3;box-shadow:0 3px 0 #c0b8ab;cursor:not-allowed}
+.navbtn:not(:disabled):active{transform:translateY(2px);box-shadow:0 1px 0 #2d8b76}
+.resetbtn{padding:13px 16px;background:#fff;border:2px solid var(--line);border-radius:14px;color:var(--dim);font-weight:800;font-size:13px}
+/* 결과 */
+.resulthead{text-align:center;padding:6px 0 4px}
+.resulthead .big{font-size:19px;font-weight:900;margin-top:6px}
+.resultrow{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--line);border-radius:12px;
+ padding:10px 13px;margin-bottom:7px}
+.resultrow.ok{border-color:var(--mint2)}
+.resultrow .era{font-size:10.5px;font-weight:800;color:var(--mint2);background:#eef7f4;border-radius:6px;padding:2px 7px}
+.finalnotice{background:#fff3d6;border:2px solid #edd49a;border-radius:14px;padding:13px 15px;font-size:12.5px;
+ color:#7a5c1c;font-weight:700;line-height:1.8;margin-top:14px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top"><div class="title">화석, 오래된 순서대로!</div></div>
+  <div class="notice">아래 화석 카드들을 <b>오래된 시대의 화석부터 최근 시대의 화석 순서로</b> 클릭하세요. 클릭한 순서대로 아래 목록에 쌓입니다. 같은 시대 화석끼리는 순서가 어떻든 상관없어요.</div>
+  <div id="app"></div>
+</div>
+
+<script>
+const POOL=[
+ {id:'strom', name:'스트로마톨라이트', era:'선캄브리아시대', rank:1, kind:'trace', ic:'🪨'},
+ {id:'trilo', name:'삼엽충', era:'고생대', rank:2, kind:'animal', ic:'🦂'},
+ {id:'fusul', name:'방추충(푸줄리나)', era:'고생대', rank:2, kind:'animal', ic:'🐚'},
+ {id:'lepido', name:'인목(鱗木)', era:'고생대', rank:2, kind:'plant', ic:'🌿'},
+ {id:'calam', name:'노목(蘆木)', era:'고생대', rank:2, kind:'plant', ic:'🌿'},
+ {id:'ammon', name:'암모나이트', era:'중생대', rank:3, kind:'animal', ic:'🐚'},
+ {id:'dino', name:'공룡 화석', era:'중생대', rank:3, kind:'animal', ic:'🦴'},
+ {id:'cycad', name:'소철류·은행나무류 화석', era:'중생대', rank:3, kind:'plant', ic:'🌿'},
+ {id:'numm', name:'화폐석(Nummulites)', era:'신생대', rank:4, kind:'animal', ic:'🐚'},
+ {id:'mammoth', name:'매머드', era:'신생대', rank:4, kind:'animal', ic:'🐘'},
+ {id:'metaseq', name:'메타세쿼이아', era:'신생대', rank:4, kind:'plant', ic:'🌲'}
+];
+const KIND_LABEL={animal:'동물화석',plant:'식물화석',trace:'생흔화석'};
+
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function pickN(arr,n){return shuffle(arr).slice(0,n);}
+
+const byEra={
+ pre: POOL.filter(f=>f.rank===1),
+ pal: POOL.filter(f=>f.rank===2),
+ mes: POOL.filter(f=>f.rank===3),
+ cen: POOL.filter(f=>f.rank===4)
+};
+const SESSION=shuffle([...pickN(byEra.pre,1), ...pickN(byEra.pal,2), ...pickN(byEra.mes,2), ...pickN(byEra.cen,2)]);
+
+const S={placed:[], submitted:false};
+
+function app(){return document.getElementById('app');}
+
+function render(){
+  if(S.submitted){renderResult();return;}
+  app().innerHTML=`
+   <h3>화석 카드 (${SESSION.length - S.placed.length}개 남음)</h3>
+   <div class="pool">${SESSION.map(f=>`<button class="card ${S.placed.includes(f.id)?'disabled':''}" id="pool-${f.id}">
+     <span class="ic">${f.ic}</span>${f.name}<span class="kb ${f.kind}">${KIND_LABEL[f.kind]}</span></button>`).join('')}</div>
+   <div class="seqwrap">
+     <h3>나의 순서 (오래된 것 → 최근)</h3>
+     ${S.placed.length? S.placed.map((id,i)=>{
+        const f=SESSION.find(x=>x.id===id);
+        return `<div class="seqrow"><span class="num">${i+1}</span><span class="lbl">${f.ic} ${f.name}</span>
+          <button data-id="${id}" class="rmbtn">↩</button></div>`;
+      }).join('') : `<div class="seqempty">위에서 화석을 순서대로 클릭하세요</div>`}
+   </div>
+   <div class="btnrow">
+     <button class="resetbtn" onclick="resetAll()">초기화</button>
+     <button class="navbtn" id="submitBtn" onclick="submitAll()" ${S.placed.length===SESSION.length?'':'disabled'}>채점하기</button>
+   </div>`;
+  SESSION.forEach(f=>{
+    const btn=document.getElementById('pool-'+f.id);
+    if(btn)btn.addEventListener('click',()=>{ if(!S.placed.includes(f.id)){S.placed.push(f.id); render();} });
+  });
+  document.querySelectorAll('.rmbtn').forEach(b=>{
+    b.addEventListener('click',()=>{ S.placed=S.placed.filter(id=>id!==b.dataset.id); render(); });
+  });
+}
+function resetAll(){S.placed=[]; render();}
+function submitAll(){S.submitted=true; render(); window.scrollTo(0,0);}
+
+function renderResult(){
+  const ranks=S.placed.map(id=>SESSION.find(f=>f.id===id).rank);
+  let inversions=0;
+  for(let i=0;i<ranks.length;i++)for(let j=i+1;j<ranks.length;j++) if(ranks[i]>ranks[j]) inversions++;
+  const perfect=inversions===0;
+  app().innerHTML=`
+   <div class="resulthead">
+     <div style="font-size:34px">${perfect?'🎉':'🪨'}</div>
+     <div class="big">${perfect? '정답입니다! 시대 순서가 정확해요' : `${inversions}곳에서 시대 순서가 뒤바뀌었어요`}</div>
+   </div>
+   ${S.placed.map((id,i)=>{
+     const f=SESSION.find(x=>x.id===id);
+     const prevOk = i===0 || SESSION.find(x=>x.id===S.placed[i-1]).rank<=f.rank;
+     return `<div class="resultrow ${prevOk?'ok':''}"><span class="ic" style="font-size:18px">${f.ic}</span>
+       <span style="flex:1;font-weight:700">${i+1}. ${f.name}</span><span class="era">${f.era}</span></div>`;
+   }).join('')}
+   <div class="finalnotice">시대 배정이 틀린 경우 위 목록에서 시대(era) 표시를 참고해 어디서 순서가 어긋났는지 스스로 다시 살펴보세요. 이 채점은 참고용이며, 실제 수행평가와 연동될 경우 최종 점수는 선생님이 확인합니다.</div>
+   <div class="btnrow" style="margin-top:14px"><button class="navbtn" onclick="location.reload()">새 화석으로 다시 도전</button></div>`;
+}
+
+render();
+</script>
+</body>
+</html>

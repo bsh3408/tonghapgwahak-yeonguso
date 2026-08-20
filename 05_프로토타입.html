@@ -1,0 +1,1845 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>통합과학연구소 · 프로토타입</title>
+<style>
+:root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
+ --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72;--purple:#a892e0;--green:#6ec98a;--blue:#7fb3e8}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.55;
+ font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;color:inherit}
+/* 크롬북(터치스크린 포함) 환경 대응 */
+button,.mrow,.splitcard,.pabtn,.clk,.opt{
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.hide{display:none!important}
+.top{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:2px solid var(--line);
+ padding:9px 13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.title{font-weight:900;font-size:15.5px}.title span{color:var(--mint2)}
+.boardbtn{background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:4px 10px;font-size:11.5px;
+ font-weight:700;color:var(--dim);white-space:nowrap}
+.sp{flex:1}
+.pill{background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:4px 11px;font-size:12.5px;
+ font-weight:800;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.pill b{font-variant-numeric:tabular-nums;color:var(--mint2)}
+#whoami{min-height:40px;padding:8px 14px;box-sizing:border-box}
+.pabtn{background:linear-gradient(160deg,#fff6e0,#ffeec5);border:2px solid var(--gold);border-radius:14px;
+ padding:4px 12px;display:flex;align-items:center;gap:8px;font-weight:800}
+.pabtn small{font-size:10px;color:#a5822c;display:block;font-weight:700}
+.pabtn b{font-size:18px;color:#c4881a;line-height:1;font-variant-numeric:tabular-nums}
+.split{max-width:820px;margin:10px auto 0;padding:0 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.splitcard{border-radius:16px;padding:12px 13px;box-shadow:0 3px 0 var(--line2);border:2px solid;cursor:pointer}
+.splitcard.task{background:linear-gradient(160deg,#fff8e8,#fff0cf);border-color:var(--gold)}
+.splitcard.game{background:linear-gradient(160deg,#eefaf6,#e2f3ec);border-color:var(--mint)}
+.splitcard:active{transform:translateY(2px)}
+.splitcard .lb{font-size:11px;font-weight:900;letter-spacing:.3px}
+.splitcard.task .lb{color:#a5822c}.splitcard.game .lb{color:var(--mint2)}
+.splitcard .big{font-size:24px;font-weight:900;line-height:1.2;margin-top:2px}
+.splitcard.task .big{color:#c4881a}.splitcard.game .big{color:var(--mint2)}
+.splitcard .sm{font-size:10.5px;color:var(--dim);margin-top:2px}
+@media(max-width:520px){.split{grid-template-columns:1fr}}
+.heroRs{max-width:820px;margin:12px auto 0;padding:8px 10px 0;text-align:center;cursor:pointer;user-select:none}
+.heroRsLabel{font-size:12.5px;font-weight:900;color:var(--mint2);letter-spacing:.5px}
+.heroRsNum{font-size:48px;font-weight:900;color:var(--mint2);line-height:1.15;
+ font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(0,0,0,.05)}
+.heroRsNum.bump{animation:heroBump .4s ease}
+@keyframes heroBump{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+.pill.bump{animation:pillBump .35s ease}
+@keyframes pillBump{0%{transform:scale(1)}45%{transform:scale(1.24)}100%{transform:scale(1)}}
+.enhSuccess{display:inline-block;animation:enhPop .55s cubic-bezier(.3,1.4,.5,1)}
+@keyframes enhPop{0%{transform:scale(.3) rotate(-14deg);opacity:0}55%{transform:scale(1.3) rotate(6deg);opacity:1}80%{transform:scale(.92) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
+.enhFail{display:inline-block;animation:enhShake .5s ease}
+@keyframes enhShake{0%,100%{transform:translateX(0) scale(1)}15%{transform:translateX(-10px) rotate(-8deg) scale(1.1)}35%{transform:translateX(9px) rotate(7deg) scale(1.1)}55%{transform:translateX(-7px) rotate(-5deg)}75%{transform:translateX(5px) rotate(3deg)}90%{transform:translateX(-2px)}}
+.flygain{position:fixed;z-index:9999;font-size:15px;font-weight:900;pointer-events:none;
+ transform:translate(-50%,-50%);opacity:1;text-shadow:0 1px 2px rgba(0,0,0,.15);
+ transition:left .65s cubic-bezier(.2,.7,.3,1),top .65s cubic-bezier(.2,.7,.3,1),opacity .3s ease .35s}
+#stage{position:relative;max-width:1100px;margin:10px auto 0;padding:0 8px}
+.assistInfoPanel{position:absolute;top:10px;right:16px;max-width:180px;background:#fffdf8;border:2px solid var(--line);
+ border-radius:14px;padding:10px 12px;box-shadow:0 4px 12px rgba(0,0,0,.14);z-index:5;animation:up .2s}
+.assistInfoPanel.hide{display:none}
+.assistInfoPanel .aiName{font-weight:900;font-size:13px}
+.assistInfoPanel .aiMeta{font-size:10.5px;color:var(--dim);margin-top:2px}
+.assistInfoPanel .aiTrait{font-size:11px;color:#4b4037;margin-top:6px;line-height:1.5}
+@media(max-width:520px){.assistInfoPanel{max-width:130px;top:6px;right:10px;padding:8px 10px}}
+#lab{width:100%;height:auto;display:block}
+.npc{animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+.walk{animation:step .42s ease-in-out infinite}
+@keyframes step{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-4px) rotate(2deg)}}
+.clk{cursor:pointer}
+.clk:hover .npc,.clk:hover .walk{filter:drop-shadow(0 0 6px rgba(95,201,176,.9))}
+.pop{animation:pop .35s ease-out}
+@keyframes pop{0%{transform:translateY(0) scale(1)}40%{transform:translateY(-7px) scale(1.07)}100%{transform:translateY(0) scale(1)}}
+.blink{animation:bl 3.6s infinite}@keyframes bl{0%,96%,100%{opacity:1}98%{opacity:.12}}
+/* 전설급 학자(개척자·선구자·혁신가·창시자·정립자·불멸자) 아바타의 금빛 반짝임 효과 */
+.legendGlow{animation:legendGlow 1.5s ease-in-out infinite}
+@keyframes legendGlow{
+ 0%,100%{filter:drop-shadow(0 0 2px #f5d060) drop-shadow(0 0 1px #fff3d6)}
+ 50%{filter:drop-shadow(0 0 8px #ffe27a) drop-shadow(0 0 3px #fff9e0)}
+}
+/* 전설급 조수의 네모(등급 배지)에도 반짝이는 이펙트, 박사는 색+두꺼운 테두리만 */
+.legendBadge{animation:legendBadgeGlow 1.5s ease-in-out infinite}
+@keyframes legendBadgeGlow{
+ 0%,100%{box-shadow:0 0 2px 1px rgba(245,208,96,.45)}
+ 50%{box-shadow:0 0 9px 3px rgba(255,226,122,.9)}
+}
+.phdBadge{font-weight:900}
+.hintline{text-align:center;font-size:11.5px;color:var(--dim2);margin-top:3px}
+.enhwrap{max-width:820px;margin:10px auto 0;padding:0 10px}
+.enhbox{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:13px 15px;box-shadow:0 3px 0 var(--line2)}
+.tagline{display:flex;gap:7px;flex-wrap:wrap;font-size:12px;color:var(--dim);align-items:center}
+.tagline b{color:var(--txt)}
+.gtag{background:#e6f7ea;border:1px solid #b6e4c3;border-radius:7px;padding:2px 8px;font-size:11px;font-weight:800;color:#3f9a5c}
+.ytag{background:#fff3d6;border:1px solid #edd49a;border-radius:7px;padding:2px 8px;font-size:11px;font-weight:800;color:#b58516}
+.bar{height:9px;background:#eee6d6;border-radius:6px;overflow:hidden;margin:8px 0 11px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--mint2))}
+.nav{max-width:820px;margin:10px auto 26px;padding:0 10px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.nav button{background:var(--paper);border:2px solid var(--line);border-radius:15px;padding:11px 4px;
+ display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:800;
+ box-shadow:0 3px 0 var(--line2)}
+.nav button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line2)}
+.nav .ic{font-size:21px;line-height:1}
+.nav .task{background:linear-gradient(160deg,#ffd77a,#f5b93f);border-color:#c99622;color:#4a3400;box-shadow:0 3px 0 #c99622}
+.nav .game{background:linear-gradient(160deg,#6fd6bd,#43b79c);border-color:#35a189;color:#fff;box-shadow:0 3px 0 #2d8b76}
+.sheet{position:fixed;inset:0;z-index:60;background:rgba(60,50,40,.42);display:flex;align-items:flex-end}
+.sbody{background:var(--bg);width:100%;max-height:93vh;border-radius:22px 22px 0 0;overflow:auto;animation:up .2s}
+@keyframes up{from{transform:translateY(26px);opacity:.4}to{transform:none;opacity:1}}
+.shead{position:sticky;top:0;background:var(--paper);border-bottom:2px solid var(--line);padding:13px 15px;
+ display:flex;align-items:center;gap:10px;z-index:5}
+.shead h2{margin:0;font-size:16px;font-weight:900}.shead .cap{font-size:11.5px;color:var(--dim);font-weight:600}
+.back{background:#fff;border:1.5px solid var(--line);border-radius:11px;width:33px;height:33px;font-size:16px;font-weight:900}
+.scont{padding:13px 15px 40px;max-width:780px;margin:0 auto}
+.box{background:#fff;border:2px solid var(--line);border-radius:16px;padding:13px;margin-bottom:10px}
+.box h3{margin:0 0 8px;font-size:12.5px;color:var(--dim);font-weight:800}
+.banner{border-radius:14px;padding:10px 13px;font-size:12px;font-weight:700;margin-bottom:11px;text-align:center}
+.banner.gold{background:#fff3d6;border:1.5px solid #edd49a;color:#a5822c}
+.banner.mint{background:#eef7f4;border:1.5px solid #bce3d8;color:var(--mint2)}
+.mrow{background:var(--paper);border:2px solid var(--line);border-radius:15px;padding:11px 13px;display:flex;
+ align-items:center;gap:10px;margin-bottom:8px;box-shadow:0 3px 0 var(--line2);width:100%;text-align:left}
+.mrow:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line2)}
+.mrow.soon{opacity:.55;box-shadow:none}
+.tmpl{font-size:10.5px;font-weight:800;color:#3d8fa8;background:#e4f3f8;border:1px solid #b7dfeb;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.kind{font-size:10px;font-weight:900;border-radius:6px;padding:2px 6px;white-space:nowrap}
+.kind.chapter{background:#eef7f4;color:#2f8a72;border:1px solid #bce3d8}
+.mt{flex:1;min-width:0;font-size:13.5px;font-weight:700}.mt small{display:block;font-size:11px;color:var(--dim);font-weight:600}
+.bg{font-size:11px;font-weight:800;border-radius:8px;padding:4px 9px;white-space:nowrap}
+.bg.p{background:#e6f7ea;color:#3f9a5c;border:1px solid #b6e4c3}
+.bg.n{background:#f1ece2;color:var(--dim2);border:1px solid var(--line)}
+.btn{width:100%;padding:12px;background:var(--mint2);border:none;border-radius:14px;color:#fff;font-weight:900;
+ font-size:14px;margin-top:12px;box-shadow:0 3px 0 #2d8b76}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #2d8b76}
+.btn:disabled{background:#d5cec3;box-shadow:0 3px 0 #c0b8ab;cursor:not-allowed}
+.btn.gold{background:var(--gold);box-shadow:0 3px 0 #c99622}
+.modal{position:fixed;inset:0;background:rgba(60,50,40,.5);display:flex;align-items:center;justify-content:center;z-index:80;padding:13px}
+.card{background:var(--paper);border:2px solid var(--line);border-radius:20px;width:100%;max-width:600px;
+ max-height:92vh;overflow:auto;padding:19px;box-shadow:0 16px 40px rgba(80,60,40,.28)}
+.card h2{margin:0 0 3px;font-size:17px;font-weight:900}.card .cap{font-size:11.5px;color:var(--dim);margin-bottom:13px}
+.x{float:right;background:#fff;border:1.5px solid var(--line);border-radius:10px;width:30px;height:30px;font-size:15px;font-weight:900}
+.opt{display:block;width:100%;text-align:left;padding:12px 14px;background:#fff;border:2px solid var(--line);
+ border-radius:13px;font-size:13.5px;font-weight:700;margin-bottom:8px}
+.opt:hover{border-color:var(--mint)}
+textarea{width:100%;min-height:110px;padding:12px;background:#fff;border:2px solid var(--line);border-radius:14px;
+ font-size:13.5px;line-height:1.7;resize:vertical;font-family:inherit;color:var(--txt);outline:none}
+textarea:focus{border-color:var(--mint)}
+.check{background:#fff;border:2px solid var(--line);border-radius:14px;padding:11px;margin-top:11px}
+.check div{display:flex;gap:8px;align-items:center;padding:3px 0;font-size:12.5px;color:var(--dim)}
+.check div.ok{color:var(--txt);font-weight:700}
+.ck{width:16px;font-weight:900;color:var(--dim2)}.ck.ok{color:var(--green)}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:9px}
+.it2{background:#fff;border:2px solid var(--line);border-radius:16px;padding:11px}
+.it2 h5{margin:0 0 3px;font-size:13px;font-weight:900}.it2 p{margin:0 0 8px;font-size:11.5px;color:var(--dim);min-height:30px}
+.pr{font-size:12px;color:var(--gold);font-weight:900}
+.buy{float:right;padding:5px 11px;background:#fff;border:1.5px solid var(--line);border-radius:9px;font-size:11.5px;font-weight:800}
+.rk{display:flex;gap:10px;align-items:center;padding:9px 11px;border-top:1.5px solid var(--line);font-size:13px}
+.rk:first-child{border-top:none}.rn{width:24px;text-align:center;font-weight:900;color:var(--dim2)}.rn.g{color:var(--gold)}
+.rk .v{margin-left:auto;font-weight:900;color:var(--mint2)}.rk.me{background:#eef7f4;border-radius:11px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:95;display:flex;flex-direction:column;gap:7px;align-items:center;pointer-events:none}
+.tst{background:#fff;border:2px solid var(--mint);border-radius:14px;padding:10px 17px;font-size:13px;font-weight:800;box-shadow:0 8px 20px rgba(80,60,40,.2)}
+.tst.bad{border-color:var(--red)}.tst.gold{border-color:var(--gold);color:#b58516}
+.note{max-width:820px;margin:0 auto 28px;padding:0 14px;font-size:11.5px;color:var(--dim2);line-height:1.8}
+
+/* 로그인 화면 */
+.loginwrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.logincard{background:var(--paper);border:2px solid var(--line);border-radius:20px;padding:28px 26px;
+ width:100%;max-width:340px;box-shadow:0 16px 40px rgba(80,60,40,.15)}
+.loginTitle{font-weight:900;font-size:20px;text-align:center;margin-bottom:4px}
+.loginTitle span{color:var(--mint2)}
+.loginSub{font-size:12.5px;color:var(--dim);text-align:center;margin-bottom:16px;line-height:1.6}
+.logininput{width:100%;padding:13px 15px;border:2px solid var(--line);border-radius:13px;font-size:15px;
+ font-family:inherit;color:var(--txt);outline:none;margin-bottom:10px}
+.logininput:focus{border-color:var(--mint)}
+.loginErr{color:var(--red);font-size:12px;font-weight:700;margin:-4px 0 10px;min-height:14px}
+.loginbtn{width:100%;padding:14px;background:var(--mint2);border:none;border-radius:14px;color:#fff;font-weight:900;
+ font-size:15px;box-shadow:0 3px 0 #2d8b76;cursor:pointer}
+.loginbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #2d8b76}
+
+/* 조수/가챠/연구활동/OX 공통 */
+.rarity{font-size:10px;font-weight:900;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.assistcard{background:#fff;border:2px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:9px}
+.assistcard .ahead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.assistcard .aname{font-weight:900;font-size:14px;flex:1}
+.assistcard .astat{font-size:11px;color:var(--dim);line-height:1.7}
+.assistcard select{width:100%;margin-top:7px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;font-size:12.5px}
+.collectbar{display:flex;align-items:center;gap:8px;margin-top:8px}
+.collectbtn{flex:none;padding:8px 13px;background:var(--mint2);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:12.5px}
+.collectbtn:disabled{background:#d5cec3}
+.oxrow{display:flex;gap:8px;margin-top:12px}
+.oxbtn{flex:1;padding:16px;border-radius:14px;font-size:16px;font-weight:900;border:2px solid var(--line);background:#fff}
+.oxbtn.oxo{color:var(--mint2)}.oxbtn.oxx{color:var(--red)}
+.journalitem{background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:10px}
+.journalitem .jq{font-size:12.5px;font-weight:700;margin-bottom:8px;line-height:1.6}
+.journalitem textarea{min-height:90px;font-size:12.5px}
+.journalitem .jstat{font-size:11px;color:var(--dim2);margin-top:6px;display:flex;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="loginwrap">
+  <div class="logincard">
+    <div class="loginTitle">통합과학<span>연구소</span></div>
+    <div id="loginStep1">
+      <div class="loginSub">이름과 비밀번호(처음엔 학번)로 로그인하세요<br><span style="font-size:11px;color:var(--dim2)">※ 선생님이 미리 등록해준 이름으로만 로그인할 수 있어요. 처음이라 안 되면 선생님께 문의하세요.</span></div>
+      <input class="logininput" id="loginName" placeholder="이름" autocomplete="off">
+      <input class="logininput" id="loginPw" type="password" placeholder="비밀번호 (처음엔 학번)" autocomplete="off">
+      <div class="loginErr" id="loginErr"></div>
+      <button class="loginbtn" id="loginBtn">로그인</button>
+    </div>
+    <div id="loginStep2" class="hide">
+      <div class="loginSub">첫 로그인이에요. 나만의 새 비밀번호로 바꿔주세요.</div>
+      <input class="logininput" id="newPw1" type="password" placeholder="새 비밀번호 (4자 이상)" autocomplete="off">
+      <input class="logininput" id="newPw2" type="password" placeholder="새 비밀번호 확인" autocomplete="off">
+      <div class="loginErr" id="changeErr"></div>
+      <button class="loginbtn" id="changeBtn">비밀번호 바꾸고 시작하기</button>
+    </div>
+  </div>
+</div>
+
+<div id="labApp" class="hide">
+<div class="top">
+  <div class="title">통합과학<span>연구소</span></div>
+  <button class="boardbtn" onclick="boardSheet()" title="오류신고 · Q&A">🛠 오류신고/Q&A</button>
+  <div class="sp"></div>
+  <div class="pill" id="whoami" style="cursor:pointer" onclick="logout()" title="눌러서 로그아웃"></div>
+  <div class="pill" style="cursor:pointer" onclick="pointInfoModal('rs')" title="눌러서 설명 보기">🏆 <b id="rs">0</b></div>
+  <div class="pill" style="cursor:pointer" onclick="pointInfoModal('rc')" title="눌러서 설명 보기">🔬 <b id="rc">0</b></div>
+  <div class="pill" style="cursor:pointer" onclick="pointInfoModal('src')" title="눌러서 설명 보기">💎 <b id="src">0</b></div>
+  <button class="pabtn" onclick="paSheet()"><span>📋<small>수행평가(과제)</small></span><b><span id="paS">0</span>/40</b></button>
+</div>
+
+<div class="split">
+  <div class="splitcard task" onclick="deptSheet()">
+    <div class="lb">📋 과제 · 성적에 반영됨</div>
+    <div class="big"><span id="paS2">0</span>/40점</div>
+    <div class="sm">문제를 풀면 점수도, 연구포인트도 얻어요</div>
+  </div>
+  <div class="splitcard game" onclick="researchSheet()">
+    <div class="lb">🏆 연구점수</div>
+    <div class="big"><span id="rs2">0</span>점</div>
+    <div class="sm">연구 활동(논문 투고)으로 쌓여요</div>
+  </div>
+</div>
+
+<div class="heroRs" onclick="researchSheet()">
+  <div class="heroRsLabel">🏆 연구점수</div>
+  <div class="heroRsNum" id="rsHero">0</div>
+</div>
+
+<div id="stage"><svg id="lab" viewBox="-236 -152 528 416" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="assistInfoPanel" class="assistInfoPanel hide"></div>
+  <div class="hintline">연구소 식구·조수를 클릭하면 말을 겁니다</div></div>
+
+<div class="nav" style="grid-template-columns:repeat(3,1fr)">
+  <button class="task" onclick="deptSheet()"><span class="ic">📋</span>과제(성적)</button>
+  <button class="game" onclick="researchSheet()"><span class="ic">📄</span>연구 활동</button>
+  <button onclick="assistantSheet()"><span class="ic">🎓</span>조수 연구실</button>
+  <button onclick="deptMapSheet()"><span class="ic">🏢</span>연구동 이동</button>
+  <button onclick="rankSheet()"><span class="ic">🏆</span>랭킹</button>
+  <button onclick="shopSheet()"><span class="ic">🖼️</span>연구실 테마</button>
+</div>
+
+<div class="note">프로토타입 · 진행 상황은 이 브라우저에 저장됩니다(다른 기기·다른 브라우저와는 공유되지 않음).<br>
+ <b style="color:#a5822c">📋 과제</b>: 누르면 실제 수행평가 게임 화면으로 이동합니다. 끝까지 풀고 제출하면 이 로비로 돌아왔을 때 결과가 반영돼요.<br>
+ <b style="color:var(--mint2)">🎓 조수 · 📄 연구 활동</b>: 성적과 무관한 게임입니다. 🔬연구포인트·💎특별연구포인트·🏆연구점수는
+ <b>오직 활동으로만</b> 생깁니다(자동 수입 없음, 조수 자동생산은 예외). 게임 요소에 참여하지 않아도
+ 실제 수행평가 챕터 문제만 풀면 40점 만점을 받을 수 있어요.</div>
+
+<div id="sheetHost"></div><div id="modalHost"></div><div id="toast"></div>
+</div>
+
+<script>
+/* ================= 과제 데이터 (성적에 반영되는 부분) =================
+   kind: 'gauge'(정밀 게이지·기본) | 'quiz'(객관식) | 'short'(서답형) | 'ask'(질문/궁금증 제출형)
+   네 형식 모두 최종적으로 score(0~100)를 만들어 동일한 채점 파이프라인(finishGame)으로 들어간다. */
+const MJ={bio:{n:'생명',c:'#7cc98d',bg:'#e6f7ea',ic:'🧬'},chem:{n:'화학',c:'#e77e8c',bg:'#fdeaed',ic:'⚗️'},
+ earth:{n:'지구',c:'#6ba3de',bg:'#e6f0fb',ic:'🌍'},phys:{n:'물리',c:'#e0a32c',bg:'#fdf3dd',ic:'⚡'},
+ etc:{n:'융합',c:'#a892e0',bg:'#eee7fa',ic:'🔬'},uni:{n:'만능',c:'#c99622',bg:'#fff3d6',ic:'🌐'}};
+const KIND_LABEL={gauge:'게이지',quiz:'객관식',short:'서답형',ask:'질문 제출',chapter:'수행평가 게임'};
+
+/* 실제 수행평가 게임(챕터N_*.html, data/chN.json)과 1:1로 연결된 과제.
+   status:'ready'인 항목을 누르면 이 로비를 벗어나 실제 게임 페이지로 이동한다.
+   완료 결과(점수·통과 여부)는 그 게임이 localStorage에 남기고, 이 로비가 돌아올 때 읽어서 반영한다. */
+function chapterMission(id, opts){
+ return Object.assign({id, kind:'chapter',
+   file:`챕터${opts.num}_${opts.slug}.html`, dataFile:`data/ch${opts.num}.json`,
+   chapterId:`ch${opts.num}_seed_v1`, t:opts.t, status:'ready', point:1, cp:opts.cp, mj:opts.mj}, {});
+}
+
+/* term: 1=전반부(중간고사 전 마감·수행1회 10점 풀) 2=후반부(기말고사 전 마감·수행2회 10점 풀)
+   0=성적 미반영 보너스 */
+const DEPTS=[
+ {id:'d1',n:'고생물 연구동',u:'Ⅰ-1. 환경 변화와 생물 다양성',ic:'🦴',c:'#f6e3d2',open:1,term:1,ms:[
+  chapterMission('ch10',{num:10,slug:'지질시대와지구환경의변화',t:'지질 시대와 지구 환경의 변화',cp:'지질 시대와 화석',mj:'earth'}),
+  chapterMission('ch11',{num:11,slug:'생물의진화와다양성',t:'생물의 진화와 다양성',cp:'변이와 자연선택',mj:'bio'})]},
+ {id:'d2',n:'물질 변환동',u:'Ⅰ-2. 우리 주변의 변화',ic:'⚗️',c:'#e2eef8',open:1,term:1,ms:[
+  chapterMission('ch12',{num:12,slug:'산화와환원',t:'산화와 환원',cp:'산화와 환원',mj:'chem'}),
+  chapterMission('ch13',{num:13,slug:'산과염기와중화반응',t:'산과 염기와 중화 반응',cp:'중화 반응과 이온',mj:'chem'}),
+  chapterMission('ch20',{num:20,slug:'물질변화와에너지의출입',t:'물질 변화와 에너지의 출입',cp:'발열 반응과 흡열 반응',mj:'chem'}),
+  chapterMission('ch21',{num:21,slug:'화학기출문제풀기',t:'화학 기출문제 풀기',cp:'기출 유형으로 개념 다지기',mj:'chem'})]},
+ {id:'d3',n:'생태 관측동',u:'Ⅱ-1. 생태계와 환경',ic:'🌿',c:'#e4f4e6',open:0,term:2,ms:[
+  chapterMission('ch14',{num:14,slug:'생태계의구성과변화',t:'생태계의 구성과 생태계 변화',cp:'생태계 평형',mj:'bio'}),
+  chapterMission('ch15',{num:15,slug:'지구환경의변화',t:'지구 환경의 변화',cp:'지구 온난화',mj:'earth'})]},
+ {id:'d4',n:'에너지 발전동',u:'Ⅱ-2. 에너지',ic:'⚡',c:'#fdf1d6',open:0,term:2,ms:[
+  chapterMission('ch16',{num:16,slug:'태양에너지의생성과전환',t:'태양 에너지의 생성과 전환',cp:'에너지 전환',mj:'phys'}),
+  chapterMission('ch17',{num:17,slug:'전기에너지생산과효율',t:'전기에너지의 생산, 에너지 효율과 지구환경',cp:'전자기 유도',mj:'phys'})]},
+ {id:'d5',n:'데이터 분석동',u:'Ⅲ-1. 과학의 유용성과 빅데이터',ic:'📊',c:'#eee7fa',open:0,term:0,ms:[
+  chapterMission('ch18',{num:18,slug:'과학의유용성과빅데이터',t:'과학의 유용성과 빅데이터 활용',cp:'빅데이터',mj:'etc'})]},
+ {id:'d6',n:'미래기술 윤리동',u:'Ⅲ-2. 과학기술의 발전과 윤리',ic:'🤖',c:'#fbe6ee',open:0,term:0,ms:[
+  chapterMission('ch19',{num:19,slug:'과학기술의발전과윤리',t:'과학기술의 발전과 윤리',cp:'과학기술과 윤리',mj:'etc'})]}];
+/* 교사용 관리 페이지에서 저장한 연구동 공개/마감일 설정을 읽어와 DEPTS를 덮어쓴다 */
+async function loadDeptConfig(){
+ try{
+  const res=await fetch('/api/deptconfig', {cache:'no-store'});
+  const cfg=await res.json();
+  DEPTS.forEach(d=>{
+   const c=cfg[d.id];
+   if(!c) return;
+   if(typeof c.open==='boolean') d.open = c.open?1:0;
+   d.dueDate = c.dueDate || null;
+  });
+ }catch(e){}
+}
+function deptDueLabel(d){
+ if(!d.dueDate) return '';
+ const due=new Date(d.dueDate+'T23:59:59');
+ const diffDays=Math.ceil((due-Date.now())/86400000);
+ if(diffDays<0) return `<span style="color:var(--red)">마감(${d.dueDate})</span>`;
+ if(diffDays===0) return `<span style="color:var(--gold)">오늘 마감(${d.dueDate})</span>`;
+ return `<span style="color:var(--dim)">~${d.dueDate}까지(D-${diffDays})</span>`;
+}
+const ALLM=()=>DEPTS.flatMap(d=>d.ms);
+const READY=()=>ALLM().filter(g=>g.status==='ready');
+const gameTerm=g=>DEPTS.find(d=>d.ms.includes(g)).term;
+const TERM_LABEL={1:'수행 1회 · 전반부 (중간고사 전 마감)',2:'수행 2회 · 후반부 (기말고사 전 마감)',0:'보너스 (성적 미반영)'};
+/* 연구실 배경 테마: 밝고 모던함(bright)이 기본 무료 테마, 나머지는 연구포인트로 구매해서 바꿔 쓸 수 있다.
+   각 이미지는 게임과 같은 2:1 아이소메트릭 탑뷰로 그려진 1024x1024 정사각형 컨셉아트다(assets/lab/concepts/).
+   방(다이아몬드) 바깥의 네 모서리도 페이지 배경색(#f3ece0)으로 그림 자체에 이미 칠해져 있어서, crop이나
+   clip-path 없이 그대로 놓기만 해도 페이지와 이어져 보인다. */
+const LAB_THEMES=[
+ {key:'bright', n:'밝고 모던함', img:'assets/lab/concepts/concept_bright.png', cost:0},
+ {key:'cozy', n:'아늑한 서재', img:'assets/lab/concepts/concept_cozy.png', cost:300},
+ {key:'playful', n:'장난스러운 게임풍', img:'assets/lab/concepts/concept_playful.png', cost:300},
+ {key:'classic', n:'클래식 빈티지', img:'assets/lab/concepts/concept_classic.png', cost:300},
+ {key:'space', n:'우주정거장', img:'assets/lab/concepts/concept_space.png', cost:400},
+ {key:'greenhouse', n:'온실 식물원', img:'assets/lab/concepts/concept_greenhouse.png', cost:400},
+ {key:'neon', n:'네온 퓨처', img:'assets/lab/concepts/concept_neon.png', cost:400},
+ {key:'ocean', n:'해양 탐사', img:'assets/lab/concepts/concept_ocean.png', cost:400}
+];
+function labThemeDef(key){ return LAB_THEMES.find(t=>t.key===key)||LAB_THEMES[0]; }
+
+/* ================= 조수(대학원생) 가챠 =================
+   조수는 실존 과학자 이름을 쓰고, "학위"(학사→석사→박사) 안에서 Lv.1~5로 강화된다. 각 학위 Lv.5에서
+   강화에 성공하면 다음 학위 Lv.1로 승급한다(학사Lv5→석사Lv1, 석사Lv5→박사Lv1). 박사(전설 포함)는 승급할 다음
+   학위가 없는 대신 레벨 제한 없이 계속 강화할 수 있다(레벨이 오를수록 성공 확률만 계속 낮아짐).
+   강화는 실패할 수 있고, 실패해도 대부분은 레벨만 그대로지만 낮은 확률로 조수가 대학원을 그만두고
+   사라진다(레벨이 높을수록 강화 실패 확률↑, 실패 시 퇴사 확률은 항상 낮게 고정).
+   학위·레벨별로 rate(연구포인트/시간)·cap(최대 저장량)이 커진다. 세트(setId)를 다 모으면 세트 조수 전원
+   rate ×1.2. 테마(theme)가 배치한 연구동의 mj와 일치하면 rate·cap ×1.5(배치 보너스). */
+const DEGREE_ORDER=['bachelor','master','phd'];
+// rate(시간당 생산량)와 cap(최대 저장량)을 같게 잡아서, 레벨·배치보너스·세트효과가 뭐든 항상
+// 정확히 60분(1시간)이면 최대치에 도달한다 — 분 단위로 계속 실시간 누적되니 "분당" 체감이 되게 함.
+const DEGREE={
+  bachelor:{n:'학사',rate:40,cap:40,color:'#8d8175',enhCost:40},
+  master:{n:'석사',rate:120,cap:120,color:'#3f6fa8',enhCost:90},
+  phd:{n:'박사',rate:300,cap:300,color:'#8a6bd6',enhCost:180}
+};
+const MAX_LV=5;
+const ENHANCE_SUCCESS=[.95,.85,.70,.55,.40]; // 인덱스=lv-1: 그 레벨에서 강화 시도했을 때 성공 확률
+// 박사(전설 포함)는 Lv.5를 넘어서도 계속 강화 가능 — Lv.5 확률(40%)에서 레벨마다 3%p씩 더 낮아지되 15% 밑으로는 안 내려감
+function successRateFor(lv){
+ if(lv<=MAX_LV) return ENHANCE_SUCCESS[lv-1];
+ return Math.max(0.15, ENHANCE_SUCCESS[MAX_LV-1]-(lv-MAX_LV)*0.03);
+}
+// 전설급 학자는 등급 표시에 "박사" 대신 legendTitle(개척자·선구자 등)을 쓴다
+function rankName(def, degreeKey){ return def.rareDraw ? def.legendTitle : DEGREE[degreeKey||'bachelor'].n; }
+/* 등급 배지(네모틀): 전설은 골드색+반짝이는 이펙트, 박사는 보라색+두꺼운 테두리, 학사·석사는 기본 얇은 테두리 */
+function rarityBadgeHtml(def, degreeKey, lv){
+ const isLegend=!!def.rareDraw, isPhd=degreeKey==='phd';
+ const col = isLegend ? '#f5d060' : DEGREE[degreeKey||'bachelor'].color;
+ const cls = isLegend?'rarity legendBadge':(isPhd?'rarity phdBadge':'rarity');
+ const bw = (isLegend||isPhd) ? 2 : 1;
+ return `<span class="${cls}" style="background:${col}22;color:${col};border:${bw}px solid ${col}${isLegend?'':'55'}">${rankName(def,degreeKey)}${lv!=null?' Lv.'+lv:''}</span>`;
+}
+const START_DEGREE_WEIGHTS={bachelor:66,master:25,phd:9}; // 전설 제외 나머지 99% 중 비율 → 전체 기준 학사65%·석사25%·박사9%
+const LEGEND_CHANCE=0.01; // 뽑기에서 "전설급 학자"(6명 중 무작위)가 나올 전체 확률 = 1%
+/* legendTitle: 전설급 학자는 "전설" 대신 업적 성격에 맞는 칭호를 씀
+   개척자(새 분야 개척)·선구자(남들보다 앞서 새 길을 만듦)·혁신가(기존 이론을 뒤집음)·
+   창시자(새 분야의 시작)·정립자(하나의 이론·체계를 완성)·불멸자(과학사에 영원히 남는 느낌) */
+const ASSISTANTS_POOL=[
+ {id:'a_bio1',name:'찰스 다윈',theme:'bio',setId:'set_bio',rareDraw:true,legendTitle:'창시자'},
+ {id:'a_bio2',name:'그레고어 멘델',theme:'bio',setId:'set_bio'},
+ {id:'a_bio3',name:'제임스 왓슨',theme:'bio',setId:'set_bio'},
+ {id:'a_bio4',name:'로절린드 프랭클린',theme:'bio',setId:'set_bio'},
+ {id:'a_bio5',name:'제인 구달',theme:'bio',setId:'set_bio'},
+ {id:'a_bio6',name:'루이 파스퇴르',theme:'bio',setId:'set_bio'},
+ {id:'a_bio7',name:'프랜시스 크릭',theme:'bio',setId:'set_bio'},
+ {id:'a_bio8',name:'알렉산더 플레밍',theme:'bio',setId:'set_bio'},
+ {id:'a_bio9',name:'바버라 매클린톡',theme:'bio',setId:'set_bio'},
+ {id:'a_bio10',name:'에드워드 제너',theme:'bio',setId:'set_bio'},
+ {id:'a_chem1',name:'앙투안 라부아지에',theme:'chem',setId:'set_chem'},
+ {id:'a_chem2',name:'드미트리 멘델레예프',theme:'chem',setId:'set_chem'},
+ {id:'a_chem3',name:'마리 퀴리',theme:'chem',setId:'set_chem',rareDraw:true,legendTitle:'개척자'},
+ {id:'a_chem4',name:'라이너스 폴링',theme:'chem',setId:'set_chem'},
+ {id:'a_chem5',name:'프리츠 하버',theme:'chem',setId:'set_chem'},
+ {id:'a_chem6',name:'존 돌턴',theme:'chem',setId:'set_chem'},
+ {id:'a_chem7',name:'알프레드 노벨',theme:'chem',setId:'set_chem'},
+ {id:'a_chem8',name:'로버트 보일',theme:'chem',setId:'set_chem'},
+ {id:'a_chem9',name:'도러시 호지킨',theme:'chem',setId:'set_chem'},
+ {id:'a_chem10',name:'스반테 아레니우스',theme:'chem',setId:'set_chem'},
+ {id:'a_earth1',name:'알프레드 베게너',theme:'earth',setId:'set_earth'},
+ {id:'a_earth2',name:'찰스 라이엘',theme:'earth',setId:'set_earth'},
+ {id:'a_earth3',name:'제임스 허턴',theme:'earth',setId:'set_earth'},
+ {id:'a_earth4',name:'마리 타프',theme:'earth',setId:'set_earth'},
+ {id:'a_earth5',name:'밀루틴 밀란코비치',theme:'earth',setId:'set_earth'},
+ {id:'a_earth6',name:'니콜라우스 코페르니쿠스',theme:'earth',setId:'set_earth',rareDraw:true,legendTitle:'혁신가'},
+ {id:'a_earth7',name:'에드워드 로렌즈',theme:'earth',setId:'set_earth'},
+ {id:'a_earth8',name:'야코브 비에르크네스',theme:'earth',setId:'set_earth'},
+ {id:'a_earth9',name:'요하네스 케플러',theme:'earth',setId:'set_earth'},
+ {id:'a_earth10',name:'찬드라세카르',theme:'earth',setId:'set_earth'},
+ {id:'a_phys1',name:'아이작 뉴턴',theme:'phys',setId:'set_phys',rareDraw:true,legendTitle:'정립자'},
+ {id:'a_phys2',name:'마이클 패러데이',theme:'phys',setId:'set_phys'},
+ {id:'a_phys3',name:'알베르트 아인슈타인',theme:'phys',setId:'set_phys'},
+ {id:'a_phys4',name:'제임스 클러크 맥스웰',theme:'phys',setId:'set_phys'},
+ {id:'a_phys5',name:'리제 마이트너',theme:'phys',setId:'set_phys'},
+ {id:'a_phys6',name:'갈릴레오 갈릴레이',theme:'phys',setId:'set_phys'},
+ {id:'a_phys7',name:'리처드 파인만',theme:'phys',setId:'set_phys'},
+ {id:'a_phys8',name:'닐스 보어',theme:'phys',setId:'set_phys'},
+ {id:'a_phys9',name:'어니스트 러더퍼드',theme:'phys',setId:'set_phys'},
+ {id:'a_phys10',name:'베르너 하이젠베르크',theme:'phys',setId:'set_phys'},
+ {id:'a_etc1',name:'앨런 튜링',theme:'etc',setId:'set_etc',rareDraw:true,legendTitle:'불멸자'},
+ {id:'a_etc2',name:'클로드 섀넌',theme:'etc',setId:'set_etc'},
+ {id:'a_etc3',name:'에이다 러브레이스',theme:'etc',setId:'set_etc'},
+ {id:'a_etc4',name:'그레이스 호퍼',theme:'etc',setId:'set_etc'},
+ {id:'a_etc5',name:'팀 버너스리',theme:'etc',setId:'set_etc'},
+ {id:'a_etc6',name:'찰스 배비지',theme:'etc',setId:'set_etc'},
+ {id:'a_etc7',name:'마빈 민스키',theme:'etc',setId:'set_etc'},
+ {id:'a_etc8',name:'존 매카시',theme:'etc',setId:'set_etc'},
+ {id:'a_etc9',name:'캐서린 존슨',theme:'etc',setId:'set_etc'},
+ {id:'a_etc10',name:'존 폰 노이만',theme:'etc',setId:'set_etc'},
+ {id:'a_davinci',name:'레오나르도 다빈치',theme:'uni',setId:'set_universal',rareDraw:true,legendTitle:'선구자'},
+ {id:'a_uni1',name:'알렉산더 폰 훔볼트',theme:'uni',setId:'set_universal'},
+ {id:'a_uni2',name:'고트프리트 라이프니츠',theme:'uni',setId:'set_universal'},
+ {id:'a_uni3',name:'아리스토텔레스',theme:'uni',setId:'set_universal'}
+];
+const SET_NAMES={set_bio:'생명과학 연구팀',set_chem:'화학 연구팀',set_earth:'지구과학 연구팀',
+ set_phys:'물리학 연구팀',set_etc:'컴퓨터·데이터 연구팀',set_universal:'만능 연구자'};
+/* 각 과학자의 실제 업적을 한두 문장으로 요약(이름 클릭 시 표시) */
+const SCIENTIST_INFO={
+ a_bio1:'자연선택에 의한 진화론을 제시한 『종의 기원』(1859)의 저자예요.',
+ a_bio2:'완두콩 교배 실험으로 유전의 기본 법칙(멘델의 법칙)을 발견했어요.',
+ a_bio3:'프랜시스 크릭과 함께 DNA의 이중나선 구조를 밝혀 1962년 노벨생리의학상을 받았어요.',
+ a_bio4:'X선 회절 사진(사진 51번)으로 DNA 이중나선 구조 규명에 결정적인 단서를 제공했어요.',
+ a_bio5:'탄자니아에서 침팬지를 수십 년간 관찰하며 동물 행동학의 새 지평을 열었어요.',
+ a_chem1:'질량 보존 법칙을 확립하고 연소가 산소와의 반응임을 밝혀 "근대 화학의 아버지"로 불려요.',
+ a_chem2:'원소를 원자량 순서로 배열해 주기율표를 만들고 미발견 원소의 성질까지 예측했어요.',
+ a_chem3:'방사성 원소 폴로늄과 라듐을 발견해 노벨물리학상과 화학상을 모두 받은 최초의 인물이에요.',
+ a_chem4:'화학결합의 본질을 규명해 노벨화학상을, 핵실험 반대 운동으로 노벨평화상을 받았어요.',
+ a_chem5:'공기 중 질소로 암모니아를 대량 합성하는 하버-보슈법을 개발했어요.',
+ a_earth1:'대륙들이 원래 하나였다가 갈라졌다는 대륙이동설을 처음 제시했어요.',
+ a_earth2:'현재 일어나는 지질 작용으로 과거를 설명하는 동일과정설을 정립했어요.',
+ a_earth3:'지구가 매우 오래되었고 지질 작용이 서서히 반복된다는 "근대 지질학의 아버지"예요.',
+ a_earth4:'대서양 해저 지형도를 그려 판구조론의 증거를 처음 시각화했어요.',
+ a_earth5:'지구 공전·자전 궤도 변화가 빙하기를 일으킨다는 밀란코비치 주기 이론을 제시했어요.',
+ a_phys1:'만유인력의 법칙과 운동 법칙을 정립해 고전역학의 토대를 세웠어요.',
+ a_phys2:'전자기 유도 현상을 발견해 오늘날 발전기·전동기의 원리를 제공했어요.',
+ a_phys3:'특수·일반 상대성이론을 발표하고 광전효과 연구로 노벨물리학상을 받았어요.',
+ a_phys4:'전기와 자기를 하나로 통합한 맥스웰 방정식으로 전자기파의 존재를 예측했어요.',
+ a_phys5:'핵분열 현상을 이론적으로 처음 설명했지만 노벨상 수상에서는 제외됐어요.',
+ a_etc1:'튜링 기계 개념으로 현대 컴퓨터 이론의 기초를 놓고 에니그마 암호를 해독했어요.',
+ a_etc2:'정보를 비트 단위로 수치화하는 정보이론을 창시해 "정보이론의 아버지"로 불려요.',
+ a_etc3:'찰스 배비지의 해석기관을 위한 최초의 알고리즘을 설계해 "최초의 프로그래머"로 불려요.',
+ a_etc4:'최초의 컴파일러를 개발하고 코볼(COBOL) 언어 탄생에 기여한 미 해군 제독이에요.',
+ a_etc5:'1989년 월드와이드웹(WWW)을 발명해 오늘날 인터넷 정보 공유의 틀을 만들었어요.',
+ a_bio6:'저온살균법과 광견병 백신을 개발하고 미생물이 질병을 일으킨다는 세균설을 확립했어요.',
+ a_bio7:'제임스 왓슨과 함께 DNA 이중나선 구조를 밝혀 1962년 노벨생리의학상을 받았어요.',
+ a_bio8:'우연히 발견한 푸른곰팡이에서 최초의 항생제 페니실린을 발견했어요.',
+ a_bio9:'옥수수 연구로 유전자가 위치를 바꾸는 "전위인자"를 발견해 노벨생리의학상을 받았어요.',
+ a_bio10:'우두 접종으로 천연두를 예방하는 최초의 백신을 개발해 "면역학의 아버지"로 불려요.',
+ a_chem6:'물질이 더 이상 쪼갤 수 없는 원자로 이루어졌다는 근대 원자설을 처음 제시했어요.',
+ a_chem7:'다이너마이트를 발명한 화학자이자, 유언으로 노벨상을 만든 인물이에요.',
+ a_chem8:'기체의 압력과 부피 관계(보일의 법칙)를 밝혀 "근대 화학의 아버지"로 불려요.',
+ a_chem9:'X선 결정학으로 페니실린과 인슐린의 분자 구조를 밝혀 노벨화학상을 받았어요.',
+ a_chem10:'물질이 물에 녹으면 이온으로 나뉜다는 전해질 이온화설을 제시했어요.',
+ a_earth6:'지구가 태양 주위를 돈다는 지동설을 처음 체계적으로 주장했어요.',
+ a_earth7:'초기 조건의 작은 차이가 큰 결과를 낳는다는 "나비효과"로 카오스 이론과 현대 기상예보의 한계를 밝혔어요.',
+ a_earth8:'엘니뇨가 바다와 대기가 서로 되먹임하며 만드는 현상임을 처음 규명해 오늘날 ENSO 이론의 출발점이 됐어요.',
+ a_earth9:'행성이 태양 주위를 타원 궤도로 돈다는 행성운동 법칙을 발견했어요.',
+ a_earth10:'별이 죽으며 남기는 백색왜성의 질량 한계(찬드라세카르 한계)를 수학적으로 규명해 노벨물리학상을 받았어요.',
+ a_phys6:'망원경으로 목성의 위성을 발견하고 지동설을 관측으로 뒷받침했어요.',
+ a_phys7:'양자전기역학을 정립해 노벨물리학상을 받고, 재미있는 강의로도 유명해요.',
+ a_phys8:'전자가 정해진 궤도에서만 움직인다는 원자 모형을 제시해 양자역학의 기초를 놓았어요.',
+ a_phys9:'알파 입자 산란 실험으로 원자핵의 존재를 발견했어요.',
+ a_phys10:'위치와 운동량을 동시에 정확히 알 수 없다는 불확정성 원리를 발표했어요.',
+ a_etc6:'톱니바퀴로 계산하는 "해석기관"을 설계해 최초의 기계식 컴퓨터 개념을 만들었어요.',
+ a_etc7:'MIT 인공지능 연구소를 설립해 "인공지능의 아버지"로 불려요.',
+ a_etc8:'"인공지능"이라는 용어를 만들고 프로그래밍 언어 LISP를 개발했어요.',
+ a_etc9:'손 계산으로 NASA 유인 우주비행의 궤도를 계산한 수학자예요.',
+ a_etc10:'오늘날 컴퓨터 구조의 기본 틀(폰 노이만 구조)을 설계했어요.',
+ a_davinci:'회화·해부학·공학을 넘나든 만능인으로 모나리자를 그리고 헬리콥터·전차 설계도를 남겼어요.',
+ a_uni1:'남미 탐험으로 생물·지질·기후를 통합해 연구해 "마지막 만능 학자"로 불려요.',
+ a_uni2:'뉴턴과 별개로 미적분을 발명하고, 오늘날 컴퓨터의 기반인 이진법을 처음 체계화했어요.',
+ a_uni3:'물리학·생물학·천문학까지 아우르며 서양 과학의 틀을 처음 세운 고대 최고의 박학다식한 학자예요.'
+};
+const RESEARCH_COST={bachelor:30,master:70,phd:150};
+const RESEARCH_SCORE_RANGE={bachelor:[10,30],master:[25,55],phd:[50,110]};
+const PAPER_TITLES={
+ bio:['개체군 변이 양상 관찰 보고','생태계 평형 회복 모델 연구','생물다양성 지표 개발 연구',
+  '멘델 유전 법칙 재현 실험','자연선택 시뮬레이션 모델 개발','DNA 복제 오류율 비교 연구',
+  '외래종 유입에 따른 생태계 교란 분석','천적-먹이 개체군 진동 모델링','유전적 다양성과 질병 저항성 상관 연구',
+  '침입종 확산 속도 예측 모델'],
+ chem:['산화·환원 반응 속도 분석','중화반응 열출입 정밀 측정','신물질 촉매 반응 탐구',
+  '주기율표 기반 원소 성질 예측 검증','미세플라스틱 화학적 분해 연구','산성비가 토양 pH에 미치는 영향 분석',
+  '전지 소재 산화환원 효율 비교','친환경 비료 합성 공정 개발','금속 부식 방지 코팅 연구',
+  '실내 공기질 화학 반응 모니터링'],
+ earth:['고대 기후 복원 연구','지질시대 경계층 분석','대기대순환 패턴 모델링',
+  '판구조 운동과 지진대 상관 분석','고생물 화석 분포로 본 대륙이동 검증','빙하 코어 기반 과거 온실기체 농도 추정',
+  '해수면 변동과 해안 침식 예측','화산 분화 전조 현상 데이터 분석','엘니뇨·라니냐 발생 주기 통계 연구',
+  '도시 열섬 현상과 미기후 변화 연구'],
+ phys:['전자기유도 효율 개선 연구','태양에너지 전환 효율 분석','신재생에너지 계통 연계 연구',
+  '핵융합 에너지 생성 조건 시뮬레이션','발전기 코일 권선수와 기전력 상관 실험','에너지 저장장치 효율 비교 연구',
+  '전자기파 스펙트럼 활용 사례 조사','상대성이론 검증 실험 재현','풍력·태양광 하이브리드 발전 효율 분석',
+  '초전도체 임계온도 측정 연구'],
+ etc:['융합 데이터 기반 예측 모델','과학기술 윤리 프레임워크 연구','알고리즘 기반 자료 분석 연구','인공지능 활용 사례 조사',
+  '빅데이터 기반 감염병 확산 예측','알고리즘 편향성 검증 연구','자율주행 윤리 딜레마 시나리오 분석',
+  '개인정보 보호와 데이터 활용의 균형 연구','인공지능 저작권 쟁점 조사','디지털 격차 해소 방안 연구'],
+ uni:['여러 분야를 넘나든 융합 연구 방법론 고찰','학문 간 경계를 넘는 통합적 관찰 기록','다학제 연구가 과학사에 남긴 영향 분석',
+  '박학다식형 연구자의 문제 해결 방식 연구','서로 다른 분야의 발견을 잇는 유추 사례 조사']
+};
+
+/* ================= 로그인한 학생별로 저장(같은 컴퓨터를 여러 학생이 써도 진행이 안 섞이게) ================= */
+let CURRENT_STUDENT=null; // {name, studentId}
+function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'guest'); }
+
+/* ================= 상태 (로그인한 학생별로 이 브라우저에 저장됨) ================= */
+// assistants: [{poolId, assignedDept(부서id|null), lastCollectedAt(ms)}]
+const S={rc:0,src:0,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright']};
+
+function loadLabState(){
+ try{
+  const raw=localStorage.getItem(sKey('lab_state_v1'));
+  if(!raw) return;
+  const s=JSON.parse(raw);
+  S.rc=s.rc||0; S.src=s.src||0; S.lv=s.lv||1; S.fail=s.fail||0;
+  S.assistants=Array.isArray(s.assistants)?s.assistants:[]; S.researchScore=s.researchScore||0;
+  S.papers=Array.isArray(s.papers)?s.papers:[]; S.nobelCount=s.nobelCount||0;
+  S.labTheme=s.labTheme||'bright';
+  S.ownedThemes=Array.isArray(s.ownedThemes)&&s.ownedThemes.length?s.ownedThemes:['bright'];
+ }catch(e){}
+}
+function saveLabState(){
+ try{ localStorage.setItem(sKey('lab_state_v1'), JSON.stringify({
+   rc:S.rc, src:S.src, lv:S.lv, fail:S.fail,
+   assistants:S.assistants, researchScore:S.researchScore, papers:S.papers, nobelCount:S.nobelCount,
+   labTheme:S.labTheme, ownedThemes:S.ownedThemes
+ })); }
+ catch(e){}
+}
+
+/* 실제 챕터 게임(roundengine.js의 saveLabProgress)이 남긴 결과를 읽어와 반영한다.
+   ① 라운드별로 "이 학생이 이 라운드를 이미 한 번이라도 맞은 적 있는지"를 추적해서, 새로 맞은 라운드마다
+      연구포인트 +10(재획득 없음). ② 통과(기준 문제 수 이상 정답) + 의견형 3개 모두 작성이면 "+1점 대상" 안내. */
+function everCorrectSet(chapterId){
+ try{ return new Set(JSON.parse(localStorage.getItem(sKey('lab_evercorrect_'+chapterId))||'[]')); }
+ catch(e){ return new Set(); }
+}
+function saveEverCorrectSet(chapterId, set){
+ try{ localStorage.setItem(sKey('lab_evercorrect_'+chapterId), JSON.stringify([...set])); }catch(e){}
+}
+function syncChapterResults(){
+ let changed=false;
+ ALLM().forEach(g=>{
+  if(g.kind!=='chapter') return;
+  let raw; try{ raw=localStorage.getItem(sKey('lab_result_'+g.chapterId)); }catch(e){ raw=null; }
+  if(!raw) return;
+  let result; try{ result=JSON.parse(raw); }catch(e){ return; }
+  const scorePct=result.total? Math.round(result.score/result.total*100) : 0;
+  g.best=Math.max(g.best||0, scorePct);
+  if(result.passed) g.cleared=true;
+  const claimedAt=+(localStorage.getItem(sKey('lab_claimed_'+g.chapterId))||0);
+  if(!result.at || result.at<=claimedAt) return; // 이미 반영한 결과 — 표시만 갱신하고 지급은 건너뜀
+  const everSet=everCorrectSet(g.chapterId);
+  let roundGain=0;
+  (result.roundResults||[]).forEach(rr=>{
+   if(rr.ok && !everSet.has(rr.id)){ everSet.add(rr.id); roundGain+=10; }
+  });
+  if(roundGain>0){
+   S.rc+=roundGain; changed=true;
+   saveEverCorrectSet(g.chapterId, everSet);
+   toast(`「${g.t}」 정답 반영 +${roundGain}🔬`, 'gold');
+   flyGain('rc', roundGain);
+  }
+  S.lastMini=scorePct;
+  try{ localStorage.setItem(sKey('lab_claimed_'+g.chapterId), String(result.at)); }catch(e){}
+  if(result.perfectClear){
+   const flagKey=sKey('lab_perfectflag_'+g.chapterId+'_'+result.at);
+   if(!localStorage.getItem(flagKey)){
+    try{ localStorage.setItem(flagKey,'1'); }catch(e){}
+    try{ localStorage.setItem(sKey('lab_everperfect_'+g.chapterId),'1'); }catch(e){}
+    toast(`🌟 「${g.t}」 통과 + 서술답안 완성! 선생님께 +1점 대상인지 확인해보세요`, 'gold');
+   }
+  }
+  changed=true;
+ });
+ if(changed) saveLabState();
+}
+
+/* 의견형(의견·논술형·심화읽기) 답안은 roundengine.js가 opinion_+챕터ID+_+라운드ID__학생이름 키에
+   저장해둔다(과제 진행 중이든, journalSheet에서 나중에 고쳐 쓰든 같은 키를 공유). 처음으로 글자수
+   조건을 채워서 저장된 순간에만 특별연구포인트 +50을 지급한다. */
+function opinionKey(chapterId, roundId){ return sKey('opinion_'+chapterId+'_'+roundId); }
+function opinionAwardedKey(chapterId, roundId){ return sKey('opinion_awarded_'+chapterId+'_'+roundId); }
+function syncOpinionPoints(){
+ let changed=false;
+ ALLM().forEach(g=>{
+  if(g.kind!=='chapter' || !g.opinionRounds) return;
+  g.opinionRounds.forEach(orId=>{
+   const minLen=(g.opinionMinLens&&g.opinionMinLens[orId])||20;
+   let text=''; try{ text=localStorage.getItem(opinionKey(g.chapterId,orId))||''; }catch(e){}
+   const awardedKey=opinionAwardedKey(g.chapterId,orId);
+   if(text.trim().length>=minLen && !localStorage.getItem(awardedKey)){
+    S.src+=50; changed=true;
+    try{ localStorage.setItem(awardedKey,'1'); }catch(e){}
+    toast(`「${g.t}」 의견 작성 +50💎`, 'gold');
+    flyGain('src', 50);
+   }
+  });
+ });
+ if(changed) saveLabState();
+}
+
+/* 문제 문구·통과 기준이 교사용 관리 페이지에서 바뀌어도 로비가 항상 최신 내용을 보여주도록,
+   각 챕터의 data/chN.json에서 제목·통과 기준·의견형 라운드 정보를 직접 읽어온다. */
+async function loadChapterMetas(){
+ const targets=ALLM().filter(g=>g.kind==='chapter');
+ await Promise.all(targets.map(async g=>{
+  try{
+   const res=await fetch(g.dataFile, {cache:'no-store'});
+   const data=await res.json();
+   g.t=data.meta.title;
+   const opinionRoundsFull=data.rounds.filter(r=>r.kind==='opinion');
+   const gradable=data.rounds.length - opinionRoundsFull.length;
+   g.passLabel = data.meta.passCount>0 ? `${gradable}문제 중 ${data.meta.passCount}개 이상 정답해야 클리어` : '완주만 하면 인정(성적 무관)';
+   g.opinionRounds=opinionRoundsFull.map(r=>r.id);
+   g.opinionMinLens={}; opinionRoundsFull.forEach(r=>{ g.opinionMinLens[r.id]=r.minLen||20; });
+  }catch(e){ g.passLabel = g.passLabel || '도전하기'; }
+ }));
+}
+
+/* ================= 채점 (평가계획서 20+20, 기본점수+해결점수 반영) =================
+   2026-2학기 통합과학2 평가운영계획서 "수행평가 세부기준" 원문 기준 회차별 20점 =
+   탐구 활동 수행과 답안 작성(10) + 개념 이해(4) + 자료 해석(3) + 태도(3).
+   백지 제출·미참여여도 "기본점수" 7점은 보장되는데, 이 앱은 로그인해서 들어오는 것 자체를
+   이미 "참여"로 보고 여기에 +1점을 더해 회차당 기본점수를 8점으로 잡는다(참여만 해도 확보되는 점수).
+   나머지 12점은 이 앱이 직접 측정할 수 있는 "탐구 활동 수행과 답안 작성"을 문제 정답 비율로 환산해 보여주고
+   (기본 8 + 해결 12 = 20, 회차당), 그 안의 세부 내용(개념 이해·자료 해석·태도)은 선생님이 답안을 직접
+   읽고 이 20점 범위 안에서 최종 점수를 확정한다 — 앱이 보여주는 20점 위에 별도로 더 얹히는 점수가 아니다. */
+function termGames(term){return READY().filter(g=>gameTerm(g)===term);}
+const TERM_BASE=8, TERM_EXTRA_MAX=12; // 20점 중 기본점수 8(원래 7+참여 1) + 해결하면 받는 점수 최대 12
+function termScore(term){
+  const gs=termGames(term);
+  const totalRaw=gs.reduce((s,g)=>s+g.point,0);
+  const earnedRaw=gs.reduce((s,g)=>s+(g.cleared?g.point:0),0);
+  const ratio = totalRaw?earnedRaw/totalRaw:0;
+  const extra = Math.round(ratio*TERM_EXTRA_MAX);
+  return {base:TERM_BASE, extra, total:TERM_BASE+extra, earnedRaw, totalRaw, count:gs.length};
+}
+function paTotal(){
+ const t1=termScore(1), t2=termScore(2);
+ const baseSum=t1.base+t2.base, extraSum=t1.extra+t2.extra;
+ return {t1, t2, baseSum, extraMax:TERM_EXTRA_MAX*2, extraSum, appSum:baseSum+extraSum, grandTotal:40};
+}
+/* ③ 추가 보너스는 서버 조회가 필요해 render()마다 매번 새로 계산할 수 없다 — paSheet가 열릴 때
+   구한 값을 여기 캐시해 두고, 상단 표시(N/40)에도 같이 반영한다. */
+let _cachedBonusTotal = 0;
+
+/* +1점 보너스 대상(통과+서술완성 단원 목록 · 전체 랭킹 top10 여부)을 모아 보여준다 */
+function everPerfectChapters(){
+ return ALLM().filter(g=>g.kind==='chapter' && localStorage.getItem(sKey('lab_everperfect_'+g.chapterId))==='1');
+}
+async function computeBonusInfo(){
+ const perfects=everPerfectChapters();
+ let rankTop10=false;
+ try{
+  const res=await fetch('/api/labscore',{cache:'no-store'});
+  const list=await res.json();
+  const myRank=list.findIndex(s=>s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name));
+  rankTop10 = myRank>=0 && myRank<10;
+ }catch(e){}
+ return {perfects, rankTop10, total: perfects.length + (rankTop10?1:0)};
+}
+
+
+/* ================= 아이소메트릭 방 (레벨에 따라 자동 성장) ================= */
+const TW=56,TH=28;
+/* 로비(연구소)는 가장 크게 보여준다 */
+const LAB_GX=15,LAB_GY=11;
+const iso=(x,y)=>[(x-y)*TW/2,(x+y)*TH/2];
+const P=a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+function roomViewBox(gx,gy){
+ const xMin=-gy*28-40, width=(gx+gy)*28+80, yMin=-152, height=(gx+gy)*14+192;
+ return `${xMin} ${yMin} ${width} ${height}`;
+}
+function setStageViewBox(gx,gy){
+ const svg=document.getElementById('lab'); if(svg) svg.setAttribute('viewBox', roomViewBox(gx,gy));
+}
+/* 로비를 돌아다니는 캐릭터는 실제로 내가 보유한 조수들이다. 배치 안 한 조수는 항상 로비에 있고,
+   연구동에 배치한 조수는 연구를 마칠 때까지(최대 저장량을 채울 때까지) 로비에 보이지 않는다 —
+   연구가 끝나면 checkAutoReturns()가 자동으로 로비로 복귀시키고 팝업으로 알려준다.
+   이동 상태(pos/path/say 등)는 화면 연출용이라 저장 상태(S)에는 넣지 않고 poolId로 따로 관리한다. */
+const ASSIST_ANIM={};
+function idleAssistants(){ return S.assistants.filter(a=>!a.assignedDept); }
+function animFor(poolId){
+ if(!ASSIST_ANIM[poolId]) ASSIST_ANIM[poolId]={pos:null,path:[],st:'idle',tmr:20+Math.random()*60|0,emo:'',face:1,say:'',sayT:0};
+ return ASSIST_ANIM[poolId];
+}
+const MEME_LINES=[
+ '오늘도 연구소 잘 부탁해요','실험대는 제가 정리했어요','다음 도전은 뭐예요?','연구소가 점점 좋아지네요','수고하셨어요!',
+ '뇌 용량 부족, 연구포인트 좀 주세요','이거 실화냐?','제 논문 어디갔죠... 아 여기 있네요','오늘 하루도 킹받는 연구',
+ '이 정도면 인간계 최강 아닌가요','일해라 절해라 하지 마세요, 저 지금 열일 중이에요','저 지금 바빠요(안 바쁨)',
+ '연구는 장비빨, 저는 재능빨','오늘의 목표: 아무 사고도 안 치기','저는 완전 인간 지식백과예요','당 떨어졌어요, 연구포인트가 당입니다',
+ '이거 그냥 노는거 아니냐구요? 아니거든요','오늘따라 실험이 잘 풀리네요, 기분 탓인가','연구실 온도 몇 도예요? 저 지금 텐션 뜨거워요',
+ '한 번 사는 인생, 연구도 화끈하게','전공책 덮고 유튜브 볼까 고민 중이에요(안 봄)','저 오늘 컨디션 최상, 물오른 과학자예요',
+ 'MSG 첨가한 논문 아니고 진짜 팩트만 담았어요','제가 최애하는 원소가 뭐냐면요... 아 이건 다음에 말씀드릴게요'
+];
+function sayFor(){
+ const un=READY().filter(g=>!g.cleared);
+ if(Math.random()<.35&&un.length) return `「${un[0].t}」 아직이시죠?`;
+ return MEME_LINES[Math.random()*MEME_LINES.length|0];
+}
+/* 게임 규칙(어떻게 포인트를 받는지)을 알려주는 대사 — 조수마다 배치 여부에 따라 다르게 안내한다 */
+function ruleLineFor(inst, def){
+ return '저를 연구동에 배치하면 시간이 지날수록 연구포인트가 쌓여요! 연구를 마치면 자동으로 로비에 돌아와서 알려드려요';
+}
+/* 조수를 클릭할 때마다: 전공 소개 / 실제 업적 / 게임 규칙 안내 / 인터넷 밈 중 하나를 랜덤으로 말한다 */
+function sayForAssistant(inst, def){
+ const roll=Math.random();
+ if(roll<0.24) return `저는 ${MJ[def.theme]?MJ[def.theme].n:def.theme} 전공이에요!`;
+ if(roll<0.48 && SCIENTIST_INFO[def.id]) return SCIENTIST_INFO[def.id];
+ if(roll<0.66) return ruleLineFor(inst, def);
+ return MEME_LINES[Math.random()*MEME_LINES.length|0];
+}
+/* 클릭하면: (1) 그 자리에 멈추고 (2) 오른쪽에 간단한 특징 팝업을 띄우고 (3) 대사를 친다 */
+function talkAssistant(poolId){
+ const idx=S.assistants.findIndex(a=>a.poolId===poolId);
+ const inst=S.assistants[idx], def=assistantDef(poolId); if(!inst||!def) return;
+ const c=animFor(poolId);
+ c.say=sayForAssistant(inst, def); c.sayT=70; c.path=[]; c.st='idle'; c.tmr=45; c.emo='';
+ showAssistInfoPanel(inst, def);
+ scene();
+}
+function showAssistInfoPanel(inst, def){
+ const panel=document.getElementById('assistInfoPanel'); if(!panel) return;
+ const deg=DEGREE[inst.degree||'bachelor'];
+ const trait=SCIENTIST_INFO[def.id]||'';
+ panel.innerHTML=`<div class="aiName" style="color:${deg.color}">${def.name}</div>
+  <div class="aiMeta">${MJ[def.theme]?MJ[def.theme].n:def.theme} 전공 · ${rankName(def,inst.degree)} Lv.${inst.lv||1}</div>
+  ${trait?`<div class="aiTrait">${trait}</div>`:''}`;
+ panel.classList.remove('hide');
+ clearTimeout(panel._hideTimer);
+ panel._hideTimer=setTimeout(()=>panel.classList.add('hide'), 6000);
+}
+/* 긴 문장도 잘리지 않도록 여러 줄로 나눈다(업적 소개 문장은 40~70자에 달함) */
+function wrapKo(t, maxLen){
+ maxLen = maxLen||14;
+ if(t.length<=maxLen) return [t];
+ const words=t.split(' '); const lines=[]; let cur='';
+ words.forEach(w=>{
+  if(cur && (cur+' '+w).trim().length>maxLen){ lines.push(cur.trim()); cur=w; }
+  else cur=(cur+' '+w).trim();
+ });
+ if(cur) lines.push(cur.trim());
+ const final=[];
+ lines.forEach(l=>{
+  if(l.length<=maxLen+5) final.push(l);
+  else for(let i=0;i<l.length;i+=maxLen) final.push(l.slice(i,i+maxLen));
+ });
+ return final.slice(0,6);
+}
+/* 대략적인 글자수 추정 대신, 실제로 SVG에 그린 뒤 getComputedTextLength()로 정확히 재서
+   말풍선 크기를 다시 맞춘다(한글 폭 추정이 부정확해 풍선이 작아 보이던 문제 해결) */
+let _bubbleUid=0;
+function bubble(text){
+ const uid='bub'+(_bubbleUid++);
+ const ls=wrapKo(text), h=ls.length*17+16;
+ return `<g class="bubblewrap" transform="translate(0,${-83-h/2})" style="pointer-events:none">
+  <rect class="bubblerect" data-buid="${uid}" x="-70" y="${-h/2}" width="140" height="${h}" rx="10" fill="#fffdf8" stroke="#e0d5c4" stroke-width="1.6"/>
+  <path d="M-5,${h/2-1} l5,8 l5,-8 z" fill="#fffdf8" stroke="#e0d5c4" stroke-width="1.6"/>
+  <rect x="-5" y="${h/2-3}" width="10" height="3" fill="#fffdf8"/>
+  ${ls.map((l,i)=>`<text class="bubbletext" data-buid="${uid}" x="0" y="${-h/2+19+i*17}" font-size="11.5" text-anchor="middle" fill="#4b4037" font-weight="700">${l}</text>`).join('')}</g>`;
+}
+function fixBubbleSizes(){
+ document.querySelectorAll('.bubblerect').forEach(rect=>{
+  const uid=rect.getAttribute('data-buid');
+  let maxW=70;
+  document.querySelectorAll(`.bubbletext[data-buid="${uid}"]`).forEach(t=>{
+   try{ maxW=Math.max(maxW, t.getComputedTextLength()); }catch(e){}
+  });
+  const w=Math.min(400, maxW+30);
+  rect.setAttribute('x', -w/2); rect.setAttribute('width', w);
+ });
+}
+const SEATS=[{x:3.1,y:1.7},{x:5.4,y:1.7},{x:7.6,y:1.7},{x:3.9,y:6.5}];
+function POIs(){return [{x:1.5,y:3.7,e:'✏️'},{x:5.9,y:1.0,e:'☁️'},{x:12.4,y:1.7,e:'🧊'},{x:11.8,y:8.4,e:'📋'},{x:1.8,y:8.6,e:'☕'}];}
+const TBL={x0:2.5,y0:2.0,x1:11.5,y1:6.2};
+function inT(x,y){return x>TBL.x0&&x<TBL.x1&&y>TBL.y0&&y<TBL.y1;}
+function route(a,b){
+  let hit=false;
+  for(let t=0;t<=1.001;t+=1/16){if(inT(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t)){hit=true;break;}}
+  if(!hit)return [b];
+  const UP=TBL.y0-.5,DN=TBL.y1+.6,L=TBL.x0-.6,R=TBL.x1+.6;
+  const ya=a.y<=(TBL.y0+TBL.y1)/2?UP:DN, yb=b.y<=(TBL.y0+TBL.y1)/2?UP:DN;
+  if(ya===yb)return [{x:a.x,y:ya},{x:b.x,y:ya},b];
+  const xc=(Math.abs(a.x-L)+Math.abs(b.x-L))<=(Math.abs(a.x-R)+Math.abs(b.x-R))?L:R;
+  return [{x:a.x,y:ya},{x:xc,y:ya},{x:xc,y:yb},{x:b.x,y:yb},b];
+}
+function moveTick(){
+  checkAutoReturns();
+  const pois=POIs();
+  idleAssistants().slice(0,9).forEach((inst,i)=>{
+    const c=animFor(inst.poolId);
+    if(!c.pos)c.pos = i<SEATS.length? {...SEATS[i]} : {...pois[Math.random()*pois.length|0]};
+    if(inT(c.pos.x,c.pos.y)) c.pos.y=(c.pos.y-TBL.y0)<(TBL.y1-c.pos.y)?TBL.y0-.5:TBL.y1+.6;
+    if(c.say){ if(--c.sayT<=0){c.say='';c.tmr=15;} c.st='idle'; return; }
+    if(c.st==='walk'){
+      const t=c.path[0];
+      if(!t){c.st='idle';c.tmr=30+Math.random()*60|0;return;}
+      const dx=t.x-c.pos.x,dy=t.y-c.pos.y,d=Math.hypot(dx,dy);
+      if(d<.09){c.pos={x:t.x,y:t.y};c.path.shift();if(!c.path.length){c.st='idle';c.tmr=(c.goSeat?60:35)+Math.random()*70|0;}}
+      else{const sp=.075;c.pos.x+=dx/d*sp;c.pos.y+=dy/d*sp;c.face=(dx-dy)>=0?1:-1;}
+    }else if(--c.tmr<=0){
+      const home=i<SEATS.length?SEATS[i]:null;
+      const atHome=home&&Math.abs(c.pos.x-home.x)<.2&&Math.abs(c.pos.y-home.y)<.2;
+      if(home&&!atHome&&Math.random()<.7){c.path=route(c.pos,home);c.goSeat=1;c.emo='';}
+      else{const p=pois[Math.random()*pois.length|0];c.path=route(c.pos,{x:p.x,y:p.y});c.goSeat=0;c.emo=p.e;}
+      c.st='walk';
+      if(Math.random()<.15){c.say=sayFor();c.sayT=42;}
+    }
+  });
+  scene();
+}
+/* 연구실 배경: 상점에서 고른 테마 컨셉아트를 방 뷰박스에 그대로 깔고, 그 위에 동적 요소(트로피/화분/
+   조수)만 얹는다. 그림의 방 바깥 모서리는 페이지 배경색(#f3ece0)으로 이미 칠해져 있어서(그림 자체를
+   그렇게 다시 그림) 별도의 crop/clip-path 없이 그대로 놓기만 해도 페이지와 자연스럽게 이어진다. */
+function labBgImage(gx,gy){
+  const vb=roomViewBox(gx,gy).split(' ').map(Number);
+  const [x,y,w,h]=vb, t=labThemeDef(S.labTheme);
+  return `<image href="${t.img}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+}
+function scene(){
+  setStageViewBox(LAB_GX,LAB_GY);
+  const objs=[]; let g='';
+  const add=(d,s)=>objs.push({d,s});
+  g+=labBgImage(LAB_GX,LAB_GY);
+  if(S.researchScore>=3500){const [px,py]=iso(2.6,9.0);
+    add(11.6,`<g transform="translate(${px},${py})"><ellipse rx="12" ry="5" fill="rgba(90,70,50,.12)"/>
+      <image href="assets/lab/trophy.png" x="-20" y="-46" width="40" height="46" preserveAspectRatio="xMidYMid meet"/></g>`);}
+  /* 노벨상을 받으면 벽에 메달을 건다(최대 6개까지 표시) */
+  if(S.nobelCount>0){
+   const medalCount=Math.min(6, S.nobelCount);
+   for(let i=0;i<medalCount;i++){
+    const w1=iso(1.6+i*1.5,0);
+    add(2, `<g transform="translate(${w1[0]},${w1[1]-70})">
+      <circle r="8" fill="#f5d060" stroke="#c99622" stroke-width="1.5"/>
+      <circle r="4.5" fill="#fff3d6"/>
+      <path d="M-2,7 l2,7 l2,-7 z" fill="#c1544c"/></g>`);
+   }
+  }
+  /* 로비에 보이는 조수 = 연구동에 배치 안 한(대기 중인) 조수뿐이다. 배치된 조수는 연구를 마칠 때까지
+     로비에 나타나지 않는다(자동 복귀는 checkAutoReturns 참고). 클릭하면 멈춰서 대사+정보를 보여준다. */
+  idleAssistants().slice(0,9).forEach((inst,i)=>{
+    const def=assistantDef(inst.poolId); if(!def) return;
+    const c=animFor(inst.poolId);
+    if(!c.pos)return;
+    const [px,py]=iso(c.pos.x,c.pos.y);
+    const walking=c.st==='walk';
+    const isLegend=!!def.rareDraw;
+    const col=isLegend ? '#f5d060' : DEGREE[inst.degree||'bachelor'].color;
+    add(c.pos.x+c.pos.y,`<g transform="translate(${px},${py})" class="clk" onclick="talkAssistant('${inst.poolId}')">
+      <circle cx="0" cy="-34" r="37" fill="transparent"/>
+      <g class="${walking?'walk':'npc'} ${c.say?'pop':''}" style="animation-delay:${i*.4}s;pointer-events:none">
+        <g transform="scale(${c.face},1)">
+         <ellipse cx="0" cy="1" rx="22" ry="8" fill="rgba(90,70,50,.13)"/>
+         <circle cx="0" cy="-28" r="28" fill="#fff" stroke="${col}" stroke-width="4" class="${isLegend?'legendGlow':''}"/>
+         <defs><clipPath id="npcclip_${inst.poolId}_${i}"><circle cx="0" cy="-28" r="26"/></clipPath></defs>
+         <image href="assets/assistants/${inst.poolId}.png" x="-26" y="-54" width="52" height="52"
+           clip-path="url(#npcclip_${inst.poolId}_${i})" preserveAspectRatio="xMidYMid slice"/>
+        </g></g>
+      ${c.say?bubble(c.say)+`<text x="0" y="-65" font-size="9.5" text-anchor="middle" fill="#8d8175"
+         font-weight="800" style="pointer-events:none">${def.name}</text>`:''}
+      </g>`);
+  });
+  objs.sort((a,b)=>a.d-b.d).forEach(o=>g+=o.s);
+  document.getElementById('lab').innerHTML=g;
+  fixBubbleSizes();
+}
+
+
+/* ================= 재화 획득 애니메이션 ================= */
+function bumpEl(el){ if(!el) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+const FLYGAIN_META={ rc:{icon:'🔬',color:'#3f9a8a'}, src:{icon:'💎',color:'#6b6bd6'}, rs:{icon:'🏆',color:'#c4881a'} };
+function flyGain(kind, amount){
+ if(!amount) return;
+ const meta=FLYGAIN_META[kind]; if(!meta) return;
+ const targetEl=document.getElementById(kind);
+ const pillEl=targetEl && targetEl.closest('.pill');
+ const stageEl=document.getElementById('stage');
+ if(!pillEl || !stageEl) return;
+ const tRect=pillEl.getBoundingClientRect();
+ const sRect=stageEl.getBoundingClientRect();
+ const el=document.createElement('div');
+ el.className='flygain';
+ el.style.color=meta.color;
+ el.textContent=`+${Math.floor(amount).toLocaleString()} ${meta.icon}`;
+ el.style.left=(sRect.left+sRect.width/2)+'px';
+ el.style.top=(sRect.top+sRect.height/2)+'px';
+ document.body.appendChild(el);
+ requestAnimationFrame(()=>{
+  requestAnimationFrame(()=>{
+   el.style.left=(tRect.left+tRect.width/2)+'px';
+   el.style.top=(tRect.top+tRect.height/2)+'px';
+   el.style.opacity='0';
+  });
+ });
+ setTimeout(()=>{ el.remove(); bumpEl(pillEl); if(kind==='rs') bumpEl(document.getElementById('rsHero')); }, 660);
+}
+
+/* ================= 렌더 ================= */
+let _lastRsRendered=null;
+function render(){
+  rc.textContent=Math.floor(S.rc).toLocaleString();
+  src.textContent=Math.floor(S.src).toLocaleString();
+  const newRs=Math.floor(S.researchScore);
+  rs.textContent=newRs.toLocaleString();
+  rs2.textContent=newRs.toLocaleString();
+  const rsHeroEl=document.getElementById('rsHero');
+  if(rsHeroEl){
+   rsHeroEl.textContent=newRs.toLocaleString();
+   if(_lastRsRendered!==null && newRs>_lastRsRendered) bumpEl(rsHeroEl);
+  }
+  _lastRsRendered=newRs;
+  const pa=paTotal(); const paShown=pa.appSum+_cachedBonusTotal; paS.textContent=paShown; paS2.textContent=paShown;
+  scene();
+  saveLabState();
+}
+function sheet(t,c,h,back){document.getElementById('sheetHost').innerHTML=
+ `<div class="sheet" onclick="if(event.target===this)closeSheet()"><div class="sbody">
+  <div class="shead"><button class="back" onclick="${back||'closeSheet()'}">‹</button>
+  <div><h2>${t}</h2><div class="cap">${c}</div></div></div><div class="scont">${h}</div></div></div>`;}
+function closeSheet(){document.getElementById('sheetHost').innerHTML='';}
+function modal(h){document.getElementById('modalHost').innerHTML=`<div class="modal"><div class="card">${h}</div></div>`;}
+function closeModal(){document.getElementById('modalHost').innerHTML='';}
+function toast(m,c=''){const t=document.createElement('div');t.className='tst '+c;t.textContent=m;
+ document.getElementById('toast').appendChild(t);setTimeout(()=>t.remove(),2500);}
+
+/* ================= 포인트(재화) 설명 ================= */
+const POINT_INFO=[
+ {key:'rs', ic:'🏆', n:'연구점수', desc:'연구 활동(논문 투고)으로 쌓이는 점수예요. 전체 랭킹을 매기는 데 쓰이고, 랭킹 top10에 들면 수행평가에 +1점 보너스 대상이 돼요.'},
+ {key:'rc', ic:'🔬', n:'연구포인트', desc:'과제(수행평가) 문제를 맞히거나, OX 퀴즈를 맞히거나, 조수를 클릭해서 받아요. 조수 강화(레벨업)와 논문 투고에 써요.'},
+ {key:'src', ic:'💎', n:'특별연구포인트', desc:'과제의 의견·논술형 라운드를 처음 작성해 저장할 때 얻어요. 조수 가챠(뽑기)와 연구시간 단축권에 써요.'}
+];
+function pointInfoModal(highlightKey){
+ modal(`<h2>포인트란?</h2>
+  ${POINT_INFO.map(p=>`<div class="box" style="${p.key===highlightKey?'border-color:var(--mint2);background:#eef7f4':''}">
+    <div style="font-size:13px;font-weight:900">${p.ic} ${p.n}</div>
+    <div style="font-size:12px;color:var(--dim);margin-top:4px">${p.desc}</div>
+   </div>`).join('')}
+  <button class="btn" onclick="closeModal()">확인</button>`);
+}
+
+/* ================= 🛠 오류신고 / Q&A 게시판 ================= */
+function boardTypeLabel(t){ return t==='bug' ? '🐞 오류신고' : '❓ Q&A'; }
+async function boardSheet(){
+ sheet('🛠 오류신고 / Q&A','문제가 있거나 궁금한 점을 남겨보세요. 선생님이 확인하면 답변이 달려요.',`
+  <div class="box">
+   <div class="flabel" style="margin-bottom:8px">새 글 쓰기</div>
+   <select id="boardType" class="ftext" style="width:100%;margin-bottom:8px;padding:10px;border-radius:10px;border:2px solid var(--line)">
+    <option value="bug">🐞 오류신고(게임이 이상해요)</option>
+    <option value="qna">❓ Q&A(궁금한 점)</option>
+   </select>
+   <input id="boardTitle" placeholder="제목" style="width:100%;margin-bottom:8px;padding:10px;border-radius:10px;border:2px solid var(--line);box-sizing:border-box">
+   <textarea id="boardContent" placeholder="내용을 자세히 적어주세요" style="width:100%;min-height:80px"></textarea>
+   <button class="collectbtn" style="margin-top:8px" onclick="submitBoardPost()">등록</button>
+  </div>
+  <div id="boardList" style="margin-top:14px;color:var(--dim);font-size:12.5px">불러오는 중...</div>
+ `, `deptSheet()`);
+ loadBoardList();
+}
+async function submitBoardPost(){
+ const type=document.getElementById('boardType').value;
+ const title=document.getElementById('boardTitle').value.trim();
+ const content=document.getElementById('boardContent').value.trim();
+ if(!title || !content){ toast('제목과 내용을 입력하세요','bad'); return; }
+ try{
+  const res=await fetch('/api/board',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({type,name:CURRENT_STUDENT.name,classNo:CURRENT_STUDENT.studentId||'',title,content})});
+  const out=await res.json();
+  if(out.ok){ toast('등록했어요'); document.getElementById('boardTitle').value=''; document.getElementById('boardContent').value=''; loadBoardList(); }
+  else toast('등록 실패: '+(out.error||''),'bad');
+ }catch(e){ toast('등록 실패(연결 오류)','bad'); }
+}
+async function loadBoardList(){
+ const wrap=document.getElementById('boardList');
+ if(!wrap) return;
+ try{
+  const res=await fetch('/api/board',{cache:'no-store'});
+  const list=await res.json();
+  if(!list.length){ wrap.innerHTML='<div style="text-align:center;padding:16px 0">아직 등록된 글이 없어요.</div>'; return; }
+  const sorted=[...list].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  wrap.innerHTML=sorted.map(p=>`
+   <div class="box" style="text-align:left">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+     <b style="font-size:13px">${boardTypeLabel(p.type)} ${escHtml(p.title)}</b>
+     <span style="font-size:11px;color:var(--dim2)">${escHtml(p.name)}${p.classNo?'('+escHtml(p.classNo)+')':''}</span>
+    </div>
+    <div style="font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.6">${escHtml(p.content)}</div>
+    ${p.reply ? `<div style="margin-top:10px;background:#f0f7f4;border-radius:10px;padding:10px 12px">
+      <div style="font-size:11px;color:var(--mint2);font-weight:800">👩‍🏫 선생님 답변</div>
+      <div style="font-size:13px;margin-top:4px;white-space:pre-wrap;line-height:1.6">${escHtml(p.reply)}</div>
+     </div>` : `<div style="font-size:11px;color:var(--dim2);margin-top:8px">아직 답변 대기 중</div>`}
+   </div>`).join('');
+ }catch(e){ wrap.innerHTML='<div>불러오기 실패</div>'; }
+}
+function escHtml(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ================= 📋 과제 (성적 반영) ================= */
+function termBox(term){
+ const t=termScore(term), gs=termGames(term), bonus=term===0;
+ return `<div class="box" style="${bonus?'':'background:linear-gradient(160deg,#fff7e6,#fff0cf);border-color:#edd49a'}">
+  <h3 style="color:${bonus?'':'#a5822c'};font-weight:900;font-size:13px">${TERM_LABEL[term]}</h3>
+  ${bonus?`<div style="font-size:12px;color:var(--dim)">이 과제들은 성적에 반영되지 않고 크레딧만 줍니다</div>`
+   :`<div style="font-size:38px;font-weight:900;color:#c4881a;line-height:1.1">${t.total}<span style="font-size:15px">/20점</span></div>
+    <div style="font-size:11px;color:#a5822c">기본점수 ${t.base}점 + 문제를 풀어서 받은 점수 ${t.extra}점 (이 창에 열린 과제 배점 ${t.totalRaw}점 중 ${t.earnedRaw}점 클리어)</div>`}
+  ${gs.length?gs.map(g=>`<div class="mrow" style="cursor:default;margin-top:8px">
+    ${g.cleared?'<span style="color:var(--green);font-weight:900">✓</span>':'<span style="width:12px"></span>'}
+    <span class="mt">${g.t}<small>${g.passLabel||'도전하기'} · 최고기록 ${g.best||0}점</small></span>
+    <span class="bg ${g.cleared?'p':'n'}">${g.cleared?'클리어':'대기'}</span></div>`).join('')
+   :`<div style="font-size:12px;color:var(--dim);margin-top:8px">아직 이 창에 열린 과제가 없어요</div>`}
+ </div>`;
+}
+async function paSheet(){
+ const pa=paTotal();
+ sheet('수행평가 현황 (40점 만점)','기본점수 + 문제를 풀어서 받는 점수를 한눈에 볼 수 있어요',`
+  <div class="banner gold">이 화면이 <b>성적과 관련된 전부</b>입니다. 조수·연구활동 같은 다른 게임 요소는 여기 안 나옵니다 — 안 해도 만점에는 지장 없어요.</div>
+  <div class="box" style="text-align:center;background:linear-gradient(160deg,#eef7f4,#e2f2ec);border-color:#bce3d8">
+   <div style="font-size:12px;color:var(--mint2);font-weight:800">총점(평가계획서 기준) 40점 만점</div>
+   <div style="font-size:11px;color:var(--dim);margin-top:3px">수행 1회 20점 + 수행 2회 20점 · 회차별 구성: 기본점수 8점(참여) + 문제를 풀면 받는 점수 최대 12점 — 이 20점 안에서 선생님이 개념 이해·자료 해석·태도를 보고 최종 확정합니다</div>
+  </div>
+  <div class="box" style="text-align:center">
+   <div style="font-size:12px;color:var(--dim);font-weight:800">① 기본점수 — 로그인해서 참여하면 보장돼요</div>
+   <div style="font-size:38px;font-weight:900;color:var(--mint2);line-height:1.1">${pa.baseSum}<span style="font-size:15px">/16점</span></div>
+   <div style="font-size:11px;color:var(--dim)">평가계획서 기준 회차당 기본점수 7점 + 참여 1점 = 8점(백지 제출·미참여여도 7점은 보장)</div>
+  </div>
+  <div class="box" style="text-align:center">
+   <div style="font-size:12px;color:var(--dim);font-weight:800">② 수행평가(과제)를 실제로 해결하면 받는 점수</div>
+   <div style="font-size:38px;font-weight:900;color:#c4881a;line-height:1.1">${pa.extraSum}<span style="font-size:15px">/${pa.extraMax}점</span></div>
+   <div style="font-size:11px;color:var(--dim)">문제를 맞힐수록 올라가요. 이 안의 세부 내용(개념 이해·자료 해석·태도)은 선생님이 답안 질을 직접 보고 확정합니다</div>
+  </div>
+  <div class="box" id="bonusBox" style="text-align:center;color:var(--dim)">③ 그 외 추가 보너스 확인 중...</div>
+  <div class="box" id="grandTotalBox" style="text-align:center;background:linear-gradient(160deg,#fff7e6,#fff0cf);border-color:var(--gold)">
+   <div style="font-size:12px;color:#a5822c;font-weight:800">지금까지 확인된 총점 (①+②+③)</div>
+   <div style="font-size:38px;font-weight:900;color:#c4881a;line-height:1.1">${pa.appSum}<span style="font-size:15px">/40점</span></div>
+  </div>
+  ${termBox(1)}${termBox(2)}${termBox(0)}
+  <div class="box" style="background:#eef7f4;border-color:#bce3d8;font-size:12.5px;color:var(--dim)">
+   목표점수를 넘으면 그 창의 점수가 오릅니다. 몇 번을 도전하든 무료이니 <b>성실하게 계속 도전하면 만점</b>에 지장이 없어요.</div>`);
+ const bonus=await computeBonusInfo();
+ _cachedBonusTotal = bonus.total;
+ const box=document.getElementById('bonusBox');
+ if(!box) return; // 그 사이 창을 닫았으면 무시
+ box.outerHTML=`<div class="box" style="text-align:center;${bonus.total?'background:#fff3d6;border-color:#edd49a':''}">
+   <div style="font-size:12px;color:${bonus.total?'#a5822c':'var(--dim)'};font-weight:800">③ 그 외 추가 보너스 (선생님 확인 후 반영)</div>
+   <div style="font-size:38px;font-weight:900;color:${bonus.total?'var(--gold)':'var(--dim2)'};line-height:1.1">+${bonus.total}점</div>
+   ${bonus.perfects.length?`<div style="font-size:11.5px;color:#7a5c1c;margin-top:6px;text-align:left">🌟 통과+서술완성(+1점씩): ${bonus.perfects.map(g=>g.t).join(', ')}</div>`:''}
+   ${bonus.rankTop10?`<div style="font-size:11.5px;color:#7a5c1c;margin-top:4px">🏆 연구점수 전체 랭킹 top10(+1점)</div>`:''}
+   ${!bonus.total?`<div style="font-size:11px;color:var(--dim)">아직 추가된 점수가 없어요. 단원을 통과하고 서술답안을 다 쓰거나 랭킹 top10에 들면 여기 표시돼요.</div>`:''}
+  </div>`;
+ const gt=document.getElementById('grandTotalBox');
+ if(gt) gt.querySelector('div:last-child').innerHTML = `${pa.appSum+bonus.total}<span style="font-size:15px">/40점</span>`;
+ render(); // 상단·상세 카드의 N/40 표시에도 보너스를 반영
+}
+function deptSheet(){
+ sheet('과제 (성적에 반영)','연구동을 골라 과제를 진행하세요',`
+  <div class="banner gold">여기서 하는 과제는 실제 수행평가 게임입니다. 눌러서 끝까지 풀고 제출하면 이 화면에 결과가 반영돼요.</div>
+  <button class="btn" style="margin:0 0 12px;background:#fff;color:var(--txt);border:2px solid var(--gold)" onclick="paSheet()">📋 내 수행평가 점수(기본+추가) 자세히 보기</button>
+  ${DEPTS.map(d=>{
+  const ready=d.ms.filter(m=>m.status==='ready'), done=ready.filter(m=>m.cleared).length;
+  return `<button class="mrow" style="${d.open?'':'opacity:.55'}" onclick="${d.open?`missionSheet('${d.id}')`:`toast('진도가 나가면 열려요','bad')`}">
+   <span style="font-size:22px">${d.open?`<img src="assets/depts/${d.id}.png" style="width:22px;height:22px;border-radius:8px;object-fit:cover;vertical-align:middle">`:'🔒'}</span>
+   <span class="mt">${d.n}<small>${d.u}${d.dueDate?' · '+deptDueLabel(d):''}</small></span>
+   <span class="bg ${d.open?'p':'n'}">${d.open?`${done}/${ready.length} 클리어`:'잠김'}</span></button>`;}).join('')}`);}
+function missionSheet(did){
+ const d=DEPTS.find(x=>x.id===did);
+ const working=S.assistants.filter(a=>a.assignedDept===did);
+ const workerPanel = working.length ? `<div class="box" style="background:#eef7f4;border-color:#bce3d8">
+   <h3 style="color:var(--mint2)">🎓 이 연구동에서 활동 중인 조수</h3>
+   ${working.map(inst=>{
+    const def=assistantDef(inst.poolId); const deg=DEGREE[inst.degree||'bachelor'];
+    const idx=S.assistants.indexOf(inst);
+    const isLegend=!!def.rareDraw;
+    return `<div class="brow" style="display:flex;align-items:center;gap:8px;padding:5px 0;flex-wrap:wrap">
+     <img src="assets/assistants/${inst.poolId}.png" class="${isLegend?'legendGlow':''}" style="flex:none;width:30px;height:30px;border-radius:50%;
+       object-fit:cover;border:2.5px solid ${isLegend?'#f5d060':deg.color}"/>
+     ${rarityBadgeHtml(def,inst.degree,inst.lv||1)}
+     <span style="font-weight:800;font-size:12.5px">${def.name}</span>
+     <span style="margin-left:auto;font-size:10.5px;color:var(--mint2);font-weight:800">${remainingTimeLabel(inst)}</span>
+     <button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line);flex:none;width:100%;margin-top:4px"
+       onclick="forceReturnAssistant(${idx});missionSheet('${did}')">🏠 로비로 돌아오게 하기</button>
+    </div>`;}).join('')}
+   <div style="font-size:11px;color:var(--dim);margin-top:6px">연구를 마치면 자동으로 로비로 돌아와서 알려드려요. 급하면 지금까지 모은 만큼만 받고 바로 불러올 수도 있어요.</div>
+  </div>` : '';
+ const otherDepts=DEPTS.filter(x=>x.id!==did && x.open);
+ const deptSwitcher = otherDepts.length ? `<div class="box" style="padding:10px 12px">
+   <div style="font-size:11px;color:var(--dim);font-weight:800;margin-bottom:7px">🏢 다른 연구동으로 이동</div>
+   <div style="display:flex;gap:6px;flex-wrap:wrap">
+    ${otherDepts.map(od=>`<button class="btn" style="margin-top:0;width:auto;padding:6px 10px;font-size:11.5px;
+      background:#fff;color:var(--txt);border:1.5px solid var(--line)" onclick="missionSheet('${od.id}')"><img src="assets/depts/${od.id}.png" style="width:14px;height:14px;border-radius:5px;object-fit:cover;vertical-align:-2px;margin-right:2px">${od.n}</button>`).join('')}
+   </div></div>` : '';
+ const quick=`<div class="row" style="display:flex;gap:8px;margin-bottom:12px">
+   <button class="btn" style="margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="oxSheet('${did}')">🔘 OX 퀴즈</button>
+   <button class="btn" style="margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="casualGameSheet('${did}')">🎮 미니게임</button>
+  </div>`;
+ sheet(d.n,d.u, deptSwitcher + workerPanel + quick + d.ms.map(m=>{
+  if(m.status==='soon')return `<div class="mrow soon">🔒<span class="mt">${m.t}<small>학기 중 추가 예정</small></span></div>`;
+  const b=m.cleared?'<span class="bg p">클리어</span>':`<span class="bg n">${m.passLabel||'도전하기'}</span>`;
+  const chNum=m.dataFile.split('/').pop().replace('.json','');
+  return `<div class="mrow" style="cursor:pointer;flex-wrap:wrap" onclick="playGame('${m.id}')">
+   ${m.cleared?'<span style="color:var(--green);font-weight:900">✓</span>':'<span style="width:12px"></span>'}
+   <span class="kind ${m.kind}">${KIND_LABEL[m.kind]}</span>
+   <span class="mt">${m.t}<small>${MJ[m.mj].ic} ${MJ[m.mj].n} · 개념 「${m.cp}」 · 최고기록 ${m.best||0}점</small></span>
+   <a href="교사용_수행평가관리.html?ch=${chNum}" target="_blank" onclick="event.stopPropagation()"
+     title="문제 내용 확인·수정" style="flex:none;text-decoration:none;background:#fff;border:1.5px solid var(--line);
+     border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px">📝</a>
+   <a href="javascript:void(0)" onclick="event.stopPropagation();journalSheet('${chNum}')"
+     title="의견·논술형·심화읽기 다시 쓰기" style="flex:none;text-decoration:none;background:#fff;border:1.5px solid var(--line);
+     border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px">✏️</a>
+   ${b}</div>`;}).join(''),
+ 'deptSheet()');}
+
+/* ================= 과제 실행: 항상 실제 챕터 게임 페이지로 이동 ================= */
+function playGame(id){
+ const g=ALLM().find(x=>x.id===id);
+ if(!g||g.status!=='ready'){toast('아직 준비 중인 과제예요');return;}
+ const dept=DEPTS.find(d=>d.ms.includes(g));
+ try{ if(dept) sessionStorage.setItem('lastDeptId', dept.id); }catch(e){}
+ saveLabState();
+ location.href=g.file;
+}
+
+/* ================= 🏢 연구소 → 연구동 이동 (시각적 지도) ================= */
+function deptMapSheet(){
+ sheet('🏢 연구동 이동','원하는 연구동으로 바로 이동하세요',`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+   ${DEPTS.map(d=>{
+    const workingCount=S.assistants.filter(a=>a.assignedDept===d.id).length;
+    return `<button class="mrow" style="flex-direction:column;align-items:center;text-align:center;height:auto;padding:14px;${d.open?'':'opacity:.55'}"
+      onclick="${d.open?`missionSheet('${d.id}')`:`toast('진도가 나가면 열려요','bad')`}">
+     <div style="font-size:130px;line-height:1">${d.open?`<img src="assets/depts/${d.id}.png" style="width:130px;height:130px;border-radius:20px;object-fit:cover;vertical-align:middle;box-shadow:0 4px 10px rgba(90,70,50,.18)">`:'🔒'}</div>
+     <div style="font-weight:800;font-size:13px;margin-top:10px">${d.n}</div>
+     <div style="font-size:10.5px;color:var(--dim);margin-top:2px">${d.u}</div>
+     ${d.dueDate?`<div style="font-size:10px;margin-top:3px">${deptDueLabel(d)}</div>`:''}
+     ${workingCount?`<div style="font-size:10.5px;color:var(--mint2);margin-top:5px;font-weight:800">🎓 ${workingCount}명 활동 중</div>`:''}
+    </button>`;}).join('')}
+  </div>
+  <div class="box" style="margin-top:12px;font-size:11.5px;color:var(--dim)">
+   🏠 메인 연구소로 돌아오려면 왼쪽 위 ‹ 버튼을 누르세요. 조수를 연구동에 배치하면 여기서 활동 중인 인원 수가 표시돼요.</div>`);}
+
+/* ================= 상점: 연구실 테마 ================= */
+function shopSheet(){
+ sheet('🖼️ 연구실 테마','연구포인트로 연구실 배경을 구매하고 바꿔보세요',`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+   ${LAB_THEMES.map(t=>{
+     const owned=S.ownedThemes.includes(t.key), active=S.labTheme===t.key;
+     return `<div class="box" style="padding:8px;text-align:center">
+      <img src="${t.img}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;box-shadow:0 3px 8px rgba(90,70,50,.18)">
+      <div style="font-weight:800;font-size:13px;margin-top:8px">${t.n}</div>
+      ${active?`<div style="font-size:11.5px;color:var(--mint2);font-weight:800;margin-top:6px">✅ 적용 중</div>`
+        : owned?`<button class="buy" style="margin-top:6px;width:100%" onclick="selectLabTheme('${t.key}')">적용하기</button>`
+        : `<div style="font-size:11.5px;color:var(--dim);margin-top:6px">${t.cost} 🔬</div>
+           <button class="buy" style="margin-top:4px;width:100%" onclick="buyLabTheme('${t.key}')">구매</button>`}
+     </div>`;}).join('')}
+  </div>`);}
+function buyLabTheme(key){
+ const t=labThemeDef(key);
+ if(S.ownedThemes.includes(key)){ selectLabTheme(key); return; }
+ if(S.rc<t.cost){ toast('연구포인트가 부족해요','bad'); return; }
+ S.rc-=t.cost; S.ownedThemes.push(key); S.labTheme=key;
+ saveLabState(); render(); toast(t.n+' 테마 구매 완료'); scene(); shopSheet();
+}
+function selectLabTheme(key){
+ if(!S.ownedThemes.includes(key)) return;
+ S.labTheme=key; saveLabState(); scene(); shopSheet();
+}
+
+/* ================= 🔘 연구동별 OX 퀴즈 ================= */
+let OX_DATA=null;
+async function loadOxData(){
+ if(OX_DATA) return OX_DATA;
+ try{ const res=await fetch('data/ox_questions.json',{cache:'no-store'}); OX_DATA=await res.json(); }
+ catch(e){ OX_DATA={}; }
+ return OX_DATA;
+}
+let OX_STATE=null;
+function oxEverCorrectSet(chNum){
+ try{ return new Set(JSON.parse(localStorage.getItem(sKey('ox_evercorrect_'+chNum))||'[]')); }
+ catch(e){ return new Set(); }
+}
+async function oxSheet(did){
+ const d=DEPTS.find(x=>x.id===did);
+ await loadOxData();
+ const items=d.ms.filter(m=>m.kind==='chapter').flatMap(m=>{
+  const chNum=m.dataFile.split('/').pop().replace('.json','');
+  const everSet=oxEverCorrectSet(chNum);
+  return (OX_DATA[chNum]||[]).filter(q=>!everSet.has(q.stmt)).map(q=>({...q, chNum}));
+ });
+ OX_STATE={did, items, idx:0, correct:0, totalAsked:items.length};
+ renderOx();
+}
+function renderOx(){
+ const st=OX_STATE;
+ if(!st) return;
+ if(st.totalAsked===0){
+  sheet('OX 퀴즈','',`
+   <div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">
+    이 연구동의 OX 문제를 이미 전부 맞혔어요! 다른 연구동도 도전해보세요.</div>`,
+  `missionSheet('${st.did}')`);
+  return;
+ }
+ if(st.idx>=st.items.length){
+  sheet('OX 퀴즈 결과','',`
+   <div class="box" style="text-align:center">
+    <div style="font-size:13px;color:var(--dim);font-weight:800">이번 판 결과</div>
+    <div style="font-size:34px;font-weight:900;color:var(--mint2);margin-top:4px">${st.correct} / ${st.totalAsked}</div>
+   </div>
+   <button class="btn" onclick="missionSheet('${st.did}')">연구동으로 돌아가기</button>`,
+  `missionSheet('${st.did}')`);
+  return;
+ }
+ const q=st.items[st.idx];
+ sheet(`OX 퀴즈 (${st.idx+1}/${st.items.length})`,'문장이 맞으면 O, 틀리면 X (한 번 맞힌 문제는 다시 나오지 않아요)',`
+  <div class="box"><div style="font-size:14.5px;font-weight:700;line-height:1.6">${q.stmt}</div></div>
+  <div class="oxrow">
+   <button class="oxbtn oxo" onclick="answerOx(true)">O</button>
+   <button class="oxbtn oxx" onclick="answerOx(false)">X</button>
+  </div>`,
+ `missionSheet('${st.did}')`);
+}
+function answerOx(picked){
+ const st=OX_STATE, q=st.items[st.idx];
+ const ok=picked===q.answer;
+ if(ok){
+  st.correct++;
+  const key=sKey('ox_evercorrect_'+q.chNum);
+  const everSet=oxEverCorrectSet(q.chNum);
+  everSet.add(q.stmt);
+  try{ localStorage.setItem(key, JSON.stringify([...everSet])); }catch(e){}
+  S.rc+=5; saveLabState();
+  toast('정답! +5🔬', 'gold');
+  flyGain('rc', 5);
+ } else {
+  toast(`오답 — ${q.explain||''}`, 'bad');
+ }
+ st.idx++;
+ render();
+ renderOx();
+}
+
+/* ================= 🎮 가벼운 미니게임 (자리만, 준비 중) ================= */
+function casualGameSheet(did){
+ const d=DEPTS.find(x=>x.id===did);
+ sheet(d.n+' · 미니게임','준비 중',`
+  <div class="box" style="text-align:center;color:var(--dim);padding:30px 10px">
+   🎮<br><br>이 연구동의 가벼운 미니게임은 곧 추가돼요.<br>
+   <span style="font-size:11.5px">완료하면 🔬연구포인트를 받을 수 있게 만들 예정입니다.</span>
+  </div>`, `missionSheet('${did}')`);
+}
+
+/* 로그인 직후 "다시 써주세요" 요청이 있으면 바로 알려준다 — 학생이 놓치지 않도록 */
+async function checkRedoRequests(){
+ if(!CURRENT_STUDENT) return;
+ try{
+  const res=await fetch('/api/redo-requests?student='+encodeURIComponent(CURRENT_STUDENT.name),{cache:'no-store'});
+  const list=await res.json();
+  if(list.length){
+   toast(`🚩 선생님이 서술답안 ${list.length}건을 다시 써 달라고 했어요. 연구동에서 ✏️로 확인하세요`, 'bad');
+  }
+ }catch(e){}
+}
+
+/* ================= ✏️ 내 생각 다시 쓰기 (의견·논술형·심화읽기 언제든 수정) ================= */
+async function journalSheet(chNum){
+ const chapterId=chNum+'_seed_v1';
+ let data;
+ try{ const res=await fetch('data/'+chNum+'.json',{cache:'no-store'}); data=await res.json(); }
+ catch(e){ toast('불러오기 실패','bad'); return; }
+ let redoFlags={};
+ try{
+  const res=await fetch('/api/redo-requests?student='+encodeURIComponent(CURRENT_STUDENT.name),{cache:'no-store'});
+  const list=await res.json();
+  list.filter(x=>x.chapter_id===chapterId).forEach(x=>{ redoFlags[x.round_id]=x.note; });
+ }catch(e){}
+ const opinionRounds=data.rounds.filter(r=>r.kind==='opinion');
+ sheet(data.meta.title+' · 내 생각','저장하면 바로 반영돼요. 몇 번이든 다시 고칠 수 있어요',`
+  <div class="banner mint">처음 저장할 때만 라운드당 💎50을 드려요. 그 이후 수정은 몇 번이든 무료예요.</div>
+  ${opinionRounds.map(r=>{
+   const val=localStorage.getItem(opinionKey(chapterId,r.id))||'';
+   const promptText=(r.prompt||'').split('\n\n')[0].replace(/^▶\s*/,'');
+   const flag=redoFlags[r.id];
+   return `<div class="journalitem">
+    ${flag!==undefined ? `<div class="banner" style="background:#fdeeee;border-color:#f1c6c1;color:#a8433c">🚩 선생님이 다시 써 달라고 했어요${flag&&flag.trim()?': '+escHtml(flag):''}</div>` : ''}
+    <div class="jq">▶ ${promptText}</div>
+    <textarea id="j_${r.id}" placeholder="${r.placeholder||''}">${val}</textarea>
+    <div class="jstat"><span id="jc_${r.id}"></span>
+     <button class="collectbtn" onclick="saveJournal('${chapterId}','${r.id}',${r.minLen||20},'${jsAttrEsc(data.meta.title)}','${jsAttrEsc(r.title||'')}')">저장</button></div>
+   </div>`;}).join('')}`,
+ `deptSheet()`);
+ opinionRounds.forEach(r=>{
+  const need=r.minLen||20;
+  const upd=()=>{ const v=document.getElementById('j_'+r.id).value; const c=document.getElementById('jc_'+r.id);
+   if(c) c.textContent=`${v.trim().length}/${need}자 이상`; };
+  const ta=document.getElementById('j_'+r.id);
+  if(ta){ ta.addEventListener('input', upd); upd(); }
+ });
+}
+function jsAttrEsc(s){ return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function saveJournal(chapterId, roundId, minLen, chapterTitle, roundTitle){
+ const ta=document.getElementById('j_'+roundId); if(!ta) return;
+ const text=ta.value;
+ try{ localStorage.setItem(opinionKey(chapterId,roundId), text); }catch(e){}
+ const awardedKey=opinionAwardedKey(chapterId,roundId);
+ const meetsMin=text.trim().length>=minLen;
+ if(meetsMin && !localStorage.getItem(awardedKey)){
+  S.src+=50; saveLabState(); render();
+  try{ localStorage.setItem(awardedKey,'1'); }catch(e){}
+  toast('저장 완료 +50💎', 'gold');
+  flyGain('src', 50);
+ } else {
+  toast('저장했어요');
+ }
+ // 최신 답안을 서버에도 올려서 선생님이 확인할 수 있게 하고, 분량을 채웠으면 "다시 써주세요" 요청도 자동으로 해제한다.
+ if(CURRENT_STUDENT && meetsMin){
+  fetch('/api/journal-answers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+   student_name:CURRENT_STUDENT.name, class_no:CURRENT_STUDENT.studentId||'',
+   chapter_id:chapterId, chapter_title:chapterTitle, round_id:roundId, round_title:roundTitle, text
+  })}).catch(()=>{});
+ }
+}
+
+/* ================= 🎓 조수(대학원생) 연구실 — 가챠·배치·수거 ================= */
+function assistantDef(poolId){ return ASSISTANTS_POOL.find(a=>a.id===poolId); }
+/* 같은 전공(theme)을 가진 조수를 모을 때마다(1명 초과분마다) 곱연산으로 +20% */
+function themeOwnedCount(theme){
+ return S.assistants.filter(a=>{const d=assistantDef(a.poolId); return d&&d.theme===theme;}).length;
+}
+// 전설급(다빈치 제외)은 박사 배율에 이 배수를 더 곱해서, 박사 Lv.5보다도 전설 Lv.1이 항상 더 높게 만든다
+const LEGEND_RATE_MULT=2.5;
+/* 전설급 조수(다빈치 제외)를 자기 전공과 맞는 연구동에 배치해두면, 그 연구동에 같이 배치된
+   "다른" 조수들의 획득량을 50% 올려준다(본인 몫에는 적용 안 됨 — 다빈치는 전공이 없어 제외). */
+function deptHasLegendBuff(deptId, excludePoolId){
+ const dept=DEPTS.find(d=>d.id===deptId); if(!dept) return false;
+ return S.assistants.some(a=>{
+  if(a.assignedDept!==deptId || a.poolId===excludePoolId) return false;
+  const d=assistantDef(a.poolId);
+  return d && d.rareDraw && d.theme!=='uni' && dept.ms.some(m=>m.mj===d.theme);
+ });
+}
+function assistantEffectiveRateCap(inst){
+ const def=assistantDef(inst.poolId); const deg=DEGREE[inst.degree||'bachelor'];
+ const lv=inst.lv||1;
+ let rate=deg.rate*(1+(lv-1)*.3), cap=deg.cap*(1+(lv-1)*.3);
+ if(def.rareDraw) { rate*=LEGEND_RATE_MULT; cap*=LEGEND_RATE_MULT; }
+ if(inst.assignedDept){
+  const dept=DEPTS.find(d=>d.id===inst.assignedDept);
+  // 만능형(theme:'uni')은 전공 일치 여부와 무관하게 어느 연구동이든 배치 보너스를 받는다
+  if(dept && (def.theme==='uni' || dept.ms.some(m=>m.mj===def.theme))){ rate*=1.5; cap*=1.5; }
+  if(deptHasLegendBuff(inst.assignedDept, inst.poolId)){ rate*=1.5; cap*=1.5; }
+ }
+ const themeMult=Math.pow(1.2, Math.max(0, themeOwnedCount(def.theme)-1));
+ rate*=themeMult; cap*=themeMult;
+ return {rate, cap};
+}
+function collectableAmount(inst){
+ if(!inst.assignedDept) return 0; // 로비(연구소)에서 대기 중인 조수는 연구포인트를 생산하지 않는다
+ const {rate,cap}=assistantEffectiveRateCap(inst);
+ const hours=Math.max(0,(Date.now()-inst.lastCollectedAt)/3600000);
+ return Math.min(Math.round(hours*rate), Math.round(cap));
+}
+function weightedStartDegree(){
+ const roll=Math.random()*100; let acc=0;
+ for(const k of DEGREE_ORDER){ acc+=START_DEGREE_WEIGHTS[k]; if(roll<=acc) return k; }
+ return 'bachelor';
+}
+function gachaPull(){
+ if(S.src<100){ toast('특별연구포인트가 부족해요 (100 필요)','bad'); return; }
+ S.src-=100;
+ const legends=ASSISTANTS_POOL.filter(a=>a.rareDraw);
+ const isLegend=Math.random()<LEGEND_CHANCE; // 전설급 학자(6명 중 무작위) 등장 확률
+ const picked = isLegend ? legends[Math.floor(Math.random()*legends.length)]
+   : ASSISTANTS_POOL.filter(a=>!a.rareDraw)[Math.floor(Math.random()*ASSISTANTS_POOL.filter(a=>!a.rareDraw).length)];
+ const startDegree = isLegend ? 'phd' : weightedStartDegree();
+ const dup=S.assistants.some(a=>a.poolId===picked.id);
+ if(dup){ S.src+=30; toast(`중복! ${picked.name} → 💎30 환급`); flyGain('src', 30); }
+ else{ S.assistants.push({poolId:picked.id, assignedDept:null, lastCollectedAt:Date.now(), degree:startDegree, lv:1});
+  toast(`🎉 ${picked.name}(${rankName(picked,startDegree)} Lv.1) 영입!`, 'gold'); }
+ saveLabState(); render(); assistantSheet();
+}
+function assignAssistant(idx, deptId){
+ S.assistants[idx].assignedDept = deptId || null;
+ S.assistants[idx].lastCollectedAt = Date.now(); // 로비↔연구동 전환 시점부터 새로 생산량을 센다
+ saveLabState(); render(); assistantSheet();
+}
+/* 연구를 마친(최대 저장량을 채운) 조수는 자동으로 로비로 복귀시키고, 그동안 모은 연구포인트를 바로 지급한다 */
+function hoursLabel(hours){
+ if(hours<1) return Math.max(1,Math.round(hours*60))+'분';
+ return Math.round(hours)+'시간';
+}
+function announceReturn(name, hours, amt){
+ modal(`<h2>🔬 연구 복귀</h2>
+  <div class="box" style="text-align:center">
+   <div style="font-size:14px;font-weight:800">${name}이(가) ${hoursLabel(hours)} 동안 연구를 마치고 로비로 복귀했습니다!</div>
+   <div style="font-size:13px;color:var(--mint2);font-weight:800;margin-top:8px">연구포인트 +${amt}🔬 획득</div>
+  </div>
+  <button class="btn" onclick="closeModal()">확인</button>`);
+}
+function checkAutoReturns(){
+ for(const inst of S.assistants){
+  if(!inst.assignedDept) continue;
+  const {rate,cap}=assistantEffectiveRateCap(inst);
+  const amt=collectableAmount(inst);
+  if(amt<Math.round(cap)) continue;
+  const def=assistantDef(inst.poolId);
+  const hours=Math.max(0,(Date.now()-inst.lastCollectedAt)/3600000);
+  S.rc+=amt; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
+  saveLabState(); render();
+  flyGain('rc', amt);
+  announceReturn(def.name, hours, amt);
+  break; // 한 번에 하나씩만 알려준다(여러 명이 동시에 끝나도 팝업이 겹치지 않게)
+ }
+}
+/* "로비로 돌아오게 하기" — 아직 다 채우지 못했어도 즉시 불러들이고, 지금까지 모인 만큼만 지급한다 */
+function forceReturnAssistant(idx){
+ const inst=S.assistants[idx]; if(!inst||!inst.assignedDept) return;
+ const def=assistantDef(inst.poolId);
+ const amt=collectableAmount(inst);
+ const hours=Math.max(0,(Date.now()-inst.lastCollectedAt)/3600000);
+ S.rc+=amt; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
+ saveLabState(); render();
+ if(amt>0) flyGain('rc', amt);
+ announceReturn(def.name, hours, amt);
+}
+/* 연구동에 배치된 조수의 남은 연구 시간을 문구로 만든다 */
+function remainingTimeLabel(inst){
+ const {rate,cap}=assistantEffectiveRateCap(inst);
+ const amt=collectableAmount(inst);
+ if(amt>=Math.round(cap)) return '연구 완료! 곧 로비로 돌아와요';
+ if(rate<=0) return '계산 중...';
+ const remainHours=(cap-amt)/rate;
+ return `⏱️ 남은 시간 약 ${hoursLabel(remainHours)}`;
+}
+function useTimeBoost(idx){
+ const inst=S.assistants[idx]; if(!inst) return;
+ if(!inst.assignedDept){ toast('연구동에 배치한 조수만 연구시간을 단축할 수 있어요','bad'); return; }
+ if(S.src<40){ toast('특별연구포인트가 부족해요 (40 필요)','bad'); return; }
+ S.src-=40;
+ inst.lastCollectedAt -= 4*3600000; // 즉시 4시간치를 당겨받는 효과
+ saveLabState(); render(); assistantSheet();
+ toast('연구시간 단축권 사용! 4시간치가 당겨졌어요', 'gold');
+}
+function enhanceCostFor(inst){
+ const deg=DEGREE[inst.degree||'bachelor'], lv=inst.lv||1;
+ return Math.round(deg.enhCost*(1+(lv-1)*.6));
+}
+function isMaxAssistant(inst){ return false; } // 박사(전설 포함)는 레벨 제한이 없어 "최고 레벨"이 존재하지 않는다
+/* 강화 실패시 조수가 나갈 확률(실패해도 대부분은 레벨만 그대로, 낮은 확률로만 퇴사) */
+const LEAVE_ON_FAIL_CHANCE=0.1; // 강화 실패 시 조수가 그만두는 확률(레벨·학위 무관하게 항상 10%로 통일)
+const QUIT_LINES=[
+ '함께해서 더러웠고 다신 만나지 말자',
+ '저는 자유로운 집요정이에요!',
+ '이 구역은 이제 안녕, 저는 떠납니다',
+ '그동안 고마웠어요, 두 번 다시는 안 볼 사이예요',
+ '나만 없어 워라밸... 이제 저부터 챙길게요',
+ '이건 제 최종 결정입니다. 안녕히',
+ '다음 생에는 다른 연구실에서 만나요',
+ '저 그만할래요. 총총',
+ '인연이 아니었나 봐요, 여기까지가 제 최선이었어요',
+ '저는 이 연구실 그만두고 유튜버 할게요'
+];
+function enhanceAssistant(idx){
+ const inst=S.assistants[idx]; if(!inst) return;
+ const def=assistantDef(inst.poolId);
+ const lv=inst.lv||1, cost=enhanceCostFor(inst), successRate=successRateFor(lv);
+ if(S.rc<cost){ toast(`연구포인트가 부족해요 (${cost} 필요)`,'bad'); return; }
+ modal(`<h2>💪 강화하기</h2>
+  <div class="box" style="text-align:center">
+   <div style="font-size:13px;font-weight:800">${def.name} · ${rankName(def,inst.degree)} Lv.${lv}</div>
+   <div style="font-size:12px;color:var(--dim);margin-top:6px">비용 🔬${cost} · 성공 확률 ${Math.round(successRate*100)}%</div>
+   <div style="font-size:11px;color:var(--dim);margin-top:6px">실패하면 대부분 레벨만 그대로지만, 낮은 확률로 조수가 떠날 수 있어요</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:10px">
+   <button class="btn" style="flex:1;margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="closeModal()">취소</button>
+   <button class="btn gold" style="flex:1;margin-top:0" onclick="closeModal();doEnhanceAssistant(${idx})">강화한다</button>
+  </div>`);
+}
+function doEnhanceAssistant(idx){
+ const inst=S.assistants[idx]; if(!inst) return;
+ const def=assistantDef(inst.poolId);
+ const lv=inst.lv||1, cost=enhanceCostFor(inst), successRate=successRateFor(lv);
+ if(S.rc<cost){ toast(`연구포인트가 부족해요 (${cost} 필요)`,'bad'); showEnhanceResult(null,{kind:'nocash',name:def.name,cost}); return; }
+ S.rc-=cost;
+ const success=Math.random()<successRate;
+ if(!success){
+  const leaves=Math.random()<LEAVE_ON_FAIL_CHANCE;
+  if(!leaves){
+   saveLabState(); render(); assistantSheet();
+   showEnhanceResult(idx, {kind:'fail-stay', name:def.name});
+   return;
+  }
+  const line=QUIT_LINES[Math.floor(Math.random()*QUIT_LINES.length)];
+  const leftDegree=inst.degree||'bachelor';
+  S.assistants.splice(idx,1);
+  saveLabState(); render(); assistantSheet();
+  showEnhanceResult(null, {kind:'fail-leave', name:def.name, line, degree:leftDegree});
+  return;
+ }
+ const before=assistantEffectiveRateCap(inst);
+ let newLabel;
+ // 박사(전설 포함)는 승급할 다음 학위가 없으므로 레벨 제한 없이 계속 레벨만 오른다
+ if(lv>=MAX_LV && inst.degree!=='phd'){
+  const curIdx=DEGREE_ORDER.indexOf(inst.degree||'bachelor'), nextKey=DEGREE_ORDER[curIdx+1];
+  inst.degree=nextKey; inst.lv=1;
+  newLabel=`${rankName(def,nextKey)} Lv.1`;
+  saveLabState(); render(); assistantSheet();
+  showEnhanceResult(idx, {kind:'success-promote', name:def.name, newLabel, before});
+ } else {
+  inst.lv=lv+1;
+  newLabel=`${rankName(def,inst.degree)} Lv.${inst.lv}`;
+  saveLabState(); render(); assistantSheet();
+  showEnhanceResult(idx, {kind:'success-lv', name:def.name, newLabel, before});
+ }
+}
+/* 강화 결과를 눈에 띄게 보여주고, 창을 닫지 않고 바로 이어서 강화할 수 있게 한다 */
+function showEnhanceResult(idx, r){
+ const inst = idx!=null ? S.assistants[idx] : null;
+ const canRetry = inst && !isMaxAssistant(inst);
+ let icon, title, effectClass, body;
+ if(r.kind==='nocash'){
+  icon='🪙'; title='연구포인트 부족'; effectClass='enhFail';
+  body=`<div style="font-size:13.5px;color:var(--dim)">🔬${r.cost}이 필요해요. 조수를 더 수거하고 다시 시도해보세요.</div>`;
+ } else if(r.kind==='fail-leave'){
+  icon='💔'; title='강화 실패'; effectClass='enhFail';
+  // 박사(전설 포함, 늘 박사로 시작)는 이미 대학원을 마친 신분이라 "연구소를 그만뒀습니다"로 문구를 다르게 보여준다
+  const quitVerb = r.degree==='phd' ? '연구소를 그만뒀습니다' : '대학원을 그만뒀습니다';
+  body=`<div style="font-size:14px;font-weight:800">${r.name}이(가) ${quitVerb}!</div>
+   <div style="font-size:13px;color:var(--dim);margin-top:8px;font-style:italic">"${r.line}"</div>`;
+ } else if(r.kind==='fail-stay'){
+  icon='💥'; title='강화 실패'; effectClass='enhFail';
+  body=`<div style="font-size:13.5px;color:var(--dim)">${r.name}은(는) 레벨은 그대로예요. 다시 도전해보세요!</div>`;
+ } else {
+  icon='🎉'; title=r.kind==='success-promote'?'승급 성공!':'강화 성공!'; effectClass='enhSuccess';
+  const after=inst?assistantEffectiveRateCap(inst):null;
+  const pctUp = (r.before && after) ? Math.round((after.rate/r.before.rate-1)*100) : null;
+  body=`<div style="font-size:16px;font-weight:900;color:var(--mint2)">${r.name} → ${r.newLabel}!</div>
+   ${r.before&&after?`<div style="font-size:13.5px;margin-top:8px">
+     분당 <b>${(r.before.rate/60).toFixed(1)}</b> → <b style="color:var(--mint2)">${(after.rate/60).toFixed(1)}🔬</b>
+     ${pctUp!=null?`<span style="color:var(--gold);font-weight:800"> (+${pctUp}%)</span>`:''}</div>
+    <div style="font-size:12px;color:var(--dim);margin-top:2px">최대 저장 ${Math.round(r.before.cap)} → ${Math.round(after.cap)}🔬</div>`:''}`;
+ }
+ modal(`<div class="enhIcon ${effectClass}" style="font-size:54px;text-align:center;line-height:1">${icon}</div>
+  <h2 style="text-align:center;margin:6px 0 0">${title}</h2>
+  <div class="box" style="text-align:center">${body}</div>
+  <div style="display:flex;gap:8px;margin-top:10px">
+   ${canRetry?`<button class="btn gold" style="flex:1;margin-top:0" onclick="doEnhanceAssistant(${idx})">한 번 더 강화</button>`:''}
+   <button class="btn" style="flex:1;margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="closeModal()">${canRetry?'닫기':'확인'}</button>
+  </div>`);
+}
+function assistantLocationLabel(inst){
+ if(!inst.assignedDept) return '🏠 연구소(로비)에서 대기 중';
+ const d=DEPTS.find(x=>x.id===inst.assignedDept);
+ return d?`🏢 ${d.n}에서 활동 중`:'🏠 연구소(로비)에서 대기 중';
+}
+function assistantSheet(){
+ const openDepts=DEPTS.filter(d=>d.open);
+ sheet('🎓 조수 연구실','조수 얼굴과 지금 어디서 활동 중인지 한눈에 볼 수 있어요',`
+  <div class="box" style="text-align:center">
+   <div style="font-size:12px;color:var(--dim);font-weight:800">대학원생 뽑기</div>
+   <div style="font-size:11.5px;color:var(--dim);margin:4px 0 10px">특별연구포인트 100 소모 · 시작 학위는 학사65% 석사25% 박사9% · ${Math.round(LEGEND_CHANCE*100)}% 확률로 전설급 학자(6명 중 무작위, 박사) 등장</div>
+   <div style="font-size:10.5px;color:var(--dim);margin-bottom:10px">💎 특별연구포인트는 <b>과제(수행평가)의 의견·논술형 라운드를 처음 작성해 저장</b>할 때 얻어요</div>
+   <button class="btn gold" onclick="gachaPull()">🎓 뽑기 · 100💎</button>
+  </div>
+  <div class="box" style="font-size:11px;color:var(--dim)">
+   🔬 연구포인트는 <b>연구동에 배치</b>해서 얻어요. 연구를 마치면(최대 저장량을 채우면) 조수가
+   <b>자동으로 로비에 돌아와서</b> 팝업으로 알려주고 포인트도 바로 지급돼요. 급하면 언제든 "로비로 돌아오게
+   하기"로 지금까지 모은 만큼만 미리 받을 수도 있어요. 한 번 클릭하면 그 조수가 하는 말을 들을 수 있어요.
+   강화에 성공하면 Lv.5에서 다음 학위로 승급해요. 실패해도 대부분은 레벨만 그대로지만, <b>낮은 확률로 조수가
+   대학원을 그만두고 떠날 수 있어요</b>.</div>
+  ${S.assistants.length===0?`<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">아직 뽑은 조수가 없어요</div>`
+   :S.assistants.map((inst,idx)=>({inst,idx})).sort((a,b)=>(!!a.inst.assignedDept)-(!!b.inst.assignedDept)).map(({inst,idx})=>{
+    const def=assistantDef(inst.poolId), deg=DEGREE[inst.degree||'bachelor'], lv=inst.lv||1;
+    const {rate,cap}=assistantEffectiveRateCap(inst);
+    const amt=collectableAmount(inst);
+    const maxed=isMaxAssistant(inst);
+    const assigned=!!inst.assignedDept;
+    const cost=enhanceCostFor(inst), successPct=Math.round(successRateFor(lv)*100);
+    const isLegend=!!def.rareDraw;
+    return `<div class="assistcard" style="${assigned?'background:#eef7f4;border-color:#bce3d8':''}">
+     <div class="ahead" style="align-items:center">
+      <img src="assets/assistants/${inst.poolId}.png" class="${isLegend?'legendGlow':''}" style="flex:none;width:34px;height:34px;border-radius:50%;
+        object-fit:cover;border:2.5px solid ${isLegend?'#f5d060':deg.color}"/>
+      ${rarityBadgeHtml(def,inst.degree,lv)}
+      <span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span><span style="font-size:11px;color:${isLegend?'var(--gold)':'var(--dim)'};font-weight:${isLegend?800:400}">${SET_NAMES[def.setId]}</span></div>
+     <div class="astat">${assistantLocationLabel(inst)}${assigned?` · ${remainingTimeLabel(inst)}`:''}</div>
+     <div class="astat">분당 ${(rate/60).toFixed(1)}🔬(1시간이면 최대치) · 최대 저장 ${Math.round(cap)}🔬 · 전공 ${MJ[def.theme]?MJ[def.theme].n:def.theme}</div>
+     <select onchange="assignAssistant(${idx}, this.value)">
+      <option value="">배치 안 함(연구소 대기)</option>
+      ${openDepts.map(d=>`<option value="${d.id}" ${inst.assignedDept===d.id?'selected':''}>${d.n}${(def.theme==='uni'||d.ms.some(m=>m.mj===def.theme))?' (적합·+50%)':''}</option>`).join('')}
+     </select>
+     <div class="collectbar">
+      ${assigned?`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
+        onclick="forceReturnAssistant(${idx});assistantSheet()">🏠 로비로 돌아오게 하기 (🔬${amt})</button>`:''}
+      ${maxed?`<span style="font-size:11px;color:var(--gold);font-weight:800;align-self:center">🏆 최고 레벨(박사 Lv.5)</span>`
+       :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
+        onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
+      <button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)${assigned?'':';opacity:.4;cursor:not-allowed'}"
+        ${assigned?'':'disabled'} onclick="useTimeBoost(${idx})" title="${assigned?'':'연구동에 배치해야 쓸 수 있어요'}">⏩ 연구시간 단축 (💎40)</button>
+     </div>
+    </div>`;}).join('')}
+  <div class="box" style="font-size:11.5px;color:var(--dim);line-height:1.8">
+   같은 전공 조수를 모을 때마다(1명 넘을 때부터) 그 전공 조수들 생산 속도·최대 저장량이 20%씩 곱연산으로
+   늘어나요(2명 ×1.2, 3명 ×1.44...). 조수를 전공과 맞는 연구동에 배치하면 생산 속도·최대 저장량이 +50%돼요.
+   강화하면 생산 속도·최대 저장량이 늘어나지만, 레벨이 높을수록 실패 확률도 높아져요 — 실패하면 10% 확률로
+   조수가 떠날 수 있어요(그 외엔 레벨만 그대로예요). ✨전설급(다빈치 제외)을 전공과 맞는 연구동에 배치하면,
+   같은 연구동의 다른 조수들 생산량도 +50%돼요. 조수 이름을 누르면 실제 업적을 볼 수 있어요.</div>`);
+}
+function scientistInfoModal(poolId){
+ const def=assistantDef(poolId); if(!def) return;
+ const info=SCIENTIST_INFO[poolId]||'아직 소개가 준비되지 않았어요.';
+ const isLegend=!!def.rareDraw;
+ modal(`<img src="assets/assistants/${poolId}.png" class="${isLegend?'legendGlow':''}" style="display:block;width:84px;height:84px;border-radius:50%;
+    object-fit:cover;margin:0 auto 10px;border:3px solid ${isLegend?'#f5d060':'var(--line)'}"/>
+  <h2 style="text-align:center">${def.name}</h2>
+  <div class="cap" style="text-align:center${isLegend?';color:var(--gold);font-weight:800':''}">${MJ[def.theme]?MJ[def.theme].n:def.theme} · ${isLegend?'✨ '+def.legendTitle:SET_NAMES[def.setId]}</div>
+  <div class="box">${info}</div>
+  <button class="btn" onclick="closeModal()">확인</button>`);
+}
+
+/* ================= 📄 연구 활동 — 조수로 논문을 써서 학술지에 투고 → 연구점수(랭킹용) ================= */
+async function postLabScore(){
+ if(!CURRENT_STUDENT) return;
+ try{
+  await fetch('/api/labscore', {method:'POST', headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({name:CURRENT_STUDENT.name, classNo:CURRENT_STUDENT.studentId||'', researchScore:S.researchScore})});
+ }catch(e){}
+}
+function researchSheet(){
+ if(S.assistants.length===0){
+  sheet('📄 연구 활동','',`<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">
+   조수가 있어야 논문을 쓸 수 있어요. 먼저 🎓 조수 연구실에서 대학원생을 뽑아보세요.</div>`);
+  return;
+ }
+ const papers=[...S.papers].reverse();
+ sheet('📄 연구 활동','조수를 골라 연구포인트를 투자하면 논문이 만들어져요 (1% 확률로 노벨상!)',
+  S.assistants.map((inst,idx)=>{
+   const def=assistantDef(inst.poolId), deg=DEGREE[inst.degree||'bachelor'], cost=RESEARCH_COST[inst.degree||'bachelor'];
+   const range=RESEARCH_SCORE_RANGE[inst.degree||'bachelor'];
+   return `<div class="assistcard">
+    <div class="ahead">${rarityBadgeHtml(def,inst.degree)}<span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span></div>
+    <div class="astat">연구포인트 ${cost} 투자 → 논문 작성 → 학술지 투고 시 연구점수 ${range[0]}~${range[1]}점 획득</div>
+    <button class="collectbtn" style="width:100%;margin-top:8px" onclick="writePaper(${idx})" ${S.rc<cost?'disabled':''}>논문 작성 (🔬${cost})</button>
+   </div>`;}).join('') +
+  `<div class="box" style="text-align:center"><div style="font-size:12px;color:var(--dim);font-weight:800">누적 연구점수</div>
+   <div style="font-size:30px;font-weight:900;color:var(--mint2)">${S.researchScore.toLocaleString()}🏆</div>
+   ${S.nobelCount?`<div style="font-size:12px;color:var(--gold);font-weight:800;margin-top:4px">🏅 노벨상 수상 ${S.nobelCount}회</div>`:''}</div>
+  <div class="box"><h3>📜 논문 기록 (${papers.length}건)</h3>
+   ${papers.length?papers.map(p=>`<div class="brow" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)">
+     ${p.nobel?'<span style="font-size:15px">🏅</span>':''}
+     <span style="font-size:12px;font-weight:700;flex:1">「${p.title}」<small style="display:block;color:var(--dim);font-weight:500">${p.assistantName} · ${new Date(p.at).toLocaleDateString('ko-KR')}</small></span>
+     <span style="font-weight:900;color:${p.nobel?'var(--gold)':'var(--mint2)'}">+${p.score}🏆</span>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--dim)">아직 투고한 논문이 없어요</div>'}
+  </div>`);
+}
+function writePaper(idx){
+ const inst=S.assistants[idx]; if(!inst) return;
+ const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor', cost=RESEARCH_COST[degKey];
+ if(S.rc<cost){ toast('연구포인트가 부족해요','bad'); return; }
+ S.rc-=cost;
+ const titles=PAPER_TITLES[def.theme]||PAPER_TITLES.etc;
+ const title=titles[Math.floor(Math.random()*titles.length)];
+ const [lo,hi]=RESEARCH_SCORE_RANGE[degKey];
+ let score=lo+Math.floor(Math.random()*(hi-lo+1));
+ const nobel=Math.random()<0.01;
+ if(nobel){ score+=300; S.nobelCount++; }
+ S.researchScore+=score;
+ S.papers.push({title, theme:def.theme, assistantName:def.name, degree:degKey, score, nobel, at:Date.now()});
+ saveLabState(); render(); postLabScore();
+ flyGain('rs', score);
+ modal(`<h2>${nobel?'🏅 노벨상 수상!':'📄 논문 투고 결과'}</h2>
+  <div class="cap">${def.name}이(가) 작성한 논문</div>
+  <div class="box" style="text-align:center;${nobel?'background:#fff3d6;border-color:#edd49a':''}">
+   <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">「${title}」</div>
+   <div style="font-size:12px;color:var(--dim)">${nobel?'전 세계가 주목했습니다! 노벨상을 수상했어요!':'학술지에 게재되었습니다!'}</div>
+   <div style="font-size:30px;font-weight:900;color:${nobel?'var(--gold)':'var(--mint2)'};margin-top:6px">+${score}🏆</div>
+  </div>
+  <button class="btn" onclick="closeModal();researchSheet()">확인</button>`);
+}
+
+/* ================= 랭킹 (서버에 모인 전체 학생 연구점수) ================= */
+async function rankSheet(){
+ sheet('🏆 전체 랭킹','연구점수 기준 · 성적과는 무관하지만, 1~10등은 +1점 대상이에요',`
+  <div class="box" id="rankBox" style="text-align:center;color:var(--dim)">불러오는 중...</div>`);
+ let list=[];
+ try{ const res=await fetch('/api/labscore',{cache:'no-store'}); list=await res.json(); }catch(e){}
+ const myRank=list.findIndex(s=>s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name));
+ const box=document.getElementById('rankBox');
+ if(!box) return; // 그 사이 창을 닫았으면 무시
+ if(list.length===0){
+  box.outerHTML=`<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">아직 랭킹 데이터가 없어요. 연구 활동으로 논문을 투고해보세요!</div>`;
+  return;
+ }
+ const top10 = myRank>=0 && myRank<10;
+ box.outerHTML=`
+  ${top10?`<div class="banner gold">🎉 전체 top10! 선생님께 확인하면 수행평가 +1점 대상일 수 있어요.</div>`:''}
+  <div class="box"><h3>연구점수 전체 랭킹</h3>
+   ${list.slice(0,10).map((s,i)=>`<div class="rk ${s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name)?'me':''}">
+    <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}${s.classNo?'('+s.classNo+')':''}<span class="v">${s.researchScore.toLocaleString()}🏆</span></div>`).join('')}
+   ${myRank>=10?`<div class="rk me"><span class="rn">${myRank+1}</span>나<span class="v">${S.researchScore.toLocaleString()}🏆</span></div>`:''}
+   <div style="font-size:11.5px;color:var(--dim2);margin-top:9px;border-top:1.5px solid var(--line);padding-top:9px">
+    전체 학생 중 연구점수 1~10등은 선생님께 확인 후 수행평가 +1점 대상이 됩니다.</div></div>`;
+}
+
+/* ================= 로그인 ================= */
+function setLoginErr(msg){ document.getElementById('loginErr').textContent=msg||''; }
+function setChangeErr(msg){ document.getElementById('changeErr').textContent=msg||''; }
+
+async function doLogin(){
+ const name=document.getElementById('loginName').value.trim();
+ const password=document.getElementById('loginPw').value;
+ setLoginErr('');
+ if(!name || !password){ setLoginErr('이름과 비밀번호를 모두 입력하세요.'); return; }
+ try{
+  const res=await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,password})});
+  const out=await res.json();
+  if(!out.ok){ setLoginErr(out.error||'로그인에 실패했습니다.'); return; }
+  CURRENT_STUDENT={name, studentId:out.studentId};
+  if(out.mustChange){
+   document.getElementById('loginStep1').classList.add('hide');
+   document.getElementById('loginStep2').classList.remove('hide');
+   document.getElementById('newPw1').focus();
+  } else {
+   finishLogin();
+  }
+ }catch(e){ setLoginErr('서버 연결 오류: '+e.message); }
+}
+
+async function doChangePassword(){
+ const p1=document.getElementById('newPw1').value, p2=document.getElementById('newPw2').value;
+ setChangeErr('');
+ if(p1.length<4){ setChangeErr('새 비밀번호는 4자 이상이어야 합니다.'); return; }
+ if(p1!==p2){ setChangeErr('두 번 입력한 비밀번호가 서로 달라요.'); return; }
+ try{
+  const res=await fetch('/api/change-password', {method:'POST', headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({name:CURRENT_STUDENT.name, oldPassword:document.getElementById('loginPw').value, newPassword:p1})});
+  const out=await res.json();
+  if(!out.ok){ setChangeErr(out.error||'비밀번호 변경에 실패했습니다.'); return; }
+  finishLogin();
+ }catch(e){ setChangeErr('서버 연결 오류: '+e.message); }
+}
+
+function finishLogin(){
+ // roundengine.js의 renderStudentGate가 쓰는 것과 같은 형식으로 남겨서,
+ // 실제 과제(챕터) 게임을 열 때 이름을 다시 묻지 않게 한다.
+ sessionStorage.setItem('studentInfo', JSON.stringify({name:CURRENT_STUDENT.name, classNo:CURRENT_STUDENT.studentId}));
+ sessionStorage.setItem('lab_logged_in', CURRENT_STUDENT.name);
+ document.getElementById('loginScreen').classList.add('hide');
+ document.getElementById('labApp').classList.remove('hide');
+ document.getElementById('whoami').textContent='👤 '+CURRENT_STUDENT.name;
+ loadLabState();
+ seedTeacherTestPoints();
+ syncChapterResults();
+ checkDailyAttendance();
+ checkRedoRequests();
+ render();
+ loadChapterMetas().then(()=>{ syncOpinionPoints(); render(); });
+ loadDeptConfig().then(()=>{
+  render();
+  /* 챕터 게임에서 "연구동으로 돌아가기"로 왔으면 그 연구동을 바로 열어준다 */
+  let lastDept=null; try{ lastDept=sessionStorage.getItem('lastDeptId'); }catch(e){}
+  if(lastDept && DEPTS.some(d=>d.id===lastDept)){
+   try{ sessionStorage.removeItem('lastDeptId'); }catch(e){}
+   missionSheet(lastDept);
+  }
+ });
+}
+
+/* 교사 테스트 계정(변석환)은 이 브라우저에서 처음 로그인할 때 넉넉한 테스트용 포인트를 채워준다 */
+const TEACHER_TEST_ACCOUNTS=['변석환'];
+function seedTeacherTestPoints(){
+ if(!TEACHER_TEST_ACCOUNTS.includes(CURRENT_STUDENT.name)) return;
+ const seededKey=sKey('lab_teacher_seeded');
+ if(localStorage.getItem(seededKey)) return;
+ S.rc+=5000; S.src+=2000;
+ try{ localStorage.setItem(seededKey,'1'); }catch(e){}
+ saveLabState();
+ toast('🧪 테스트 계정 — 연구포인트·특별연구포인트를 넉넉히 채워드렸어요', 'gold');
+}
+
+/* 하루 1회 로그인 출석 보너스 */
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function checkDailyAttendance(){
+ const key=sKey('lastAttendance');
+ const last=localStorage.getItem(key);
+ const today=todayStr();
+ if(last===today) return;
+ try{ localStorage.setItem(key, today); }catch(e){}
+ S.rc+=30; saveLabState(); render();
+ toast('🌞 오늘의 출석 보너스 +30🔬', 'gold');
+ flyGain('rc', 30);
+}
+
+function logout(){
+ if(!confirm('로그아웃할까요?')) return;
+ sessionStorage.removeItem('studentInfo');
+ sessionStorage.removeItem('lab_logged_in');
+ location.reload();
+}
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('changeBtn').addEventListener('click', doChangePassword);
+document.getElementById('loginPw').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('newPw2').addEventListener('keydown', e=>{ if(e.key==='Enter') doChangePassword(); });
+
+/* 세션 안에서 이미 로그인했다면(예: 실제 과제 게임에서 로비로 돌아온 경우) 다시 묻지 않는다 */
+(function initAuth(){
+ const loggedName=sessionStorage.getItem('lab_logged_in');
+ if(loggedName){
+  let studentId=null;
+  try{ const info=JSON.parse(sessionStorage.getItem('studentInfo')||'null'); if(info&&info.name===loggedName) studentId=info.classNo; }catch(e){}
+  CURRENT_STUDENT={name:loggedName, studentId};
+  finishLogin();
+ }
+})();
+
+setInterval(moveTick,90);
+</script>
+</body>
+</html>

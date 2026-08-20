@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지질시대와 지구 환경의 변화</title>
+<link rel="stylesheet" href="roundstyle.css">
+</head>
+<body>
+<div class="wrap">
+  <div id="top"></div>
+  <div id="app"></div>
+</div>
+<script src="roundengine.js"></script>
+<script type="application/json" id="embeddedChapterData">{
+  "seedKey": "ch10_seed_v1",
+  "vars": {},
+  "meta": {
+    "title": "지질시대와 지구 환경의 변화",
+    "targetMin": 22,
+    "passCount": 5,
+    "scoreNotice": "라운드별 정답률·소요시간·창 이탈 지표는 채점을 돕는 참고 자료일 뿐입니다. 실제 수행평가 점수는 선생님이 최종 확정합니다."
+  },
+  "rounds": [
+    {
+      "id": "r7",
+      "kind": "opinion",
+      "title": "의견 라운드",
+      "prompt": "▶ 이번 자료를 살펴보며 가장 궁금했던 점이나 흥미로웠던 점을 적으시오.",
+      "placeholder": "예) 스트로마톨라이트는 지금도 만들어지고 있을까?",
+      "minLen": 30
+    },
+    {
+      "id": "r8",
+      "kind": "opinion",
+      "title": "논술형 라운드",
+      "prompt": "▶ 다음 주제로 자신의 생각을 근거와 함께 서술하시오.\n\n\"지구의 역사(약 46억 년)에서 인류가 존재해온 시간은 매우 짧다. 5번의 대멸종을 겪으면서도 생명이 끊이지 않고 이어져 온 지질시대의 기록이, 지금을 살아가는 우리에게 어떤 의미를 준다고 생각하는지 서술하시오.\"",
+      "placeholder": "예) 지질시대의 기록을 보면 생명은...",
+      "minLen": 150
+    },
+    {
+      "id": "r9",
+      "kind": "opinion",
+      "title": "심화 읽기 라운드",
+      "prompt": "▶ 다음 글을 읽고, 무엇을 근거로 이런 주장이 나왔는지 자신의 말로 정리하고, 이에 대한 생각을 서술하시오.\n\n\"최근 지질학계에서는 인류의 활동이 지구 환경에 남긴 영향이 너무 커서, 현재를 별도의 새로운 지질시대인 '인류세(Anthropocene)'로 구분해야 한다는 논의가 이어지고 있다. 콘크리트, 플라스틱, 방사성 물질 등이 먼 훗날 지층 속에 뚜렷한 흔적으로 남을 것이라는 점이 근거로 제시된다.\"",
+      "placeholder": "예) 인류세라는 개념은...",
+      "minLen": 150
+    }
+  ],
+  "gradablePool": [
+    {
+      "id": "r1",
+      "kind": "classify",
+      "title": "지층-시대 분류",
+      "prompt": "▶ 각 층의 화석을 보고 지질시대(선캄브리아시대·고생대·중생대·신생대)를 판단하시오.",
+      "items": [
+        {
+          "id": "l1",
+          "content": "<b>제1층</b> · 두께 320cm · 암석: 백운암<br>화석: <img src=\"assets/fossils/stromatolite.png\" alt=\"스트로마톨라이트\" style=\"height:26px;vertical-align:middle;margin-right:2px\">스트로마톨라이트",
+          "correct": "선캄브리아시대"
+        },
+        {
+          "id": "l2",
+          "content": "<b>제2층</b> · 두께 60cm · 암석: 셰일<br>화석: <img src=\"assets/fossils/trilobite.png\" alt=\"삼엽충\" style=\"height:26px;vertical-align:middle;margin-right:2px\">삼엽충",
+          "correct": "고생대"
+        },
+        {
+          "id": "l3",
+          "content": "<b>제3층</b> · 두께 55cm · 암석: 석회암<br>화석: <img src=\"assets/fossils/fusulinid.png\" alt=\"방추충(푸줄리나)\" style=\"height:26px;vertical-align:middle;margin-right:2px\">방추충(푸줄리나)",
+          "correct": "고생대"
+        },
+        {
+          "id": "l4",
+          "content": "<b>제4층</b> · 두께 70cm · 암석: 사암<br>화석: <img src=\"assets/fossils/ammonite.png\" alt=\"암모나이트\" style=\"height:26px;vertical-align:middle;margin-right:2px\">암모나이트",
+          "correct": "중생대"
+        },
+        {
+          "id": "l5",
+          "content": "<b>제5층</b> · 두께 65cm · 암석: 사암<br>화석: <img src=\"assets/fossils/dinosaur_fossil.png\" alt=\"공룡 화석\" style=\"height:26px;vertical-align:middle;margin-right:2px\">공룡 화석",
+          "correct": "중생대"
+        },
+        {
+          "id": "l6",
+          "content": "<b>제6층</b> · 두께 50cm · 암석: 사암<br>화석: <img src=\"assets/fossils/nummulites.png\" alt=\"화폐석\" style=\"height:26px;vertical-align:middle;margin-right:2px\">화폐석",
+          "correct": "신생대"
+        }
+      ],
+      "categories": [
+        "선캄브리아시대",
+        "고생대",
+        "중생대",
+        "신생대"
+      ],
+      "passRatio": 1
+    },
+    {
+      "id": "r2",
+      "kind": "ordering",
+      "title": "지질시대 순서",
+      "prompt": "▶ 지질시대 카드를 오래된 것부터 최근 순서로 클릭하시오.",
+      "items": [
+        {
+          "id": "e1",
+          "content": "선캄브리아시대",
+          "rank": 1
+        },
+        {
+          "id": "e2",
+          "content": "고생대",
+          "rank": 2
+        },
+        {
+          "id": "e3",
+          "content": "중생대",
+          "rank": 3
+        },
+        {
+          "id": "e4",
+          "content": "신생대",
+          "rank": 4
+        }
+      ]
+    },
+    {
+      "id": "r3",
+      "kind": "matchpairs",
+      "title": "대멸종 원인-환경 변화 짝짓기",
+      "prompt": "▶ 대멸종을 일으킨 사건 카드와 그로 인한 환경 변화 카드를 연결하시오.",
+      "left": [
+        {
+          "id": "l1",
+          "content": "판게아 형성으로 대륙이 하나로 뭉침"
+        },
+        {
+          "id": "l2",
+          "content": "소행성이 지구에 충돌함"
+        },
+        {
+          "id": "l3",
+          "content": "대규모 화산이 폭발함"
+        }
+      ],
+      "right": [
+        {
+          "id": "r1",
+          "content": "해안선 감소 + 기후 단순화"
+        },
+        {
+          "id": "r2",
+          "content": "먼지구름이 햇빛을 차단해 기온 감소"
+        },
+        {
+          "id": "r3",
+          "content": "화산재가 햇빛을 차단하고 온실효과·산성비를 유발"
+        }
+      ],
+      "correct": {
+        "l1": "r1",
+        "l2": "r2",
+        "l3": "r3"
+      }
+    },
+    {
+      "id": "r4",
+      "kind": "graphread",
+      "title": "지질시대 길이 비율 판독",
+      "prompt": "▶ 아래 막대는 지구 역사(약 46억 년) 중 각 지질시대가 차지하는 길이를 비율로 나타낸 것이다.",
+      "chartSvg": "<svg viewBox=\"0 0 400 70\" style=\"width:100%;height:auto\"><rect x=\"0\" y=\"10\" width=\"352\" height=\"26\" fill=\"#cfd6dd\"/><rect x=\"0\" y=\"10\" width=\"24\" height=\"26\" fill=\"#e0a32c\"/><rect x=\"24\" y=\"10\" width=\"16\" height=\"26\" fill=\"#7cc98d\"/><rect x=\"40\" y=\"10\" width=\"6\" height=\"26\" fill=\"#e77e8c\"/><text x=\"0\" y=\"55\" font-size=\"10\" fill=\"#8d8175\">선캄브리아</text><text x=\"190\" y=\"55\" font-size=\"10\" fill=\"#8d8175\">고생대·중생대·신생대 (전체의 약 12%)</text></svg>",
+      "question": "선캄브리아시대가 전체 지질시대에서 차지하는 비율에 가장 가까운 것은?",
+      "options": [
+        "약 90%",
+        "약 50%",
+        "약 20%",
+        "약 5%"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "r5",
+      "kind": "matchpairs",
+      "title": "원인-결과 짝짓기",
+      "prompt": "▶ 사건 카드와 그 결과 카드를 연결하시오.",
+      "left": [
+        {
+          "id": "l1",
+          "content": "판게아 형성과 대규모 화산활동"
+        },
+        {
+          "id": "l2",
+          "content": "소행성(운석) 충돌(약 6600만 년 전)"
+        },
+        {
+          "id": "l3",
+          "content": "경계층의 이리듐 고농도"
+        }
+      ],
+      "right": [
+        {
+          "id": "r1",
+          "content": "고생대 말 대멸종(삼엽충 등 절멸)"
+        },
+        {
+          "id": "r2",
+          "content": "중생대 말 대멸종(공룡 등 절멸)"
+        },
+        {
+          "id": "r3",
+          "content": "소행성 충돌설의 대표적 증거"
+        }
+      ],
+      "correct": {
+        "l1": "r1",
+        "l2": "r2",
+        "l3": "r3"
+      }
+    },
+    {
+      "id": "r6",
+      "kind": "combo",
+      "title": "보기조합형",
+      "prompt": "▶ 지질시대와 대멸종에 대한 설명으로 옳은 것만을 있는 대로 고르시오.",
+      "statements": [
+        "지질시대는 생물계의 급격한 변화(대멸종 등)를 기준으로 구분한다.",
+        "선캄브리아시대에는 단단한 골격을 가진 생물이 많아 화석이 풍부하게 발견된다.",
+        "대멸종은 비교적 짧은 시간에 생물다양성이 크게 감소하는 사건이다."
+      ],
+      "comboOptions": [
+        [
+          0
+        ],
+        [
+          2
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "correctComboIndex": 3
+    },
+    {
+      "id": "p1",
+      "kind": "classify",
+      "title": "생물·환경 특징으로 시대 판단",
+      "prompt": "▶ 다음은 각 지질시대의 생물·환경 특징을 설명한 카드이다. 알맞은 지질시대로 분류하시오.",
+      "items": [
+        {
+          "id": "a1",
+          "content": "겉씨식물인 소철·은행나무가 번성하고, 하늘에는 시조새가 등장하였다.",
+          "correct": "중생대"
+        },
+        {
+          "id": "a2",
+          "content": "얕은 바다에서 남세균(시아노박테리아)이 매트 형태로 쌓이며 대기 중에 산소를 공급하기 시작하였다.",
+          "correct": "선캄브리아시대"
+        },
+        {
+          "id": "a3",
+          "content": "따뜻한 얕은 바다에 삼엽충과 필석이 번성하고, 육상에는 양치식물 숲이 형성되었다.",
+          "correct": "고생대"
+        },
+        {
+          "id": "a4",
+          "content": "속씨식물이 번성하고 포유류가 다양하게 진화하여 육상 생태계의 주요 구성원이 되었다.",
+          "correct": "신생대"
+        },
+        {
+          "id": "a5",
+          "content": "오존층이 아직 두껍게 형성되지 않아 생물 대부분이 육상으로 진출하지 못하고 바다에서만 살았다.",
+          "correct": "선캄브리아시대"
+        },
+        {
+          "id": "a6",
+          "content": "히말라야산맥이 형성되는 등 조산 운동이 활발하였고, 매머드와 같은 대형 포유류가 살았다.",
+          "correct": "신생대"
+        }
+      ],
+      "categories": [
+        "선캄브리아시대",
+        "고생대",
+        "중생대",
+        "신생대"
+      ],
+      "passRatio": 1
+    },
+    {
+      "id": "p2",
+      "kind": "classify",
+      "title": "지층·환경 단서로 시대 판단",
+      "prompt": "▶ 다음은 지층 조사에서 얻은 기록 카드이다. 기록의 내용을 보고 지층이 쌓인 시대를 분류하시오.",
+      "items": [
+        {
+          "id": "b1",
+          "content": "석탄층에서 대형 양치식물(인목·봉인목)의 압흔 화석이 다량으로 발견되었다.",
+          "correct": "고생대"
+        },
+        {
+          "id": "b2",
+          "content": "붉은 사암층에서 공룡 발자국 화석과 겉씨식물의 구과 화석이 함께 발견되었다.",
+          "correct": "중생대"
+        },
+        {
+          "id": "b3",
+          "content": "화산재로 덮인 지층에서 매머드 뼈 화석과 함께 사람의 발자국 화석이 발견되었다.",
+          "correct": "신생대"
+        },
+        {
+          "id": "b4",
+          "content": "줄무늬 모양의 호상철광층(BIF)이 두껍게 쌓여 있고, 육상 생물의 흔적은 전혀 발견되지 않았다.",
+          "correct": "선캄브리아시대"
+        },
+        {
+          "id": "b5",
+          "content": "해성층에서 초기 고래류의 뼈 화석과 대형 상어의 이빨 화석이 함께 산출되었다.",
+          "correct": "신생대"
+        },
+        {
+          "id": "b6",
+          "content": "쥐라기 지층에서 깃털이 찍힌 시조새 화석이 발견되었다.",
+          "correct": "중생대"
+        }
+      ],
+      "categories": [
+        "선캄브리아시대",
+        "고생대",
+        "중생대",
+        "신생대"
+      ],
+      "passRatio": 1
+    },
+    {
+      "id": "p3",
+      "kind": "classify",
+      "title": "지구 환경 변화 사건으로 시대 판단",
+      "prompt": "▶ 다음은 지구 환경 변화와 관련된 사건 카드이다. 각 사건이 일어난 지질시대로 분류하시오.",
+      "items": [
+        {
+          "id": "c1",
+          "content": "초대륙 판게아가 형성되며 대륙 대부분이 하나로 합쳐졌다.",
+          "correct": "고생대"
+        },
+        {
+          "id": "c2",
+          "content": "판게아가 분리되기 시작하며 대서양이 열리기 시작하였다.",
+          "correct": "중생대"
+        },
+        {
+          "id": "c3",
+          "content": "빙하기와 간빙기가 반복되며 현재와 비슷한 기후 환경이 나타났다.",
+          "correct": "신생대"
+        },
+        {
+          "id": "c4",
+          "content": "대기 중에 산소가 거의 없다가 광합성 생물의 활동으로 산소 농도가 점차 증가하기 시작하였다.",
+          "correct": "선캄브리아시대"
+        },
+        {
+          "id": "c5",
+          "content": "히말라야산맥과 알프스산맥이 조산 운동으로 융기하였다.",
+          "correct": "신생대"
+        },
+        {
+          "id": "c6",
+          "content": "오존층이 형성되면서 육상에 최초로 식물과 동물이 진출하기 시작하였다.",
+          "correct": "고생대"
+        }
+      ],
+      "categories": [
+        "선캄브리아시대",
+        "고생대",
+        "중생대",
+        "신생대"
+      ],
+      "passRatio": 1
+    },
+    {
+      "id": "p4",
+      "kind": "classify",
+      "title": "대표 화석 이름으로 시대 분류",
+      "prompt": "▶ 다음은 각 지질시대를 대표하는 화석의 이름이다. 알맞은 지질시대로 분류하시오.",
+      "items": [
+        {
+          "id": "d1",
+          "content": "삼엽충",
+          "correct": "고생대"
+        },
+        {
+          "id": "d2",
+          "content": "공룡",
+          "correct": "중생대"
+        },
+        {
+          "id": "d3",
+          "content": "매머드",
+          "correct": "신생대"
+        },
+        {
+          "id": "d4",
+          "content": "스트로마톨라이트",
+          "correct": "선캄브리아시대"
+        },
+        {
+          "id": "d5",
+          "content": "필석(그랍톨라이트)",
+          "correct": "고생대"
+        },
+        {
+          "id": "d6",
+          "content": "화폐석(뉴뮬라이트)",
+          "correct": "신생대"
+        }
+      ],
+      "categories": [
+        "선캄브리아시대",
+        "고생대",
+        "중생대",
+        "신생대"
+      ],
+      "passRatio": 1
+    },
+    {
+      "id": "p5",
+      "kind": "ordering",
+      "title": "생물 출현·번성 순서",
+      "prompt": "▶ 다음 생물이 출현하거나 번성한 순서대로(오래된 것부터) 클릭하시오.",
+      "items": [
+        {
+          "id": "e1",
+          "content": "스트로마톨라이트(남세균)의 출현",
+          "rank": 1
+        },
+        {
+          "id": "e2",
+          "content": "삼엽충의 번성",
+          "rank": 2
+        },
+        {
+          "id": "e3",
+          "content": "공룡의 번성",
+          "rank": 3
+        },
+        {
+          "id": "e4",
+          "content": "매머드의 등장",
+          "rank": 4
+        }
+      ]
+    },
+    {
+      "id": "p6",
+      "kind": "ordering",
+      "title": "판게아 형성부터 포유류 번성까지",
+      "prompt": "▶ 다음 사건을 시간 순서대로(오래된 것부터) 클릭하시오.",
+      "items": [
+        {
+          "id": "f1",
+          "content": "초대륙 판게아 형성",
+          "rank": 1
+        },
+        {
+          "id": "f2",
+          "content": "고생대 말 대멸종",
+          "rank": 2
+        },
+        {
+          "id": "f3",
+          "content": "중생대 공룡의 번성",
+          "rank": 3
+        },
+        {
+          "id": "f4",
+          "content": "중생대 말 대멸종(소행성 충돌)",
+          "rank": 4
+        },
+        {
+          "id": "f5",
+          "content": "신생대 포유류의 번성",
+          "rank": 5
+        }
+      ]
+    },
+    {
+      "id": "p7",
+      "kind": "ordering",
+      "title": "지층 누중의 법칙으로 본 퇴적 순서",
+      "prompt": "▶ 어느 지역의 지층 단면에서 각 층의 화석을 조사하였다. 지층 누중의 법칙에 따라 먼저 퇴적된 층부터(오래된 것부터) 클릭하시오.",
+      "items": [
+        {
+          "id": "g1",
+          "content": "스트로마톨라이트 화석이 나오는 맨 아래층",
+          "rank": 1
+        },
+        {
+          "id": "g2",
+          "content": "삼엽충 화석이 나오는 층",
+          "rank": 2
+        },
+        {
+          "id": "g3",
+          "content": "암모나이트 화석이 나오는 층",
+          "rank": 3
+        },
+        {
+          "id": "g4",
+          "content": "매머드 화석이 나오는 맨 위층",
+          "rank": 4
+        }
+      ]
+    },
+    {
+      "id": "p8",
+      "kind": "ordering",
+      "title": "오존층 형성부터 인류 출현까지",
+      "prompt": "▶ 다음 사건을 시간 순서대로(오래된 것부터) 클릭하시오.",
+      "items": [
+        {
+          "id": "h1",
+          "content": "오존층이 형성되어 생물이 육상으로 진출하기 시작함",
+          "rank": 1
+        },
+        {
+          "id": "h2",
+          "content": "파충류가 처음 등장함",
+          "rank": 2
+        },
+        {
+          "id": "h3",
+          "content": "시조새가 하늘을 낢",
+          "rank": 3
+        },
+        {
+          "id": "h4",
+          "content": "인류의 조상이 출현함",
+          "rank": 4
+        }
+      ]
+    },
+    {
+      "id": "p9",
+      "kind": "matchpairs",
+      "title": "지질시대-대표 표준화석 짝짓기",
+      "prompt": "▶ 지질시대 카드와 그 시대의 대표적인 표준화석 카드를 연결하시오.",
+      "left": [
+        {
+          "id": "c1",
+          "content": "선캄브리아시대"
+        },
+        {
+          "id": "c2",
+          "content": "고생대"
+        },
+        {
+          "id": "c3",
+          "content": "중생대"
+        },
+        {
+          "id": "c4",
+          "content": "신생대"
+        }
+      ],
+      "right": [
+        {
+          "id": "e1",
+          "content": "스트로마톨라이트"
+        },
+        {
+          "id": "e2",
+          "content": "삼엽충(방추충)"
+        },
+        {
+          "id": "e3",
+          "content": "암모나이트"
+        },
+        {
+          "id": "e4",
+          "content": "화폐석"
+        }
+      ],
+      "correct": {
+        "c1": "e1",
+        "c2": "e2",
+        "c3": "e3",
+        "c4": "e4"
+      }
+    },
+    {
+      "id": "p10",
+      "kind": "matchpairs",
+      "title": "표준화석·시상화석 개념 짝짓기",
+      "prompt": "▶ 화석의 개념·예시 카드와 그에 알맞은 설명 카드를 연결하시오.",
+      "left": [
+        {
+          "id": "c1",
+          "content": "표준화석"
+        },
+        {
+          "id": "c2",
+          "content": "시상화석"
+        },
+        {
+          "id": "c3",
+          "content": "삼엽충(고생대 표준화석)"
+        },
+        {
+          "id": "c4",
+          "content": "산호(따뜻하고 얕은 바다의 시상화석)"
+        }
+      ],
+      "right": [
+        {
+          "id": "e1",
+          "content": "생존 기간이 짧고 분포 범위가 넓어 지층이 쌓인 시대를 판단하는 데 이용되는 화석"
+        },
+        {
+          "id": "e2",
+          "content": "특정 환경에서만 살아서 지층이 쌓일 당시의 환경을 판단하는 데 이용되는 화석"
+        },
+        {
+          "id": "e3",
+          "content": "표준화석의 대표적인 예"
+        },
+        {
+          "id": "e4",
+          "content": "시상화석의 대표적인 예"
+        }
+      ],
+      "correct": {
+        "c1": "e1",
+        "c2": "e2",
+        "c3": "e3",
+        "c4": "e4"
+      }
+    },
+    {
+      "id": "p11",
+      "kind": "matchpairs",
+      "title": "지질시대-당시의 지구 환경 짝짓기",
+      "prompt": "▶ 지질시대 카드와 그 시대에 일어난 지구 환경 변화 카드를 연결하시오.",
+      "left": [
+        {
+          "id": "c1",
+          "content": "선캄브리아시대"
+        },
+        {
+          "id": "c2",
+          "content": "고생대"
+        },
+        {
+          "id": "c3",
+          "content": "중생대"
+        },
+        {
+          "id": "c4",
+          "content": "신생대"
+        }
+      ],
+      "right": [
+        {
+          "id": "e1",
+          "content": "대기 중 산소 농도가 증가하기 시작하고 다세포 생물이 출현함"
+        },
+        {
+          "id": "e2",
+          "content": "판게아가 형성되고 육상에 양치식물 숲이 발달함"
+        },
+        {
+          "id": "e3",
+          "content": "판게아가 분리되고 파충류(공룡)가 육상을 지배함"
+        },
+        {
+          "id": "e4",
+          "content": "히말라야산맥이 융기하고 포유류와 속씨식물이 번성함"
+        }
+      ],
+      "correct": {
+        "c1": "e1",
+        "c2": "e2",
+        "c3": "e3",
+        "c4": "e4"
+      }
+    },
+    {
+      "id": "p12",
+      "kind": "matchpairs",
+      "title": "대멸종 사건-내용 짝짓기",
+      "prompt": "▶ 대멸종 사건 카드와 그에 알맞은 내용 카드를 연결하시오.",
+      "left": [
+        {
+          "id": "c1",
+          "content": "고생대 말 대멸종으로 사라진 생물"
+        },
+        {
+          "id": "c2",
+          "content": "중생대 말 대멸종으로 사라진 생물과 그 이후"
+        },
+        {
+          "id": "c3",
+          "content": "고생대 말 대멸종이 일어난 시기"
+        },
+        {
+          "id": "c4",
+          "content": "중생대 말 대멸종이 일어난 시기"
+        }
+      ],
+      "right": [
+        {
+          "id": "e1",
+          "content": "삼엽충, 방추충(푸줄리나) 등 해양 무척추동물 대부분이 멸종함"
+        },
+        {
+          "id": "e2",
+          "content": "공룡, 암모나이트 등이 멸종하고 이후 포유류가 번성하는 계기가 됨"
+        },
+        {
+          "id": "e3",
+          "content": "약 2억 5천만 년 전(페름기 말)"
+        },
+        {
+          "id": "e4",
+          "content": "약 6600만 년 전(백악기 말)"
+        }
+      ],
+      "correct": {
+        "c1": "e1",
+        "c2": "e2",
+        "c3": "e3",
+        "c4": "e4"
+      }
+    },
+    {
+      "id": "p13",
+      "kind": "quiz",
+      "title": "표준화석의 조건",
+      "prompt": "▶ 화석의 종류에 대한 다음 질문에 답하시오.",
+      "question": "다음 중 표준화석이 되기 위한 조건으로 가장 적절한 것은?",
+      "options": [
+        "생존 기간이 길고 분포 범위가 좁아야 한다",
+        "생존 기간이 짧고 분포 범위가 넓어야 한다",
+        "생존 기간이 길고 분포 범위가 넓어야 한다",
+        "생존 기간이 짧고 분포 범위가 좁아야 한다"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "id": "p14",
+      "kind": "quiz",
+      "title": "시상화석의 특징",
+      "prompt": "▶ 화석의 종류에 대한 다음 질문에 답하시오.",
+      "question": "다음 중 시상화석에 대한 설명으로 옳은 것은?",
+      "options": [
+        "특정한 환경에서만 서식하여 지층이 퇴적될 당시의 환경을 알려준다",
+        "여러 시대에 걸쳐 널리 분포하여 지층의 생성 시대를 정확히 알려준다",
+        "진화 속도가 빨라 다른 시대의 화석과 쉽게 구별된다",
+        "지구 전체에서 짧은 기간에만 살았던 생물의 화석이다"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "p15",
+      "kind": "quiz",
+      "title": "고생대 말 대멸종의 원인",
+      "prompt": "▶ 대멸종 사건에 대한 다음 질문에 답하시오.",
+      "question": "고생대 말(페름기 말) 대멸종의 주요 원인으로 가장 널리 받아들여지는 것은?",
+      "options": [
+        "소행성 충돌",
+        "대규모 화산 활동(시베리아 트랩)과 이로 인한 급격한 기후 변화",
+        "빙하기의 급격한 도래",
+        "대형 육식 공룡의 등장"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "id": "p16",
+      "kind": "quiz",
+      "title": "중생대 말 대멸종의 증거",
+      "prompt": "▶ 대멸종 사건에 대한 다음 질문에 답하시오.",
+      "question": "중생대 말 대멸종이 소행성 충돌로 일어났다는 주장의 대표적인 증거는 무엇인가?",
+      "options": [
+        "지층 경계에서 이리듐 함량이 비정상적으로 높게 검출된다",
+        "지층 경계에서 화석이 전혀 발견되지 않는다",
+        "지층 경계의 암석이 모두 석회암으로 이루어져 있다",
+        "지층 경계에서 공룡 알 화석이 급격히 증가한다"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "p17",
+      "kind": "graphread",
+      "title": "고생대·중생대·신생대 길이 비교",
+      "prompt": "▶ 아래 막대는 선캄브리아시대를 제외한 나머지 세 지질시대(고생대·중생대·신생대)의 상대적인 길이를 나타낸 것이다.",
+      "chartSvg": "<svg viewBox=\"0 0 320 110\" style=\"width:100%;height:auto\"><rect x=\"70\" y=\"10\" width=\"260\" height=\"20\" fill=\"#e0a32c\"/><text x=\"0\" y=\"25\" font-size=\"11\" fill=\"#555\">고생대</text><rect x=\"70\" y=\"40\" width=\"166\" height=\"20\" fill=\"#7cc98d\"/><text x=\"0\" y=\"55\" font-size=\"11\" fill=\"#555\">중생대</text><rect x=\"70\" y=\"70\" width=\"59\" height=\"20\" fill=\"#e77e8c\"/><text x=\"0\" y=\"85\" font-size=\"11\" fill=\"#555\">신생대</text></svg>",
+      "question": "고생대, 중생대, 신생대 중 지속된 기간이 가장 긴 시대는?",
+      "options": [
+        "고생대",
+        "중생대",
+        "신생대",
+        "세 시대의 길이가 모두 같다"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "p18",
+      "kind": "graphread",
+      "title": "지층 단면도 판독",
+      "prompt": "▶ 아래는 어느 지역의 지층 단면을 나타낸 것이다. 지층은 뒤집히지 않았다.",
+      "chartSvg": "<svg viewBox=\"0 0 300 130\" style=\"width:100%;height:auto\"><rect x=\"20\" y=\"90\" width=\"260\" height=\"30\" fill=\"#cfc7a8\"/><text x=\"30\" y=\"108\" font-size=\"11\" fill=\"#333\">층A · 석회암 · 삼엽충 화석</text><rect x=\"20\" y=\"55\" width=\"260\" height=\"30\" fill=\"#d9b98a\"/><text x=\"30\" y=\"73\" font-size=\"11\" fill=\"#333\">층B · 사암 · 암모나이트 화석</text><rect x=\"20\" y=\"20\" width=\"260\" height=\"30\" fill=\"#b9c9a8\"/><text x=\"30\" y=\"38\" font-size=\"11\" fill=\"#333\">층C · 이암 · 화폐석 화석</text></svg>",
+      "question": "지층 누중의 법칙에 따를 때, 가장 최근(나중)에 퇴적된 층은?",
+      "options": [
+        "층A",
+        "층B",
+        "층C",
+        "판단할 수 없다"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "id": "p19",
+      "kind": "combo",
+      "title": "보기조합형 - 화석과 시대 구분",
+      "prompt": "▶ 화석과 지질시대 구분에 대한 설명으로 옳은 것만을 있는 대로 고르시오.",
+      "statements": [
+        "표준화석은 생존 기간이 짧고 분포 범위가 넓을수록 시대 판단에 유용하다.",
+        "산호 화석은 대표적인 표준화석으로, 지층이 쌓인 시대를 정확하게 알려준다.",
+        "지질시대의 경계는 생물계의 급격한 변화(대멸종 등)를 기준으로 설정되는 경우가 많다."
+      ],
+      "comboOptions": [
+        [
+          0
+        ],
+        [
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "correctComboIndex": 3
+    },
+    {
+      "id": "p20",
+      "kind": "combo",
+      "title": "보기조합형 - 지질시대별 사실 확인",
+      "prompt": "▶ 지질시대에 대한 설명으로 옳은 것만을 있는 대로 고르시오.",
+      "statements": [
+        "고생대 말에는 초대륙 판게아가 형성되어 있었다.",
+        "중생대에는 속씨식물이 육상 생태계를 지배하며 번성하였다.",
+        "신생대에는 히말라야산맥과 같은 대규모 조산 운동이 일어났다.",
+        "선캄브리아시대는 지질시대 전체 길이의 약 90%를 차지한다."
+      ],
+      "comboOptions": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ]
+      ],
+      "correctComboIndex": 1
+    }
+  ],
+  "gradablePoolCount": 6
+}</script>
+<script src="chapterdata.js"></script>
+<script>
+loadChapterData('data/ch10.json').then(({ROUNDS, META}) => startSession(ROUNDS, META));
+</script>
+</body>
+</html>

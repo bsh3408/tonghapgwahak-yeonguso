@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대멸종 그래프로 시대 나누기</title>
+<style>
+:root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
+ --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72;--blue:#7fb3e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-size:14.5px;line-height:1.65;
+ font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:760px;margin:0 auto;padding:14px 16px 60px}
+.top{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:2px solid var(--line);
+ padding:12px 16px;margin:0 -16px 16px}
+.title{font-weight:900;font-size:15.5px}
+.notice{background:#fff3d6;border:1.5px solid #edd49a;border-radius:12px;padding:11px 13px;font-size:12.5px;
+ color:#a5822c;font-weight:700;margin-bottom:14px;line-height:1.7}
+.notice b{color:#7a5c1c}
+.graphbox{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+svg{width:100%;height:auto;display:block}
+.pt{cursor:pointer}
+.pt circle{fill:#fff;stroke:var(--dim2);stroke-width:3;transition:all .15s}
+.pt:hover circle{stroke:var(--gold)}
+.pt.picked circle{fill:var(--gold);stroke:#c99622}
+.pt.correct circle{fill:var(--mint2);stroke:#2d8b76}
+.pt.wrong circle{fill:var(--red);stroke:#c1544c}
+.pt.missed circle{fill:none;stroke:var(--red);stroke-dasharray:3,3}
+.ptlabel{font-size:11px;font-weight:800;fill:var(--dim);text-anchor:middle}
+.axislabel{font-size:11px;fill:var(--dim2)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--dim);margin-top:8px;justify-content:center}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:11px;height:11px;border-radius:50%;display:inline-block;border:2px solid}
+.picklist{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.pickbtn{background:#fff;border:2px solid var(--line);border-radius:11px;padding:9px 13px;font-size:12.5px;font-weight:800}
+.pickbtn.picked{border-color:var(--gold);background:#fff8e8;color:#a5822c}
+.navbtn{width:100%;padding:13px;background:var(--mint2);border:none;border-radius:14px;color:#fff;font-weight:900;
+ font-size:14.5px;margin-top:6px;box-shadow:0 3px 0 #2d8b76}
+.navbtn:disabled{background:#d5cec3;box-shadow:0 3px 0 #c0b8ab;cursor:not-allowed}
+.navbtn:not(:disabled):active{transform:translateY(2px);box-shadow:0 1px 0 #2d8b76}
+.hint{text-align:center;font-size:11.5px;color:var(--dim2);margin-top:8px}
+/* 결과 */
+.resulthead{text-align:center;padding:6px 0 10px}
+.resulthead .big{font-size:18px;font-weight:900;margin-top:6px}
+.explainbox{background:#fff;border:2px solid var(--line);border-radius:13px;padding:12px 13px;margin-bottom:9px}
+.explainbox.correct{border-color:var(--mint2)}
+.explainbox.wrong{border-color:var(--red)}
+.explainbox h4{margin:0 0 5px;font-size:13px;font-weight:900}
+.explainbox p{margin:0;font-size:12.5px;color:var(--dim);line-height:1.7}
+.finalnotice{background:#fff3d6;border:2px solid #edd49a;border-radius:14px;padding:13px 15px;font-size:12.5px;
+ color:#7a5c1c;font-weight:700;line-height:1.8;margin-top:14px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top"><div class="title">대멸종 그래프로 시대 나누기</div></div>
+  <div class="notice">아래 그래프는 <b>선캄브리아시대부터 현재까지 생물다양성이 시간에 따라 어떻게 변해왔는지</b>를 나타낸 것입니다. 그래프에는 급격히 다양성이 줄어드는 지점(대멸종) 5곳이 표시돼 있습니다.<br>
+  이 중에서 <b>지질시대의 "대(代)"가 실제로 바뀌는 경계</b>(예: 고생대 → 중생대)에 해당하는 지점만 정확히 골라보세요. <b>5곳 모두가 "대"의 경계는 아닙니다.</b></div>
+
+  <div id="app"></div>
+</div>
+
+<script>
+/* ===================== 데이터 (통박사 검증: 상대적 생물다양성 지수, 셉코스키 곡선 단순화) ===================== */
+const CURVE=[[20,5],[90,8],[130,55],[190,65],[220,40],[260,60],[300,68],[320,48],[360,62],[400,72],
+ [420,15],[460,25],[500,45],[520,35],[560,50],[620,75],[650,68],[660,20],[700,35],[750,55],[820,75],[880,90]];
+function valToY(v){return 280 - v*2.5;}
+const PATH_D = 'M ' + CURVE.map(([x,v])=>`${x},${valToY(v)}`).join(' L ');
+
+const DIPS=[
+ {id:'ord', label:'오르도비스기 말', x:220, v:40, boundary:false,
+  desc:'고생대 안에서 일어난 대멸종입니다(오르도비스기/실루리아기 "기" 경계). "대(代)"가 바뀌는 지점이 아니라, 여전히 고생대입니다.'},
+ {id:'dev', label:'데본기 후기', x:320, v:48, boundary:false,
+  desc:'역시 고생대 안에서 일어난 사건입니다(데본기 후기 "기" 경계). "대"는 바뀌지 않습니다.'},
+ {id:'perm', label:'페름기 말', x:420, v:15, boundary:true,
+  desc:'5대 대멸종 중 최대 규모("대멸종의 어머니")입니다. 이 지점이 바로 고생대 → 중생대로 "대"가 바뀌는 경계입니다.'},
+ {id:'tri', label:'트라이아스기 말', x:520, v:35, boundary:false,
+  desc:'중생대 안에서 일어난 사건입니다(트라이아스기/쥐라기 "기" 경계). "대"는 바뀌지 않고 계속 중생대입니다.'},
+ {id:'cret', label:'백악기 말(K-Pg)', x:660, v:20, boundary:true,
+  desc:'공룡(조류 제외)이 사라진 사건입니다. 이 지점이 중생대 → 신생대로 "대"가 바뀌는 경계입니다. 수행평가 과제(대멸종 가설 타당성 평가)에서 다루는 바로 그 사건입니다.'}
+];
+const CAMBRIAN={x:130, v:55, label:'캄브리아 대폭발'};
+const CORRECT=new Set(DIPS.filter(d=>d.boundary).map(d=>d.id));
+
+const S={picked:new Set(), submitted:false};
+
+function app(){return document.getElementById('app');}
+
+function render(){
+  if(S.submitted){renderResult();return;}
+  app().innerHTML=`
+   <div class="graphbox">
+     <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg">
+       <line x1="20" y1="280" x2="880" y2="280" stroke="var(--line2)" stroke-width="2"/>
+       <text class="axislabel" x="20" y="300">약 46억 년 전(지구 탄생)</text>
+       <text class="axislabel" x="880" y="300" text-anchor="end">현재</text>
+       <text class="axislabel" x="20" y="20">생물다양성 ▲</text>
+       <path d="${PATH_D}" fill="none" stroke="var(--mint2)" stroke-width="3"/>
+       <g class="pt" style="cursor:default"><circle cx="${CAMBRIAN.x}" cy="${valToY(CAMBRIAN.v)}" r="7" fill="var(--blue)" stroke="#5a8fc2"/>
+         <text class="ptlabel" x="${CAMBRIAN.x}" y="${valToY(CAMBRIAN.v)-14}">🔺${CAMBRIAN.label}</text></g>
+       ${DIPS.map(d=>`<g class="pt" id="pt-${d.id}" data-id="${d.id}">
+         <circle cx="${d.x}" cy="${valToY(d.v)}" r="9"/>
+         <text class="ptlabel" x="${d.x}" y="${valToY(d.v)+22}">${d.label}</text></g>`).join('')}
+     </svg>
+     <div class="legend">
+       <span><i style="background:var(--blue);border-color:#5a8fc2"></i>선캄브리아→고생대 (급상승, 참고용)</span>
+       <span><i style="background:#fff;border-color:var(--dim2)"></i>대멸종 지점(클릭해서 선택)</span>
+       <span><i style="background:var(--gold);border-color:#c99622"></i>내가 고른 지점</span>
+     </div>
+   </div>
+   <div class="hint" id="pickHint"></div>
+   <button class="navbtn" id="submitBtn" onclick="submitAll()" disabled>채점하기</button>`;
+  DIPS.forEach(d=>{
+    document.getElementById('pt-'+d.id).addEventListener('click',()=>{
+      if(S.picked.has(d.id))S.picked.delete(d.id); else S.picked.add(d.id);
+      updatePicked();
+    });
+  });
+  updatePicked();
+}
+function updatePicked(){
+  DIPS.forEach(d=>{
+    const el=document.getElementById('pt-'+d.id);
+    if(el)el.classList.toggle('picked', S.picked.has(d.id));
+  });
+  const hint=document.getElementById('pickHint');
+  if(hint)hint.textContent=`${S.picked.size}개 선택됨 · "대(代)"의 경계라고 생각하는 지점만 고르세요`;
+  const btn=document.getElementById('submitBtn');
+  if(btn)btn.disabled=S.picked.size===0;
+}
+function submitAll(){S.submitted=true; render(); window.scrollTo(0,0);}
+
+function renderResult(){
+  const perfect = S.picked.size===CORRECT.size && [...S.picked].every(id=>CORRECT.has(id));
+  app().innerHTML=`
+   <div class="resulthead">
+     <div style="font-size:34px">${perfect?'🎉':'🪨'}</div>
+     <div class="big">${perfect? '정답입니다! 페름기 말·백악기 말이 실제 "대"의 경계예요' : '아쉬워요, 다시 살펴볼까요?'}</div>
+   </div>
+   ${DIPS.map(d=>{
+     const wasPicked=S.picked.has(d.id), isBoundary=d.boundary;
+     const status = isBoundary && wasPicked ? 'correct' : (!isBoundary && wasPicked ? 'wrong' : (isBoundary && !wasPicked ? 'wrong' : ''));
+     const icon = isBoundary && wasPicked ? '✅ 정확히 골랐어요' : (!isBoundary && wasPicked ? '❌ 이 지점은 "대" 경계가 아니에요' : (isBoundary && !wasPicked ? '⚠️ 이 지점을 놓쳤어요' : '➖ 고르지 않음 (맞음)'));
+     return `<div class="explainbox ${status}"><h4>${d.label} ${icon}</h4><p>${d.desc}</p></div>`;
+   }).join('')}
+   <div class="explainbox" style="border-color:var(--blue)"><h4>🔺 ${CAMBRIAN.label} (참고)</h4>
+     <p>이 지점도 선캄브리아시대 → 고생대로 "대"가 바뀌는 진짜 경계입니다. 다만 대멸종(급락)이 아니라 다양성이 폭발적으로 늘어난 지점(급상승)이라 이번 문제에서는 선택 대상에 넣지 않았어요.</p></div>
+   <div class="finalnotice">이 채점은 "대(代)"와 "기(紀)" 경계를 구분하는 연습을 돕는 참고 자료입니다. 정확한 연대나 멸종 규모의 세부 수치는 자료마다 차이가 있을 수 있어, 여기서는 상대적인 크기와 순서만 다뤘습니다.</div>
+   <div class="navbtn" onclick="location.reload()" style="text-align:center">다시 도전하기</div>`;
+}
+
+render();
+</script>
+</body>
+</html>

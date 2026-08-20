@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지층 속 화석, 언제 살았을까?</title>
+<style>
+:root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
+ --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-size:14.5px;line-height:1.65;
+ font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:720px;margin:0 auto;padding:14px 16px 60px}
+.top{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:2px solid var(--line);
+ padding:12px 16px;margin:0 -16px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.title{font-weight:900;font-size:15.5px;flex:1}
+.leavebadge{background:#fff;border:2px solid var(--line);border-radius:20px;padding:6px 13px;font-size:12px;
+ font-weight:800;color:var(--dim);transition:all .2s}
+.leavebadge.warn{border-color:var(--red);color:var(--red);background:#fff0ee;animation:pulse .5s}
+@keyframes pulse{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+.notice{background:#fff3d6;border:1.5px solid #edd49a;border-radius:12px;padding:11px 13px;font-size:12.5px;
+ color:#a5822c;font-weight:700;margin-bottom:14px;line-height:1.7}
+.notice b{color:#7a5c1c}
+.column{display:flex;flex-direction:column-reverse;gap:8px}
+.layer{border:2px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+.layer.correct{border-color:var(--mint2)}
+.layer.wrong{border-color:var(--red)}
+.layerhead{display:flex;align-items:center;gap:11px;padding:12px 14px;cursor:pointer;font-weight:800}
+.layerhead .n{width:28px;height:28px;border-radius:50%;background:var(--line);color:var(--dim);
+ display:flex;align-items:center;justify-content:center;font-size:12.5px;flex-shrink:0}
+.layer.open .layerhead .n{background:var(--mint2);color:#fff}
+.layerhead .lbl{flex:1;font-size:14px}
+.layerhead .lbl small{display:block;font-size:11px;color:var(--dim2);font-weight:600}
+.layerhead .chev{color:var(--dim2);transition:transform .15s}
+.layer.open .layerhead .chev{transform:rotate(90deg)}
+.layerbody{max-height:0;overflow:hidden;transition:max-height .25s ease}
+.layer.open .layerbody{max-height:520px}
+.layerbody-in{padding:0 14px 14px}
+.fossilcard{background:#f8f4ea;border-radius:12px;padding:12px;margin-bottom:11px;display:flex;gap:12px;align-items:flex-start}
+.fossilcard .ic{font-size:30px;line-height:1;flex-shrink:0}
+.fossilcard .tx b{display:block;font-size:14px;margin-bottom:3px}
+.fossilcard .tx p{margin:0;font-size:12.5px;color:var(--dim);line-height:1.7}
+.badge{display:inline-block;font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 8px;margin-top:6px}
+.badge.std{background:#e6f7ea;color:#3f9a5c;border:1px solid #b6e4c3}
+.badge.rep{background:#e6f0fb;color:#3f6fa8;border:1px solid #c2d9f0}
+.badge.trace{background:#f1ece2;color:#8d8175;border:1px solid var(--line)}
+.erabtns{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.erabtn{padding:11px;background:#fff;border:2px solid var(--line);border-radius:11px;font-size:13px;font-weight:800;color:var(--txt)}
+.erabtn.picked{border-color:var(--gold);background:#fff8e8;color:#a5822c}
+.erabtn.showcorrect{border-color:var(--mint2);background:#eef7f4;color:var(--mint2)}
+.erabtn.showwrong{border-color:var(--red);background:#fff0ee;color:var(--red)}
+.erabtn:disabled{cursor:default}
+.explain{margin-top:10px;font-size:12px;color:var(--dim);background:#f8f4ea;border-radius:10px;padding:10px;line-height:1.7;display:none}
+.explain.show{display:block}
+.navbtn{width:100%;padding:13px;background:var(--mint2);border:none;border-radius:14px;color:#fff;font-weight:900;
+ font-size:14.5px;margin-top:16px;box-shadow:0 3px 0 #2d8b76}
+.navbtn:disabled{background:#d5cec3;box-shadow:0 3px 0 #c0b8ab;cursor:not-allowed}
+.navbtn:not(:disabled):active{transform:translateY(2px);box-shadow:0 1px 0 #2d8b76}
+.progresshint{text-align:center;font-size:11.5px;color:var(--dim2);margin-top:8px}
+/* 결과 */
+.resulthead{text-align:center;padding:10px 0 4px}
+.resulthead .score{font-size:38px;font-weight:900;color:var(--mint2);margin-top:6px}
+.metricgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.metric{background:#fff;border:2px solid var(--line);border-radius:12px;padding:11px 12px}
+.metric .k{font-size:10.5px;color:var(--dim2);font-weight:700}
+.metric .v{font-size:18px;font-weight:900;color:var(--mint2);margin-top:2px}
+.metric .v.warn{color:var(--red)}
+.finalnotice{background:#fff3d6;border:2px solid #edd49a;border-radius:14px;padding:14px 15px;font-size:12.5px;
+ color:#7a5c1c;font-weight:700;line-height:1.8;margin-top:16px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <div class="title">지층 속 화석, 언제 살았을까?</div>
+    <div class="leavebadge" id="leaveBadge">⏱️ 창 이탈 0회</div>
+  </div>
+
+  <div class="notice">아래에서 위로(오래된 것 → 최근) 쌓인 6개 지층이 있다. 각 층을 클릭해 화석을 확인하고, <b>이 층이 만들어진 지질시대</b>를 선캄브리아시대·고생대·중생대·신생대 중에서 고른다.<br><b>다른 창(검색·AI 챗봇 등)을 확인하면 화면 상단에 기록된다.</b> 지층의 순서 자체가 근거이므로 화면 안 자료로 판단한다.</div>
+
+  <div id="app"></div>
+</div>
+
+<script>
+/* ===================== 데이터 (통박사 검증: 표준화석/대표화석/생흔화석 구분 반영) ===================== */
+const ERAS=['선캄브리아시대','고생대','중생대','신생대'];
+const LAYERS=[
+ {n:1, era:'선캄브리아시대', thick:320, rock:'백운암(스트로마톨라이트질)', ic:'🪨',
+  fossil:'스트로마톨라이트', kind:'trace',
+  desc:'남세균(시아노박테리아)이 얕은 물속에서 층층이 쌓으며 만든 줄무늬 구조입니다. 생물 자체의 화석이 아니라 생물이 남긴 흔적(생흔화석)입니다.',
+  note:'이 층은 다른 층보다 훨씬 두껍습니다(320cm). 그런데 화석은 딱 하나뿐이에요. 왜 그럴까요? — 이 시기는 지구 역사의 대부분(약 88%)을 차지하지만, 대부분의 생물이 단세포이거나 단단한 골격이 없어 화석으로 남기 어려웠기 때문입니다.'},
+ {n:2, era:'고생대', thick:60, rock:'셰일', ic:'🦂',
+  fossil:'삼엽충', kind:'std',
+  desc:'딱딱한 겉껍질을 가진 절지동물로, 고생대 전기(캄브리아기~오르도비스기)에 크게 번성했다가 고생대 말 대멸종 때 함께 사라졌습니다.', note:''},
+ {n:3, era:'고생대', thick:55, rock:'석회암', ic:'🐚',
+  fossil:'방추충(푸줄리나)', kind:'std',
+  desc:'방추(물레의 가락) 모양의 껍데기를 가진 단세포 생물로, 고생대 후기(석탄기~페름기)에 널리 번성했습니다.', note:''},
+ {n:4, era:'중생대', thick:70, rock:'사암', ic:'🐚',
+  fossil:'암모나이트', kind:'std',
+  desc:'나선형으로 감긴 껍데기를 가진 연체동물로, 중생대 전 시기(트라이아스기~백악기)에 걸쳐 널리 번성했습니다. 중생대 말 대멸종 때 공룡과 함께 사라졌습니다.', note:''},
+ {n:5, era:'중생대', thick:65, rock:'사암', ic:'🦴',
+  fossil:'공룡 화석', kind:'rep',
+  desc:'중생대(주로 쥐라기~백악기)를 상징하는 화석입니다. 다만 표준화석의 조건(넓은 분포+짧은 생존기간)에 정확히 들어맞지는 않아 "그 시대를 대표하는 화석"으로 분류합니다.', note:''},
+ {n:6, era:'신생대', thick:50, rock:'사암', ic:'🐚',
+  fossil:'화폐석(Nummulites)', kind:'std',
+  desc:'동전처럼 납작하고 둥근 모양의 대형 단세포 생물 화석으로, 신생대 전기(고제3기)를 대표합니다. 이 시기 지층에서는 매머드·인류 화석도 함께 발견되지만, 화폐석이 표준화석으로서 가장 정확합니다.', note:''}
+];
+const KIND_LABEL={std:'표준화석',rep:'대표 화석(표준화석 아님)',trace:'생흔화석(생물이 남긴 흔적)'};
+
+/* ===================== 창 이탈 감지 ===================== */
+let leaveCount=0, awayStart=null, totalAwayMs=0, lastEventTime=0;
+function registerLeave(){
+  const now=Date.now(); if(now-lastEventTime<400)return; lastEventTime=now;
+  leaveCount++; awayStart=now;
+  const b=document.getElementById('leaveBadge');
+  b.textContent=`⏱️ 창 이탈 ${leaveCount}회`; b.classList.add('warn');
+  setTimeout(()=>b.classList.remove('warn'),900);
+}
+function registerReturn(){
+  if(awayStart){ totalAwayMs+=Date.now()-awayStart; awayStart=null; }
+}
+window.addEventListener('blur',registerLeave);
+window.addEventListener('focus',registerReturn);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden)registerLeave(); else registerReturn(); });
+
+/* ===================== 상태 ===================== */
+const S={opened:Array(6).fill(false), picks:Array(6).fill(''), submitted:false};
+const startTime=Date.now();
+
+function app(){return document.getElementById('app');}
+
+function render(){
+  if(S.submitted){renderResult();return;}
+  app().innerHTML=`
+   <div class="column">${LAYERS.map(l=>layerHTML(l)).join('')}</div>
+   <button class="navbtn" id="submitBtn" onclick="submitAll()" disabled>채점</button>
+   <div class="progresshint" id="progressHint"></div>`;
+  LAYERS.forEach((l,idx)=>{
+    document.getElementById('lh'+l.n).addEventListener('click',()=>{
+      S.opened[idx]=true;
+      document.getElementById('lay'+l.n).classList.toggle('open');
+      updateProgress();
+    });
+  });
+  document.querySelectorAll('.erabtn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      const n=+e.target.dataset.n, era=e.target.dataset.era;
+      S.picks[n-1]=era;
+      document.querySelectorAll(`.erabtn[data-n="${n}"]`).forEach(b=>b.classList.toggle('picked', b.dataset.era===era));
+      updateProgress();
+    });
+  });
+  updateProgress();
+}
+function layerHTML(l){
+  return `<div class="layer" id="lay${l.n}">
+    <div class="layerhead" id="lh${l.n}"><span class="n">${l.n}</span>
+      <span class="lbl">제${l.n}층 <small>두께 ${l.thick}cm · 암석: ${l.rock}</small></span>
+      <span class="chev">▸</span></div>
+    <div class="layerbody"><div class="layerbody-in">
+      <div class="fossilcard"><span class="ic">${l.ic}</span><div class="tx">
+        <b>${l.fossil}</b>
+        <span class="badge ${l.kind}">${KIND_LABEL[l.kind]}</span>
+      </div></div>
+      <div style="font-size:12px;font-weight:800;color:var(--dim);margin-bottom:7px">▶ 이 층의 지질시대 선택</div>
+      <div class="erabtns">${ERAS.map(e=>`<button class="erabtn" data-n="${l.n}" data-era="${e}">${e}</button>`).join('')}</div>
+      <div class="explain" id="ex${l.n}"></div>
+    </div></div></div>`;
+}
+function updateProgress(){
+  const openedAll=S.opened.every(Boolean);
+  const pickedAll=S.picks.every(p=>p!=='');
+  const btn=document.getElementById('submitBtn'); if(btn)btn.disabled=!(openedAll&&pickedAll);
+  const hint=document.getElementById('progressHint');
+  if(hint)hint.textContent=`열람 ${S.opened.filter(Boolean).length}/6 · 판단 ${S.picks.filter(p=>p!=='').length}/6`;
+}
+
+function submitAll(){
+  registerReturn();
+  S.submitted=true;
+  render();
+  window.scrollTo(0,0);
+}
+
+function renderResult(){
+  const correctCount=LAYERS.filter((l,i)=>S.picks[i]===l.era).length;
+  const totalMs=Date.now()-startTime;
+  const totalSec=Math.round(totalMs/1000);
+  app().innerHTML=`
+   <div class="resulthead">
+     <div style="font-size:34px">🪨</div>
+     <div style="font-weight:900;font-size:15px">채점 결과</div>
+     <div class="score">${correctCount} / 6</div>
+   </div>
+   <div class="column">${LAYERS.map((l,i)=>{
+     const ok=S.picks[i]===l.era;
+     return `<div class="layer open ${ok?'correct':'wrong'}">
+       <div class="layerhead"><span class="n">${l.n}</span>
+         <span class="lbl">제${l.n}층 <small>${l.fossil} · 정답: ${l.era}</small></span>
+         <span>${ok?'✅':'❌'}</span></div>
+       <div class="layerbody" style="max-height:200px"><div class="layerbody-in">
+         <div style="font-size:12.5px">나의 선택: <b>${S.picks[i]}</b> ${ok?'':`→ 정답은 <b style="color:var(--mint2)">${l.era}</b>입니다`}</div>
+       </div></div></div>`;
+   }).join('')}</div>
+
+   <div class="metricgrid">
+     <div class="metric"><div class="k">총 소요시간</div><div class="v">${Math.floor(totalSec/60)}분 ${totalSec%60}초</div></div>
+     <div class="metric"><div class="k">창 이탈 횟수</div><div class="v ${leaveCount>0?'warn':''}">${leaveCount}회</div></div>
+     <div class="metric" style="grid-column:1/-1"><div class="k">창을 벗어나 있던 총 시간</div><div class="v ${totalAwayMs>15000?'warn':''}">${Math.round(totalAwayMs/1000)}초</div></div>
+   </div>
+
+   <div class="finalnotice">창 이탈 횟수·시간은 채점을 돕는 참고 신호일 뿐입니다. 이탈이 있었다고 해서 자동으로 부정행위로 간주하지 않습니다(예: 다른 자료를 찾아본 정당한 경우도 있을 수 있음). 최종 수행평가 점수는 선생님이 학생의 판단 과정을 함께 보고 확정합니다.</div>`;
+}
+
+render();
+</script>
+</body>
+</html>

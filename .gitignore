@@ -1,0 +1,30 @@
+# 학생 개인정보·비밀번호·제출기록 — 절대 공개 레포에 올리면 안 됨
+data/_students.json
+data/_submissions_mock.json
+data/_labscores.json
+data/_journalanswers.json
+data/_redorequests.json
+data/_board.json
+
+# 비밀키
+.env
+.env.*
+*.key
+
+# 임시/미리보기 파일
+assets/lab/concepts/_composite_preview.html
+
+# 학생 명렬(개인정보)
+*명렬*.xlsx
+*명렬*.xls
+
+# 저작권 자료(출판사 교과서·지도서·기출문제집) — 앱 배포에 불필요, 공개 레포에 절대 포함 금지
+*.pdf
+
+# 출처 불명 대용량 파일
+aWDEBBuo2xhn5Q3OTrECs5oVGRqDWORSTUyRBjwzmPLZz4GwmE-idAxlJzKM3QncvM8DtS2DLwtiMZMkQ7kvNYjMcthv_K6e89M3fvjuQdtBOT9fzqzzSDnJHNixILWeKlwGpYDcEfmiNkbSy929ew.svg
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

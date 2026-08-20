@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>화학 기출문제 풀기</title>
+<link rel="stylesheet" href="roundstyle.css">
+</head>
+<body>
+<div class="wrap">
+  <div id="top"></div>
+  <div id="app"></div>
+</div>
+<script src="roundengine.js"></script>
+<script type="application/json" id="embeddedChapterData">{
+  "seedKey": "ch21_seed_v1",
+  "vars": {},
+  "meta": {
+    "title": "화학 기출문제 풀기",
+    "targetMin": 20,
+    "passCount": 5,
+    "scoreNotice": "라운드별 정답률·소요시간·창 이탈 지표는 채점을 돕는 참고 자료일 뿐입니다. 실제 수행평가 점수는 선생님이 최종 확정합니다."
+  },
+  "rounds": [
+    {
+      "id": "r1",
+      "kind": "quiz",
+      "title": "마그네슘 연소 반응",
+      "prompt": "▶ 마그네슘 리본과 산소 기체를 반응시키기 전과 후의 상태를 비교했다. 반응 전에는 마그네슘 리본과 산소 기체가 있었고, 반응 후에는 흰색 가루(산화마그네슘)만 남았다.",
+      "chartSvg": "<svg viewBox='0 0 480 130' width='100%' height='130' xmlns='http://www.w3.org/2000/svg'><rect x='8' y='8' width='190' height='112' rx='10' fill='#f7f4ee' stroke='#d9cbb4' stroke-width='1.5'/><text x='103' y='26' font-size='13' font-weight='700' text-anchor='middle' fill='#4b4037'>반응 전</text><rect x='35' y='48' width='16' height='58' rx='3' fill='#c9ced3' stroke='#9aa1a8'/><text x='118' y='60' font-size='11' fill='#4b4037'>마그네슘</text><text x='118' y='75' font-size='11' fill='#4b4037'>리본(Mg)</text><text x='60' y='118' font-size='10' text-anchor='middle' fill='#8d8175'>+ 산소(O₂)</text><path d='M205,63 L265,63' stroke='#8d8175' stroke-width='2.5' marker-end='url(#arrow1)'/><rect x='278' y='8' width='194' height='112' rx='10' fill='#fdfbf6' stroke='#e8ddc0' stroke-width='1.5'/><text x='375' y='26' font-size='13' font-weight='700' text-anchor='middle' fill='#4b4037'>반응 후</text><ellipse cx='375' cy='72' rx='58' ry='26' fill='#f3f1ea' stroke='#c9c2a8'/><text x='375' y='70' font-size='10.5' text-anchor='middle' fill='#4b4037'>흰색 가루</text><text x='375' y='84' font-size='9.5' text-anchor='middle' fill='#8d8175'>(산화마그네슘)</text><defs><marker id='arrow1' markerWidth='8' markerHeight='8' refX='6' refY='3' orient='auto'><path d='M0,0 L6,3 L0,6 z' fill='#8d8175'/></marker></defs></svg>",
+      "question": "이 반응에서 산화된 물질과 환원된 물질을 옳게 짝지은 것은?",
+      "options": [
+        "산화: 마그네슘, 환원: 산소",
+        "산화: 산소, 환원: 마그네슘",
+        "마그네슘과 산소 둘 다 산화되었다",
+        "마그네슘과 산소 둘 다 환원되었다"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "r2",
+      "kind": "quiz",
+      "title": "이동한 전자 수",
+      "prompt": "▶ 수용액 속 아연(Zn) 원자 6N개가 구리 이온(Cu²⁺)과 반응하여 아연 이온(Zn²⁺)과 구리(Cu)가 되었다.",
+      "question": "이 반응에서 이동한 전자는 총 몇 N개인가?",
+      "options": [
+        "6N개",
+        "12N개",
+        "3N개",
+        "18N개"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "id": "r3",
+      "kind": "quiz",
+      "title": "대화로 보는 산화·환원",
+      "prompt": "▶ 민수: \"사과 깎아두면 갈색 되는 것도 산화야.\" 지은: \"철이 녹스는 것도 마찬가지고.\" 현우: \"그럼 광합성은 항상 산화만 일어나는 거네?\"",
+      "question": "옳지 않게 말한 사람은?",
+      "options": [
+        "민수",
+        "지은",
+        "현우",
+        "아무도 틀리지 않았다"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "id": "r4",
+      "kind": "quiz",
+      "title": "철못의 부식 조건 비교",
+      "prompt": "▶ 철못을 (가) 마른 공기 중, (나) 물에 완전히 잠긴 상태, (다) 물과 공기에 모두 노출된 상태로 두고 며칠 뒤 녹슨 정도를 비교했다.",
+      "chartSvg": "<svg viewBox='0 0 480 150' width='100%' height='150' xmlns='http://www.w3.org/2000/svg'><rect x='8' y='24' width='144' height='104' rx='8' fill='#fdf8ee' stroke='#e8ddc0'/><text x='80' y='16' font-size='12' font-weight='700' text-anchor='middle' fill='#4b4037'>(가) 마른 공기 중</text><rect x='73' y='55' width='10' height='58' rx='2' fill='#9aa1a8'/><text x='80' y='122' font-size='9.5' text-anchor='middle' fill='#8d8175'>변화 거의 없음</text><rect x='168' y='24' width='144' height='104' rx='8' fill='#eaf3fb' stroke='#9fc4e8'/><text x='240' y='16' font-size='12' font-weight='700' text-anchor='middle' fill='#4b4037'>(나) 물에 잠김</text><rect x='178' y='65' width='124' height='55' fill='#cfe6f7' opacity='.6'/><rect x='233' y='55' width='10' height='58' rx='2' fill='#a8846a'/><text x='240' y='138' font-size='9.5' text-anchor='middle' fill='#8d8175'>서서히 녹슬음</text><rect x='328' y='24' width='144' height='104' rx='8' fill='#eaf3fb' stroke='#9fc4e8'/><text x='400' y='16' font-size='12' font-weight='700' text-anchor='middle' fill='#4b4037'>(다) 물+공기 노출</text><rect x='338' y='95' width='124' height='25' fill='#cfe6f7' opacity='.6'/><rect x='393' y='55' width='10' height='58' rx='2' fill='#b9713f'/><text x='400' y='138' font-size='9.5' text-anchor='middle' fill='#8d8175'>가장 빠르게 녹슮</text></svg>",
+      "question": "가장 빠르게 녹슨(산화된) 조건은?",
+      "options": [
+        "(가)",
+        "(나)",
+        "(다)",
+        "세 조건 모두 동일하다"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "id": "r5",
+      "kind": "quiz",
+      "title": "이온 모형으로 보는 액성",
+      "prompt": "▶ 수용액 (가)에는 H⁺ 이온 5개, OH⁻ 이온 2개가 들어 있고, 수용액 (나)에는 H⁺ 이온 2개, OH⁻ 이온 6개가 들어 있다.",
+      "chartSvg": "<svg viewBox='0 0 480 150' width='100%' height='150' xmlns='http://www.w3.org/2000/svg'><rect x='20' y='20' width='200' height='110' rx='10' fill='#fdfbf6' stroke='#e8ddc0'/><text x='120' y='16' font-size='12' font-weight='700' text-anchor='middle' fill='#4b4037'>수용액 (가)</text><circle cx='55' cy='55' r='7' fill='#e37b6f'/><circle cx='80' cy='75' r='7' fill='#e37b6f'/><circle cx='105' cy='55' r='7' fill='#e37b6f'/><circle cx='130' cy='80' r='7' fill='#e37b6f'/><circle cx='155' cy='58' r='7' fill='#e37b6f'/><circle cx='70' cy='105' r='7' fill='#6fa8e3'/><circle cx='150' cy='100' r='7' fill='#6fa8e3'/><rect x='260' y='20' width='200' height='110' rx='10' fill='#fdfbf6' stroke='#e8ddc0'/><text x='360' y='16' font-size='12' font-weight='700' text-anchor='middle' fill='#4b4037'>수용액 (나)</text><circle cx='300' cy='60' r='7' fill='#e37b6f'/><circle cx='335' cy='95' r='7' fill='#e37b6f'/><circle cx='310' cy='105' r='7' fill='#6fa8e3'/><circle cx='340' cy='55' r='7' fill='#6fa8e3'/><circle cx='370' cy='75' r='7' fill='#6fa8e3'/><circle cx='400' cy='55' r='7' fill='#6fa8e3'/><circle cx='400' cy='100' r='7' fill='#6fa8e3'/><circle cx='430' cy='75' r='7' fill='#6fa8e3'/><g transform='translate(20,140)'><circle cx='0' cy='0' r='6' fill='#e37b6f'/><text x='12' y='4' font-size='10' fill='#4b4037'>H⁺ 이온</text><circle cx='80' cy='0' r='6' fill='#6fa8e3'/><text x='92' y='4' font-size='10' fill='#4b4037'>OH⁻ 이온</text></g></svg>",
+      "question": "(가), (나)의 액성을 옳게 짝지은 것은?",
+      "options": [
+        "(가) 산성 - (나) 염기성",
+        "(가) 염기성 - (나) 산성",
+        "(가) 중성 - (나) 산성",
+        "(가)와 (나) 모두 중성이다"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "r6",
+      "kind": "quiz",
+      "title": "지시약 반응으로 보는 액성",
+      "prompt": "▶ 물질 A, B, C에 페놀프탈레인 용액을 떨어뜨렸더니 A는 무색을 유지했고, B는 붉은색으로 변했으며, C는 무색을 유지했다.",
+      "chartSvg": "<svg viewBox='0 0 480 160' width='100%' height='160' xmlns='http://www.w3.org/2000/svg'><g transform='translate(70,20)'><rect x='-18' y='0' width='36' height='90' rx='10' fill='#fdfdfb' stroke='#c9c2a8' stroke-width='2'/><rect x='-14' y='40' width='28' height='46' rx='6' fill='#f3f1ea'/><text x='0' y='108' font-size='13' font-weight='700' text-anchor='middle' fill='#4b4037'>A</text><text x='0' y='124' font-size='10' text-anchor='middle' fill='#8d8175'>무색 유지</text></g><g transform='translate(240,20)'><rect x='-18' y='0' width='36' height='90' rx='10' fill='#fdfdfb' stroke='#c9c2a8' stroke-width='2'/><rect x='-14' y='40' width='28' height='46' rx='6' fill='#e88ba0'/><text x='0' y='108' font-size='13' font-weight='700' text-anchor='middle' fill='#4b4037'>B</text><text x='0' y='124' font-size='10' text-anchor='middle' fill='#8d8175'>붉은색으로 변함</text></g><g transform='translate(410,20)'><rect x='-18' y='0' width='36' height='90' rx='10' fill='#fdfdfb' stroke='#c9c2a8' stroke-width='2'/><rect x='-14' y='40' width='28' height='46' rx='6' fill='#f3f1ea'/><text x='0' y='108' font-size='13' font-weight='700' text-anchor='middle' fill='#4b4037'>C</text><text x='0' y='124' font-size='10' text-anchor='middle' fill='#8d8175'>무색 유지</text></g></svg>",
+      "question": "이 중 염기성일 가능성이 있는 물질은?",
+      "options": [
+        "A만",
+        "B만",
+        "C만",
+        "A와 C"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "id": "r7",
+      "kind": "graphread",
+      "title": "혼합 비율과 중화열",
+      "prompt": "▶ 표는 염산과 수산화나트륨 수용액을 여러 부피비로 섞었을 때 도달한 최고 온도를 나타낸 것이다. 혼합비 10:10에서 온도가 가장 높았고, 15:5와 5:15로 섞었을 때는 그보다 낮았다.",
+      "chartSvg": "<svg viewBox='0 0 480 210' width='100%' height='210' xmlns='http://www.w3.org/2000/svg'><line x1='50' y1='170' x2='450' y2='170' stroke='#8d8175' stroke-width='1.5'/><line x1='50' y1='20' x2='50' y2='170' stroke='#8d8175' stroke-width='1.5'/><text x='20' y='30' font-size='10' fill='#8d8175'>온도</text><g transform='translate(110,0)'><rect x='-22' y='90' width='44' height='80' fill='#8fd6e8'/><text x='0' y='185' font-size='11' text-anchor='middle' fill='#4b4037'>15:5</text><text x='0' y='82' font-size='10' text-anchor='middle' fill='#4b4037'>28℃</text></g><g transform='translate(240,0)'><rect x='-22' y='40' width='44' height='130' fill='#f4a6b0'/><text x='0' y='185' font-size='11' text-anchor='middle' fill='#4b4037'>10:10</text><text x='0' y='32' font-size='10' text-anchor='middle' fill='#4b4037'>35℃(최고)</text></g><g transform='translate(370,0)'><rect x='-22' y='95' width='44' height='75' fill='#8fd6e8'/><text x='0' y='185' font-size='11' text-anchor='middle' fill='#4b4037'>5:15</text><text x='0' y='87' font-size='10' text-anchor='middle' fill='#4b4037'>27℃</text></g><text x='250' y='200' font-size='10' text-anchor='middle' fill='#8d8175'>염산 : 수산화나트륨 수용액 부피비</text></svg>",
+      "question": "이 결과로 가장 타당한 추론은?",
+      "options": [
+        "10:10에서 가장 가깝게 중화되었다",
+        "산의 부피가 많을수록 항상 온도가 높다",
+        "염기의 부피가 많을수록 항상 온도가 높다",
+        "온도는 혼합 비율과 무관하다"
+      ],
+      "correctIndex": 0
+    }
+  ]
+}</script>
+<script src="chapterdata.js"></script>
+<script>
+loadChapterData('data/ch21.json').then(({ROUNDS, META}) => startSession(ROUNDS, META));
+</script>
+</body>
+</html>

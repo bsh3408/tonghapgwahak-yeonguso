@@ -347,8 +347,14 @@ function selectDepts(){
 async function loadDeptConfigAdmin(){
   const wrap = document.getElementById('deptTableWrap');
   try{
-    const res = await fetch('/api/deptconfig', {cache:'no-store'});
-    const cfg = await res.json();
+    let cfg;
+    if(isSupabaseConfigured()){
+      const rows = await supaSelect('lab_deptconfig', 'id=eq.1');
+      cfg = (rows && rows[0] && rows[0].data) || {};
+    } else {
+      const res = await fetch('/api/deptconfig', {cache:'no-store'});
+      cfg = await res.json();
+    }
     wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:#f7f8fa">
         <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);color:var(--sub);font-size:12px">연구동</th>

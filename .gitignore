@@ -5,6 +5,7 @@ data/_labscores.json
 data/_journalanswers.json
 data/_redorequests.json
 data/_board.json
+data/_deptconfig.json
 
 # 비밀키
 .env

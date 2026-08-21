@@ -187,6 +187,12 @@ textarea:focus{border-color:var(--mint)}
 /* 조수/가챠/연구활동/OX 공통 */
 .rarity{font-size:10px;font-weight:900;border-radius:6px;padding:2px 7px;white-space:nowrap}
 .assistcard{background:#fff;border:2px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:9px}
+.legendCard{border-color:#f5d060!important;animation:legendCardGlow 1.5s ease-in-out infinite}
+@keyframes legendCardGlow{
+ 0%,100%{box-shadow:0 0 0 2px #f5d060, 0 0 8px rgba(245,208,96,.45)}
+ 50%{box-shadow:0 0 0 3px #ffe27a, 0 0 20px rgba(255,226,122,.85)}
+}
+.phdCard{border-color:#8a6bd6!important;box-shadow:0 0 0 2px #8a6bd6, 0 0 12px rgba(138,107,214,.55)}
 .assistcard .ahead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .assistcard .aname{font-weight:900;font-size:14px;flex:1}
 .assistcard .astat{font-size:11px;color:var(--dim);line-height:1.7}
@@ -1148,7 +1154,7 @@ function missionSheet(did){
     const def=assistantDef(inst.poolId); const deg=DEGREE[inst.degree||'bachelor'];
     const idx=S.assistants.indexOf(inst);
     const isLegend=!!def.rareDraw, isPhd=inst.degree==='phd';
-    return `<div class="brow" style="display:flex;align-items:center;gap:8px;padding:5px 0;flex-wrap:wrap">
+    return `<div class="brow ${isLegend?'legendCard':(isPhd?'phdCard':'')}" style="display:flex;align-items:center;gap:8px;padding:6px 10px;flex-wrap:wrap;border-radius:12px;border:2px solid transparent">
      <img src="assets/assistants/${inst.poolId}.png" class="${isLegend?'legendGlow':(isPhd?'phdRing':'')}" style="flex:none;width:30px;height:30px;border-radius:50%;
        object-fit:cover;border:2.5px solid ${isLegend?'#f5d060':deg.color}"/>
      ${rarityBadgeHtml(def,inst.degree,inst.lv||1)}
@@ -1665,7 +1671,7 @@ function assistantSheet(){
     const assigned=!!inst.assignedDept;
     const cost=enhanceCostFor(inst), successPct=Math.round(successRateFor(lv)*100);
     const isLegend=!!def.rareDraw, isPhd=inst.degree==='phd';
-    return `<div class="assistcard" style="${assigned?'background:#eef7f4;border-color:#bce3d8':''}">
+    return `<div class="assistcard ${isLegend?'legendCard':(isPhd?'phdCard':'')}" style="${assigned?'background:#eef7f4;border-color:#bce3d8':''}">
      <div class="ahead" style="align-items:center">
       <img src="assets/assistants/${inst.poolId}.png" class="${isLegend?'legendGlow':(isPhd?'phdRing':'')}" style="flex:none;width:34px;height:34px;border-radius:50%;
         object-fit:cover;border:2.5px solid ${isLegend?'#f5d060':deg.color}"/>

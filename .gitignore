@@ -12,6 +12,9 @@ data/_deptconfig.json
 .env.*
 *.key
 
+# 관리자 전용 페이지 — 로컬 서버(serve.js)에서만 완전히 동작해서 공개 배포 사이트에는 올리지 않음
+교사용_수행평가관리.html
+
 # 임시/미리보기 파일
 assets/lab/concepts/_composite_preview.html
 

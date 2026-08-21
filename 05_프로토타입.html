@@ -1148,9 +1148,6 @@ function missionSheet(did){
    ${m.cleared?'<span style="color:var(--green);font-weight:900">✓</span>':'<span style="width:12px"></span>'}
    <span class="kind ${m.kind}">${KIND_LABEL[m.kind]}</span>
    <span class="mt">${m.t}<small>${MJ[m.mj].ic} ${MJ[m.mj].n} · 개념 「${m.cp}」 · 최고기록 ${m.best||0}점</small></span>
-   <a href="교사용_수행평가관리.html?ch=${chNum}" target="_blank" onclick="event.stopPropagation()"
-     title="문제 내용 확인·수정" style="flex:none;text-decoration:none;background:#fff;border:1.5px solid var(--line);
-     border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px">📝</a>
    <a href="javascript:void(0)" onclick="event.stopPropagation();journalSheet('${chNum}')"
      title="의견·논술형·심화읽기 다시 쓰기" style="flex:none;text-decoration:none;background:#fff;border:1.5px solid var(--line);
      border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px">✏️</a>

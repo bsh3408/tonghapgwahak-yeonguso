@@ -896,7 +896,7 @@ function moveTick(){
       if(Math.random()<.15){c.say=sayFor();c.sayT=42;}
     }
   });
-  scene();
+  renderNpcs();
 }
 /* 연구실 배경: 상점에서 고른 테마 컨셉아트를 방 뷰박스에 그대로 깔고, 그 위에 동적 요소(트로피/화분/
    조수)만 얹는다. 그림의 방 바깥 모서리는 페이지 배경색(#f3ece0)으로 이미 칠해져 있어서(그림 자체를
@@ -906,8 +906,19 @@ function labBgImage(gx,gy){
   const [x,y,w,h]=vb, t=labThemeDef(S.labTheme);
   return `<image href="${t.img}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
 }
-function scene(){
-  setStageViewBox(LAB_GX,LAB_GY);
+/* #lab을 정적 레이어(labStatic: 배경·트로피·메달 — 거의 안 바뀜)와 동적 레이어(labNpcs: 조수 —
+   0.09초마다 바뀜)로 나눈다. 예전에는 매 틱마다 방 전체(배경 이미지 포함)를 통째로 다시 그려서,
+   조수를 클릭하는 순간과 다시 그리는 순간이 겹치면 클릭이 씹히는 문제가 있었다. 이제 배경은 정말
+   바뀔 때만(연구점수·노벨상·테마 변경 등) 다시 그리고, 조수는 이미 있는 조수면 위치(transform)만
+   갱신해서(노드 자체를 안 지웠다 새로 만듦) 클릭 대상이 계속 같은 DOM 요소로 안정적으로 유지된다. */
+function ensureLabLayers(){
+  const svg=document.getElementById('lab');
+  if(!document.getElementById('labStatic')){
+    svg.insertAdjacentHTML('beforeend', '<g id="labStatic"></g><g id="labNpcs"></g>');
+  }
+}
+function renderStatic(){
+  ensureLabLayers();
   const objs=[]; let g='';
   const add=(d,s)=>objs.push({d,s});
   g+=labBgImage(LAB_GX,LAB_GY);
@@ -925,17 +936,15 @@ function scene(){
       <path d="M-2,7 l2,7 l2,-7 z" fill="#c1544c"/></g>`);
    }
   }
-  /* 로비에 보이는 조수 = 연구동에 배치 안 한(대기 중인) 조수뿐이다. 배치된 조수는 연구를 마칠 때까지
-     로비에 나타나지 않는다(자동 복귀는 checkAutoReturns 참고). 클릭하면 멈춰서 대사+정보를 보여준다. */
-  idleAssistants().slice(0,9).forEach((inst,i)=>{
-    const def=assistantDef(inst.poolId); if(!def) return;
-    const c=animFor(inst.poolId);
-    if(!c.pos)return;
-    const [px,py]=iso(c.pos.x,c.pos.y);
-    const walking=c.st==='walk';
-    const isLegend=!!def.rareDraw;
-    const col=isLegend ? '#f5d060' : DEGREE[inst.degree||'bachelor'].color;
-    add(c.pos.x+c.pos.y,`<g transform="translate(${px},${py})" class="clk" data-poolid="${inst.poolId}">
+  objs.sort((a,b)=>a.d-b.d).forEach(o=>g+=o.s);
+  document.getElementById('labStatic').innerHTML=g;
+}
+function npcMarkup(inst, def, c, i){
+  const [px,py]=iso(c.pos.x,c.pos.y);
+  const walking=c.st==='walk';
+  const isLegend=!!def.rareDraw;
+  const col=isLegend ? '#f5d060' : DEGREE[inst.degree||'bachelor'].color;
+  return `<g transform="translate(${px},${py})" class="clk" data-poolid="${inst.poolId}">
       <circle cx="0" cy="-34" r="52" fill="transparent"/>
       <g class="${walking?'walk':'npc'} ${c.say?'pop':''}" style="animation-delay:${i*.4}s;pointer-events:none">
         <g transform="scale(${c.face},1)">
@@ -947,11 +956,52 @@ function scene(){
         </g></g>
       ${c.say?bubble(c.say)+`<text x="0" y="-65" font-size="9.5" text-anchor="middle" fill="#8d8175"
          font-weight="800" style="pointer-events:none">${def.name}</text>`:''}
-      </g>`);
+      </g>`;
+}
+/* 로비에 보이는 조수 = 연구동에 배치 안 한(대기 중인) 조수뿐이다. 배치된 조수는 연구를 마칠 때까지
+   로비에 나타나지 않는다(자동 복귀는 checkAutoReturns 참고). 클릭하면 멈춰서 대사+정보를 보여준다.
+   이미 그려져 있는 조수는(말풍선 유무·걷기 상태가 안 바뀌었으면) transform만 바꿔서 같은 DOM 노드를
+   계속 재사용한다 — 그래야 클릭 판정이 "지워졌다 다시 생긴 요소"가 아니라 안정적으로 유지된다. */
+function renderNpcs(){
+  ensureLabLayers();
+  const layer=document.getElementById('labNpcs');
+  const list=idleAssistants().slice(0,9);
+  const seen=new Set();
+  let needFullSort=false;
+  list.forEach((inst,i)=>{
+    const def=assistantDef(inst.poolId); if(!def) return;
+    const c=animFor(inst.poolId);
+    if(!c.pos)return;
+    seen.add(inst.poolId);
+    const sig=(c.st==='walk')+'|'+(c.say?'1':'0')+'|'+c.face+'|'+i;
+    const depth=c.pos.x+c.pos.y;
+    const existing=layer.querySelector(`[data-poolid="${inst.poolId}"]`);
+    const [px,py]=iso(c.pos.x,c.pos.y);
+    if(existing && existing.dataset.sig===sig){
+      existing.setAttribute('transform', `translate(${px},${py})`);
+      existing.dataset.depth=depth;
+    } else {
+      needFullSort=true;
+      const wrap=document.createElement('div');
+      wrap.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg">${npcMarkup(inst, def, c, i)}</svg>`;
+      const fresh=wrap.firstChild.firstChild;
+      fresh.dataset.sig=sig;
+      fresh.dataset.depth=depth;
+      if(existing) existing.replaceWith(fresh); else layer.appendChild(fresh);
+    }
   });
-  objs.sort((a,b)=>a.d-b.d).forEach(o=>g+=o.s);
-  document.getElementById('lab').innerHTML=g;
+  layer.querySelectorAll('[data-poolid]').forEach(el=>{ if(!seen.has(el.dataset.poolid)) el.remove(); });
+  if(needFullSort){
+    // 그림 순서(위→아래)가 곧 렌더 순서라, 새로 들어온/모양이 바뀐 조수가 있으면 depth(격자 x+y) 순서로 다시 정렬한다.
+    const nodes=[...layer.children].sort((a,b)=>(+a.dataset.depth)-(+b.dataset.depth));
+    nodes.forEach(n=>layer.appendChild(n));
+  }
   fixBubbleSizes();
+}
+function scene(){
+  setStageViewBox(LAB_GX,LAB_GY);
+  renderStatic();
+  renderNpcs();
 }
 
 

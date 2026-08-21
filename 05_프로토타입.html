@@ -936,7 +936,7 @@ function scene(){
     const isLegend=!!def.rareDraw;
     const col=isLegend ? '#f5d060' : DEGREE[inst.degree||'bachelor'].color;
     add(c.pos.x+c.pos.y,`<g transform="translate(${px},${py})" class="clk" data-poolid="${inst.poolId}">
-      <circle cx="0" cy="-34" r="37" fill="transparent"/>
+      <circle cx="0" cy="-34" r="52" fill="transparent"/>
       <g class="${walking?'walk':'npc'} ${c.say?'pop':''}" style="animation-delay:${i*.4}s;pointer-events:none">
         <g transform="scale(${c.face},1)">
          <ellipse cx="0" cy="1" rx="22" ry="8" fill="rgba(90,70,50,.13)"/>

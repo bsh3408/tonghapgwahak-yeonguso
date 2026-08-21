@@ -36,12 +36,11 @@
 <body>
 <div class="wrap">
   <h1>📊 제출기록 미리보기</h1>
-  <div class="sub">수파베이스에 아직 연결하지 않은 상태에서, 학생이 게임을 제출하면 실제로 어떤 데이터가
-    쌓이는지 미리 확인하는 화면입니다. (이 로컬 서버의 임시 저장소 <code>data/_submissions_mock.json</code>를 보여줍니다)</div>
-  <div class="banner">
-    실제 수파베이스에 연결하면 이 화면 대신 <b>Supabase 대시보드</b> 또는 <b>자동 동기화된 구글시트</b>에서
-    똑같은 형태의 표를 보게 됩니다. 지금은 전체 흐름(학생 이름 입력 → 게임 → 제출 → 자동 저장)이
-    설계대로 동작하는지 확인하는 용도입니다.
+  <div class="sub" id="subLine">불러오는 중...</div>
+  <div class="banner" id="banner"></div>
+  <div class="toolbar" id="teacherPwRow" style="display:none">
+    <input type="password" id="teacherPw" placeholder="교사 비밀번호" style="flex:1;max-width:260px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px">
+    <button class="btn btn-refresh" id="pwGoBtn">확인</button>
   </div>
   <div class="toolbar">
     <button class="btn btn-refresh" id="refreshBtn">↻ 새로고침</button>
@@ -52,6 +51,7 @@
   <h2 style="font-size:15px;margin:26px 0 10px">✏️ 서술형 답안 기록 (문항별로 따로 표시)</h2>
   <div id="opinionwrap"></div>
 </div>
+<script src="supabase-config.js"></script>
 <script>
 const _chapterPromptCache = {};
 async function chapterPromptMap(chapterId){
@@ -68,12 +68,41 @@ async function chapterPromptMap(chapterId){
   }catch(e){ return {}; }
 }
 
+function teacherPw(){ return document.getElementById('teacherPw').value; }
+function updateHeaderForDataSource(){
+  const real = isSupabaseConfigured();
+  document.getElementById('subLine').textContent = real
+    ? '수파베이스(lab_submissions)에 실제로 쌓인 학생 제출기록입니다 — 교사 비밀번호로 보호돼요.'
+    : '수파베이스에 아직 연결하지 않은 상태에서, 학생이 게임을 제출하면 실제로 어떤 데이터가 쌓이는지 미리 확인하는 화면입니다. (이 로컬 서버의 임시 저장소 data/_submissions_mock.json를 보여줍니다)';
+  document.getElementById('banner').innerHTML = real
+    ? '이 화면은 <b>실제 학생 제출기록</b>을 보여줍니다. 전체 삭제 버튼은 실수로 지우는 걸 막기 위해 꺼져 있어요 — 정말 지워야 하면 Supabase SQL 편집기에서 직접 실행하세요.'
+    : '실제 수파베이스에 연결하면 이 화면이 자동으로 실제 학생 제출기록을 보여주는 화면으로 바뀝니다. 지금은 전체 흐름(학생 이름 입력 → 게임 → 제출 → 자동 저장)이 설계대로 동작하는지 확인하는 용도입니다.';
+  const clearBtn = document.getElementById('clearBtn');
+  clearBtn.disabled = real;
+  clearBtn.style.display = real ? 'none' : '';
+  document.getElementById('teacherPwRow').style.display = real ? '' : 'none';
+}
 async function loadSubmissions(){
+  updateHeaderForDataSource();
   const wrap = document.getElementById('tablewrap');
+  if(isSupabaseConfigured() && !teacherPw()){
+    wrap.innerHTML = '<div class="empty">교사 비밀번호를 입력하면 제출기록이 나와요.</div>';
+    document.getElementById('countLabel').textContent = '';
+    return;
+  }
   wrap.innerHTML = '<div class="empty">불러오는 중...</div>';
   try{
-    const res = await fetch('/api/mock-submissions', {cache:'no-store'});
-    const list = await res.json();
+    let list;
+    if(isSupabaseConfigured()){
+      list = await supaRpc('lab_submissions_list', {p_teacher_password: teacherPw()});
+      if(!Array.isArray(list)){
+        wrap.innerHTML = '<div class="empty">교사 비밀번호가 올바르지 않아요.</div>';
+        document.getElementById('countLabel').textContent = '';
+        return;
+      }
+    } else {
+      list = await (await fetch('/api/mock-submissions', {cache:'no-store'})).json();
+    }
     render(list);
     await renderOpinions(list);
   }catch(e){
@@ -151,6 +180,8 @@ async function renderOpinions(list){
 function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 document.getElementById('refreshBtn').addEventListener('click', loadSubmissions);
+document.getElementById('pwGoBtn').addEventListener('click', loadSubmissions);
+document.getElementById('teacherPw').addEventListener('keydown', e=>{ if(e.key==='Enter') loadSubmissions(); });
 document.getElementById('clearBtn').addEventListener('click', async ()=>{
   if(!confirm('테스트 제출기록을 전부 삭제할까요? (되돌릴 수 없습니다)')) return;
   await fetch('/api/mock-submissions', {method:'DELETE'});

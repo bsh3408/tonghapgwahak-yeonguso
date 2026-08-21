@@ -17,6 +17,23 @@ const JOURNAL_FILE = path.join(DATA_DIR, '_journalanswers.json');
 const LOBBY_HTML_FILE = path.join(ROOT, '05_프로토타입.html');
 const ADMIN_HTML_FILE = path.join(ROOT, '교사용_수행평가관리.html');
 
+/* ---------- 수파베이스(학생 로그인 원본 저장소) ----------
+   학생 로그인은 이제 05_프로토타입.html이 수파베이스 RPC(lab_login 등)를 직접 호출해서 처리하므로,
+   이 로컬 서버(교사 컴퓨터에서만 켜짐)가 관리하는 명단(roster)도 같은 lab_students 테이블에 써야
+   학생들이 실제로 로그인할 수 있다. supabase-config.js와 같은 URL/anon key를 그대로 쓴다. */
+const SUPABASE_URL = 'https://oqhldrkmcewcjslciqmp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xaGxkcmttY2V3Y2pzbGNpcW1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNDQ4MDIsImV4cCI6MjEwMjgyMDgwMn0.It7aXZ5utrWEoAv9rniGFWQGzJNcDaSzmcAaAoT9GyM';
+async function supaRpc(fnName, params) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer '+SUPABASE_ANON_KEY },
+    body: JSON.stringify(params || {})
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error('supabase rpc 실패: ' + text);
+  return text ? JSON.parse(text) : null;
+}
+
 function readJsonBody(req, maxLen, cb) {
   let body = '';
   req.on('data', chunk => { body += chunk; if (body.length > maxLen) req.destroy(); });
@@ -51,67 +68,57 @@ function findStudent(list, name) {
   return list.find(s => s.name === name);
 }
 
-// POST /api/roster  { students:[{name, studentId}, ...] } — 교사가 명단을 등록/추가한다.
-// 이미 등록된 이름은 비밀번호·변경여부를 건드리지 않는다(재업로드해도 안전).
-function handleRoster(req, res) {
+// GET /api/roster?teacherPassword=...  |  POST /api/roster { teacherPassword, students:[{name, studentId}, ...] }
+// 교사가 명단을 등록/추가한다. 이미 등록된 이름은 비밀번호·변경여부를 건드리지 않는다(재업로드해도 안전).
+// 학생 로그인은 05_프로토타입.html이 수파베이스를 직접 보므로, 여기서도 로컬 파일이 아니라
+// 같은 lab_students 테이블에(lab_roster_* RPC — 교사 비밀번호로 보호됨) 써야 실제로 로그인할 수 있다.
+function handleRoster(req, res, query) {
   if (req.method === 'GET') {
-    const list = readStudents().map(s => ({ name: s.name, studentId: s.studentId, mustChange: s.mustChange, loggedIn: !!s.loggedInAt }));
-    return sendJson(res, 200, list);
+    const teacherPassword = query.get('teacherPassword') || '';
+    return supaRpc('lab_roster_list', { p_teacher_password: teacherPassword })
+      .then(out => {
+        if (Array.isArray(out)) return sendJson(res, 200, out.map(s => ({ name: s.name, studentId: s.studentId, mustChange: s.mustChange, loggedIn: s.loggedIn })));
+        return sendJson(res, 403, out); // {ok:false, error:'교사 비밀번호가 올바르지 않습니다.'}
+      })
+      .catch(e => sendJson(res, 500, { ok:false, error: e.message }));
   }
   if (req.method === 'POST') {
     return readJsonBody(req, 2_000_000, (err, body) => {
       if (err || !Array.isArray(body && body.students)) return sendJson(res, 400, { ok:false, error:'invalid body' });
-      const list = readStudents();
-      let added = 0, skipped = 0;
-      body.students.forEach(s => {
-        const name = String(s.name || '').trim();
-        const studentId = String(s.studentId || '').trim();
-        if (!name || !studentId) return;
-        if (findStudent(list, name)) { skipped++; return; }
-        const salt = crypto.randomBytes(16).toString('hex');
-        list.push({ name, studentId, salt, passwordHash: hashPassword(studentId, salt), mustChange: true, loggedInAt: null });
-        added++;
-      });
-      writeStudents(list);
-      return sendJson(res, 200, { ok:true, added, skipped, total: list.length });
+      const students = body.students
+        .map(s => ({ name: String(s.name || '').trim(), studentId: String(s.studentId || '').trim() }))
+        .filter(s => s.name && s.studentId);
+      supaRpc('lab_roster_add', { p_teacher_password: body.teacherPassword || '', p_students: students })
+        .then(out => sendJson(res, out && out.ok ? 200 : 403, out))
+        .catch(e => sendJson(res, 500, { ok:false, error: e.message }));
     });
   }
-  if (req.method === 'DELETE') {
-    writeStudents([]);
-    return sendJson(res, 200, { ok:true });
-  }
   res.writeHead(405); res.end('method not allowed');
+  // DELETE(전체 명단 비우기)는 되돌릴 수 없는 위험한 동작이라 일부러 여기서 지원하지 않는다 —
+  // 필요하면 수파베이스 SQL 편집기에서 "delete from lab_students;"를 직접 실행한다.
 }
 
-// POST /api/roster-resetpw  { name } — 그 학생의 비밀번호를 학번으로 되돌리고 mustChange를 켠다.
+// POST /api/roster-resetpw  { teacherPassword, name } — 그 학생의 비밀번호를 학번으로 되돌리고 mustChange를 켠다.
 function handleRosterResetPw(req, res) {
   if (req.method !== 'POST') { res.writeHead(405); return res.end('method not allowed'); }
   readJsonBody(req, 10_000, (err, body) => {
     if (err) return sendJson(res, 400, { ok:false, error:'invalid body' });
     const name = String(body.name || '').trim();
-    const list = readStudents();
-    const student = findStudent(list, name);
-    if (!student) return sendJson(res, 404, { ok:false, error:'등록되지 않은 이름입니다.' });
-    const salt = crypto.randomBytes(16).toString('hex');
-    student.salt = salt;
-    student.passwordHash = hashPassword(student.studentId, salt);
-    student.mustChange = true;
-    writeStudents(list);
-    return sendJson(res, 200, { ok:true });
+    supaRpc('lab_roster_resetpw', { p_teacher_password: body.teacherPassword || '', p_name: name })
+      .then(out => sendJson(res, out && out.ok ? 200 : 403, out))
+      .catch(e => sendJson(res, 500, { ok:false, error: e.message }));
   });
 }
 
-// POST /api/roster-remove  { name } — 그 학생 계정 하나만 명단에서 지운다(과제 기록은 안 지움).
+// POST /api/roster-remove  { teacherPassword, name } — 그 학생 계정 하나만 명단에서 지운다(과제 기록은 안 지움).
 function handleRosterRemove(req, res) {
   if (req.method !== 'POST') { res.writeHead(405); return res.end('method not allowed'); }
   readJsonBody(req, 10_000, (err, body) => {
     if (err) return sendJson(res, 400, { ok:false, error:'invalid body' });
     const name = String(body.name || '').trim();
-    const list = readStudents();
-    const next = list.filter(s => s.name !== name);
-    if (next.length === list.length) return sendJson(res, 404, { ok:false, error:'등록되지 않은 이름입니다.' });
-    writeStudents(next);
-    return sendJson(res, 200, { ok:true });
+    supaRpc('lab_roster_remove', { p_teacher_password: body.teacherPassword || '', p_name: name })
+      .then(out => sendJson(res, out && out.ok ? 200 : 403, out))
+      .catch(e => sendJson(res, 500, { ok:false, error: e.message }));
   });
 }
 
@@ -378,6 +385,7 @@ function buildChapterWrapperHtml(num, title) {
   <div id="top"></div>
   <div id="app"></div>
 </div>
+<script src="supabase-config.js"></script>
 <script src="roundengine.js"></script>
 <script src="chapterdata.js"></script>
 <script>
@@ -562,7 +570,7 @@ http.createServer((req, res) => {
   const m = p.match(/^\/api\/data\/(ch\d+\.json)$/);
   if (req.method === 'PUT' && m) return saveChapterData(req, res, m[1]);
   if (p === '/api/mock-submissions') return handleMockSubmissions(req, res);
-  if (p === '/api/roster') return handleRoster(req, res);
+  if (p === '/api/roster') return handleRoster(req, res, query);
   if (p === '/api/roster-resetpw') return handleRosterResetPw(req, res);
   if (p === '/api/roster-remove') return handleRosterRemove(req, res);
   if (p === '/api/login') return handleLogin(req, res);

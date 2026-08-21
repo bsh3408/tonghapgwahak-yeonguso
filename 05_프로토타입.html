@@ -269,6 +269,7 @@ textarea:focus{border-color:var(--mint)}
 <div id="sheetHost"></div><div id="modalHost"></div><div id="toast"></div>
 </div>
 
+<script src="supabase-config.js"></script>
 <script>
 /* ================= 과제 데이터 (성적에 반영되는 부분) =================
    kind: 'gauge'(정밀 게이지·기본) | 'quiz'(객관식) | 'short'(서답형) | 'ask'(질문/궁금증 제출형)
@@ -682,8 +683,7 @@ async function computeBonusInfo(){
  const perfects=everPerfectChapters();
  let rankTop10=false;
  try{
-  const res=await fetch('/api/labscore',{cache:'no-store'});
-  const list=await res.json();
+  const list=await fetchLabScores();
   const myRank=list.findIndex(s=>s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name));
   rankTop10 = myRank>=0 && myRank<10;
  }catch(e){}
@@ -992,19 +992,33 @@ async function submitBoardPost(){
  const content=document.getElementById('boardContent').value.trim();
  if(!title || !content){ toast('제목과 내용을 입력하세요','bad'); return; }
  try{
-  const res=await fetch('/api/board',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({type,name:CURRENT_STUDENT.name,classNo:CURRENT_STUDENT.studentId||'',title,content})});
-  const out=await res.json();
-  if(out.ok){ toast('등록했어요'); document.getElementById('boardTitle').value=''; document.getElementById('boardContent').value=''; loadBoardList(); }
-  else toast('등록 실패: '+(out.error||''),'bad');
+  let ok;
+  if(isSupabaseConfigured()){
+   ok=await supaInsert('lab_board', {
+    id:'post-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),
+    type, name:CURRENT_STUDENT.name, class_no:CURRENT_STUDENT.studentId||'', title, content
+   });
+  } else {
+   const res=await fetch('/api/board',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({type,name:CURRENT_STUDENT.name,classNo:CURRENT_STUDENT.studentId||'',title,content})});
+   const out=await res.json(); ok=out.ok;
+  }
+  if(ok){ toast('등록했어요'); document.getElementById('boardTitle').value=''; document.getElementById('boardContent').value=''; loadBoardList(); }
+  else toast('등록 실패','bad');
  }catch(e){ toast('등록 실패(연결 오류)','bad'); }
 }
 async function loadBoardList(){
  const wrap=document.getElementById('boardList');
  if(!wrap) return;
  try{
-  const res=await fetch('/api/board',{cache:'no-store'});
-  const list=await res.json();
+  let list;
+  if(isSupabaseConfigured()){
+   const rows=await supaSelect('lab_board','order=created_at.desc');
+   list=rows.map(r=>({type:r.type, name:r.name, classNo:r.class_no, title:r.title, content:r.content, reply:r.reply, createdAt:r.created_at}));
+  } else {
+   const res=await fetch('/api/board',{cache:'no-store'});
+   list=await res.json();
+  }
   if(!list.length){ wrap.innerHTML='<div style="text-align:center;padding:16px 0">아직 등록된 글이 없어요.</div>'; return; }
   const sorted=[...list].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   wrap.innerHTML=sorted.map(p=>`
@@ -1275,12 +1289,22 @@ function casualGameSheet(did){
   </div>`, `missionSheet('${did}')`);
 }
 
+/* 학생 이름으로 "다시 써주세요" 요청 목록을 가져온다(수파베이스 컬럼명 → 기존 코드가 쓰는 필드명으로 맞춰줌) */
+async function fetchRedoRequests(studentName){
+ try{
+  if(isSupabaseConfigured()){
+   const rows=await supaSelect('lab_redo_requests', 'student_name=eq.'+encodeURIComponent(studentName));
+   return rows.map(r=>({chapter_id:r.chapter_id, round_id:r.round_id, note:r.note}));
+  }
+  const res=await fetch('/api/redo-requests?student='+encodeURIComponent(studentName),{cache:'no-store'});
+  return await res.json();
+ }catch(e){ return []; }
+}
 /* 로그인 직후 "다시 써주세요" 요청이 있으면 바로 알려준다 — 학생이 놓치지 않도록 */
 async function checkRedoRequests(){
  if(!CURRENT_STUDENT) return;
  try{
-  const res=await fetch('/api/redo-requests?student='+encodeURIComponent(CURRENT_STUDENT.name),{cache:'no-store'});
-  const list=await res.json();
+  const list=await fetchRedoRequests(CURRENT_STUDENT.name);
   if(list.length){
    toast(`🚩 선생님이 서술답안 ${list.length}건을 다시 써 달라고 했어요. 연구동에서 ✏️로 확인하세요`, 'bad');
   }
@@ -1295,8 +1319,7 @@ async function journalSheet(chNum){
  catch(e){ toast('불러오기 실패','bad'); return; }
  let redoFlags={};
  try{
-  const res=await fetch('/api/redo-requests?student='+encodeURIComponent(CURRENT_STUDENT.name),{cache:'no-store'});
-  const list=await res.json();
+  const list=await fetchRedoRequests(CURRENT_STUDENT.name);
   list.filter(x=>x.chapter_id===chapterId).forEach(x=>{ redoFlags[x.round_id]=x.note; });
  }catch(e){}
  const opinionRounds=data.rounds.filter(r=>r.kind==='opinion');
@@ -1339,10 +1362,17 @@ function saveJournal(chapterId, roundId, minLen, chapterTitle, roundTitle){
  }
  // 최신 답안을 서버에도 올려서 선생님이 확인할 수 있게 하고, 분량을 채웠으면 "다시 써주세요" 요청도 자동으로 해제한다.
  if(CURRENT_STUDENT && meetsMin){
-  fetch('/api/journal-answers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   student_name:CURRENT_STUDENT.name, class_no:CURRENT_STUDENT.studentId||'',
-   chapter_id:chapterId, chapter_title:chapterTitle, round_id:roundId, round_title:roundTitle, text
-  })}).catch(()=>{});
+  if(isSupabaseConfigured()){
+   supaRpc('lab_journal_save', {
+    p_student_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'',
+    p_chapter_id:chapterId, p_chapter_title:chapterTitle, p_round_id:roundId, p_round_title:roundTitle, p_text:text
+   }).catch(()=>{});
+  } else {
+   fetch('/api/journal-answers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    student_name:CURRENT_STUDENT.name, class_no:CURRENT_STUDENT.studentId||'',
+    chapter_id:chapterId, chapter_title:chapterTitle, round_id:roundId, round_title:roundTitle, text
+   })}).catch(()=>{});
+  }
  }
 }
 
@@ -1644,11 +1674,25 @@ function scientistInfoModal(poolId){
 }
 
 /* ================= 📄 연구 활동 — 조수로 논문을 써서 학술지에 투고 → 연구점수(랭킹용) ================= */
+async function fetchLabScores(){
+ try{
+  if(isSupabaseConfigured()){
+   const rows = await supaSelect('lab_scores', 'order=research_score.desc');
+   return rows.map(r=>({name:r.name, classNo:r.class_no, researchScore:r.research_score}));
+  }
+  const res=await fetch('/api/labscore',{cache:'no-store'});
+  return await res.json();
+ }catch(e){ return []; }
+}
 async function postLabScore(){
  if(!CURRENT_STUDENT) return;
  try{
-  await fetch('/api/labscore', {method:'POST', headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({name:CURRENT_STUDENT.name, classNo:CURRENT_STUDENT.studentId||'', researchScore:S.researchScore})});
+  if(isSupabaseConfigured()){
+   await supaRpc('lab_score_upsert', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_research_score:S.researchScore});
+  } else {
+   await fetch('/api/labscore', {method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:CURRENT_STUDENT.name, classNo:CURRENT_STUDENT.studentId||'', researchScore:S.researchScore})});
+  }
  }catch(e){}
 }
 function researchSheet(){
@@ -1707,8 +1751,7 @@ function writePaper(idx){
 async function rankSheet(){
  sheet('🏆 전체 랭킹','연구점수 기준 · 성적과는 무관하지만, 1~10등은 +1점 대상이에요',`
   <div class="box" id="rankBox" style="text-align:center;color:var(--dim)">불러오는 중...</div>`);
- let list=[];
- try{ const res=await fetch('/api/labscore',{cache:'no-store'}); list=await res.json(); }catch(e){}
+ let list=await fetchLabScores();
  const myRank=list.findIndex(s=>s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name));
  const box=document.getElementById('rankBox');
  if(!box) return; // 그 사이 창을 닫았으면 무시
@@ -1737,8 +1780,9 @@ async function doLogin(){
  setLoginErr('');
  if(!name || !password){ setLoginErr('이름과 비밀번호를 모두 입력하세요.'); return; }
  try{
-  const res=await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,password})});
-  const out=await res.json();
+  const out = isSupabaseConfigured()
+   ? await supaRpc('lab_login', {p_name:name, p_password:password})
+   : await (await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,password})})).json();
   if(!out.ok){ setLoginErr(out.error||'로그인에 실패했습니다.'); return; }
   CURRENT_STUDENT={name, studentId:out.studentId};
   if(out.mustChange){
@@ -1757,9 +1801,11 @@ async function doChangePassword(){
  if(p1.length<4){ setChangeErr('새 비밀번호는 4자 이상이어야 합니다.'); return; }
  if(p1!==p2){ setChangeErr('두 번 입력한 비밀번호가 서로 달라요.'); return; }
  try{
-  const res=await fetch('/api/change-password', {method:'POST', headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({name:CURRENT_STUDENT.name, oldPassword:document.getElementById('loginPw').value, newPassword:p1})});
-  const out=await res.json();
+  const oldPassword=document.getElementById('loginPw').value;
+  const out = isSupabaseConfigured()
+   ? await supaRpc('lab_change_password', {p_name:CURRENT_STUDENT.name, p_old:oldPassword, p_new:p1})
+   : await (await fetch('/api/change-password', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:CURRENT_STUDENT.name, oldPassword, newPassword:p1})})).json();
   if(!out.ok){ setChangeErr(out.error||'비밀번호 변경에 실패했습니다.'); return; }
   finishLogin();
  }catch(e){ setChangeErr('서버 연결 오류: '+e.message); }

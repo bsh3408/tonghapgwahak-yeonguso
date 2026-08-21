@@ -4,16 +4,12 @@
    라운드 kind: classify | matchpairs | ordering | quiz | graphread | combo | opinion
 */
 
-/* ===== 수파베이스 연동 설정 (선생님이 아래 두 값만 채우면 학생 결과가 실제 수파베이스에 자동 저장됩니다) =====
-   1) supabase.com 에서 무료 프로젝트를 만든다.
-   2) SQL Editor에서 supabase_schema.sql 내용을 실행해 테이블을 만든다.
-   3) 프로젝트 설정(Project Settings > Data API/API Keys)에서 Project URL과 anon public key를 복사해 아래에 붙여넣는다.
-   비워두면(기본 상태) 수파베이스 대신 이 로컬 서버의 "모의 저장소"에 저장되어, 실제 연결 전에도
-   전체 흐름(이름 입력 → 게임 → 제출 → 자동 저장 → 제출기록 목록)을 미리 확인할 수 있다.
+/* ===== 수파베이스 연동 설정 =====
+   실제 SUPABASE_URL/SUPABASE_ANON_KEY와 isSupabaseConfigured()는 supabase-config.js에 있다 —
+   이 파일을 쓰는 모든 HTML은 roundengine.js보다 먼저 <script src="supabase-config.js"></script>를 불러와야 한다.
+   그 값이 비어 있으면(로컬 테스트용) 수파베이스 대신 로컬 서버(serve.js)의 "모의 저장소"로 보낸다.
    → 확인용 화면: 제출기록_미리보기.html
 */
-const SUPABASE_URL = '';       // 예: 'https://xxxxxxxx.supabase.co'
-const SUPABASE_ANON_KEY = '';  // 예: 'eyJhbGciOi....' (anon/public 키. service_role 키는 절대 여기 넣지 않는다)
 const DEMO_MOCK_ENDPOINT = '/api/mock-submissions'; // 로컬 서버(serve.js)가 제공하는 모의 저장 API
 
 function getStudentInfo(){
@@ -509,7 +505,6 @@ function setSyncBadge(text, cls){
   const b=document.getElementById('syncBadge');
   if(b){ b.textContent=text; b.className='syncbadge'+(cls?(' '+cls):''); }
 }
-function isSupabaseConfigured(){ return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
 async function syncToSupabase(){
   const S=ENGINE_STATE;
   const info=getStudentInfo() || {name:'미상', classNo:'미상'};
@@ -542,7 +537,7 @@ async function syncToSupabase(){
   };
 
   const useReal = isSupabaseConfigured();
-  const endpoint = useReal ? SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/submissions' : DEMO_MOCK_ENDPOINT;
+  const endpoint = useReal ? SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/lab_submissions' : DEMO_MOCK_ENDPOINT;
   const headers = useReal
     ? { 'Content-Type':'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization':'Bearer '+SUPABASE_ANON_KEY, 'Prefer':'return=minimal' }
     : { 'Content-Type':'application/json' };
@@ -561,12 +556,22 @@ async function syncToSupabase(){
 // 제출 시점의 서술형 답을 "최신 답안" 저장소에도 남긴다 — 나중에 학생이 "내 생각 다시 쓰기"로 고치면
 // 여기가 계속 최신본으로 덮어써지고, 교사가 건 "다시 써주세요" 요청도 이걸 저장하는 순간 자동 해제된다.
 function syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload){
+  const useReal = isSupabaseConfigured();
   opinionRounds.forEach(r=>{
-    fetch('/api/journal-answers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+    const body = {
       student_name: payload.student_name, class_no: payload.class_no,
       chapter_id: payload.chapter_id, chapter_title: payload.chapter_title,
       round_id: r.id, round_title: r.title, text: opinionAnswers[r.id] || ''
-    })}).catch(()=>{});
+    };
+    if(useReal){
+      supaRpc('lab_journal_save', {
+        p_student_name: body.student_name, p_class_no: body.class_no,
+        p_chapter_id: body.chapter_id, p_chapter_title: body.chapter_title,
+        p_round_id: body.round_id, p_round_title: body.round_title, p_text: body.text
+      }).catch(()=>{});
+    } else {
+      fetch('/api/journal-answers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).catch(()=>{});
+    }
   });
 }
 

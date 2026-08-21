@@ -98,6 +98,10 @@
 <div class="layout">
   <div class="sidebar">
     <h1>📋 수행평가 관리</h1>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--line)">
+      <input type="password" id="teacherPw" placeholder="교사 비밀번호" style="width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;box-sizing:border-box">
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">학생 계정·게시판 답변·연구동 설정 저장에 필요해요</div>
+    </div>
     <div class="chitem" id="item-students" style="border-bottom:1px solid var(--line)">
       <div class="chtitle">👤 학생 계정 관리</div>
       <div class="chmeta">로그인 아이디·비밀번호 초기화 현황</div>
@@ -128,6 +132,7 @@
   </div>
 </div>
 <div id="teacherModalHost"></div>
+<script src="supabase-config.js"></script>
 <script>
 const CHAPTERS = [
   {file:'ch10.json', label:'10단원'}, {file:'ch11.json', label:'11단원'},
@@ -367,10 +372,8 @@ async function loadDeptConfigAdmin(){
     wrap.innerHTML = `<div style="color:var(--danger);font-size:13px">불러오기 실패: ${e.message}</div>`;
   }
 }
-let _teacherPwCache = null;
 function teacherPwPrompt(){
-  if(_teacherPwCache == null) _teacherPwCache = window.prompt('교사 비밀번호(학생 로비에 반영하려면 필요해요)') || '';
-  return _teacherPwCache;
+  return document.getElementById('teacherPw').value;
 }
 async function saveDeptConfig(){
   const cfg = {};
@@ -420,7 +423,6 @@ function selectStudents(){
       <textarea id="rosterInput" class="ftext" rows="5" placeholder="김철수,10315&#10;이영희,10316" style="font-family:'D2Coding','Consolas',monospace"></textarea>
       <div class="row" style="margin-top:10px">
         <button class="btn btn-save" id="rosterSubmitBtn" style="flex:none">명단 등록</button>
-        <button class="btn" id="rosterResetBtn" style="flex:none;background:#fdeeee;color:var(--danger)">전체 초기화</button>
         <span class="status info" id="rosterStatus" style="flex:none"></span>
       </div>
     </div></div>
@@ -433,7 +435,6 @@ function selectStudents(){
     </div></div>
   `;
   document.getElementById('rosterSubmitBtn').addEventListener('click', submitRoster);
-  document.getElementById('rosterResetBtn').addEventListener('click', resetRoster);
   document.getElementById('rosterRefreshBtn').addEventListener('click', loadRoster);
   loadRoster();
 }
@@ -463,8 +464,15 @@ async function loadBoardAdmin(){
   if(!wrap) return;
   wrap.innerHTML = '<div style="color:var(--sub);font-size:13px">불러오는 중...</div>';
   try{
-    const res = await fetch('/api/board', {cache:'no-store'});
-    const list = await res.json();
+    let list;
+    if(isSupabaseConfigured()){
+      const rows = await supaSelect('lab_board', 'order=created_at.desc');
+      list = rows.map(r=>({id:r.id, type:r.type, name:r.name, classNo:r.class_no, title:r.title, content:r.content,
+        reply:r.reply, repliedAt:r.replied_at, createdAt:r.created_at}));
+    } else {
+      const res = await fetch('/api/board', {cache:'no-store'});
+      list = await res.json();
+    }
     if(!list.length){ wrap.innerHTML = '<div style="color:var(--sub);font-size:13px">아직 등록된 글이 없습니다.</div>'; return; }
     const sorted = [...list].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
     wrap.innerHTML = sorted.map(p=>`
@@ -488,7 +496,8 @@ async function loadBoardAdmin(){
     wrap.querySelectorAll('[data-boarddel]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         if(!confirm('이 글을 삭제할까요?')) return;
-        await fetch('/api/board-delete', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id:btn.dataset.boarddel})});
+        if(isSupabaseConfigured()) await supaRpc('lab_board_delete', {p_teacher_password:teacherPwPrompt(), p_id:btn.dataset.boarddel});
+        else await fetch('/api/board-delete', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id:btn.dataset.boarddel})});
         loadBoardAdmin();
       });
     });
@@ -498,7 +507,8 @@ async function loadBoardAdmin(){
         const ta = wrap.querySelector(`[data-replyinput="${id}"]`);
         const reply = ta ? ta.value.trim() : '';
         if(!reply){ alert('답변 내용을 입력하세요.'); return; }
-        await fetch('/api/board-reply', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, reply})});
+        if(isSupabaseConfigured()) await supaRpc('lab_board_reply', {p_teacher_password:teacherPwPrompt(), p_id:id, p_reply:reply});
+        else await fetch('/api/board-reply', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, reply})});
         loadBoardAdmin();
       });
     });
@@ -526,28 +536,23 @@ async function submitRoster(){
   if(!students.length){ setRosterStatus('등록할 학생이 없습니다. "이름,학번" 형식으로 입력하세요.', 'err'); return; }
   setRosterStatus('등록 중...', 'info');
   try{
-    const res = await fetch('/api/roster', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({students}) });
+    const res = await fetch('/api/roster', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({teacherPassword:teacherPwPrompt(), students}) });
     const out = await res.json();
     if(out.ok){
-      setRosterStatus(`등록 완료 — 새로 추가 ${out.added}명, 이미 있어서 건너뜀 ${out.skipped}명 (전체 ${out.total}명)`, 'ok');
+      setRosterStatus(`등록 완료 — 새로 추가 ${out.added}명, 이미 있어서 건너뜀 ${out.skipped}명`, 'ok');
       document.getElementById('rosterInput').value='';
       loadRoster();
     } else setRosterStatus('등록 실패: '+(out.error||'알 수 없는 오류'), 'err');
   }catch(e){ setRosterStatus('등록 실패(서버 연결 오류): '+e.message, 'err'); }
-}
-async function resetRoster(){
-  if(!confirm('전체 학생 계정을 삭제할까요? 모든 학생이 다시 처음부터(학번=비밀번호) 로그인해야 합니다.')) return;
-  await fetch('/api/roster', {method:'DELETE'});
-  setRosterStatus('전체 초기화되었습니다.', 'ok');
-  loadRoster();
 }
 async function loadRoster(){
   const wrap = document.getElementById('rosterTableWrap');
   if(!wrap) return;
   wrap.innerHTML = '<div style="color:var(--sub);font-size:13px">불러오는 중...</div>';
   try{
-    const res = await fetch('/api/roster', {cache:'no-store'});
+    const res = await fetch('/api/roster?teacherPassword='+encodeURIComponent(teacherPwPrompt()), {cache:'no-store'});
     const list = await res.json();
+    if(!Array.isArray(list)){ wrap.innerHTML = '<div style="color:var(--danger);font-size:13px">'+(list.error||'교사 비밀번호가 올바르지 않습니다.')+'</div>'; return; }
     if(!list.length){ wrap.innerHTML = '<div style="color:var(--sub);font-size:13px">등록된 학생이 없습니다.</div>'; return; }
     wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:#f7f8fa">
@@ -582,7 +587,7 @@ async function loadRoster(){
 async function rosterResetPw(name){
   if(!confirm(`"${name}"의 비밀번호를 학번으로 되돌릴까요? 다음 로그인 때 새 비밀번호를 다시 정해야 해요.`)) return;
   try{
-    const res = await fetch('/api/roster-resetpw', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
+    const res = await fetch('/api/roster-resetpw', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({teacherPassword:teacherPwPrompt(), name})});
     const out = await res.json();
     if(out.ok){ setRosterStatus(`"${name}"의 비밀번호를 초기화했어요.`, 'ok'); loadRoster(); }
     else setRosterStatus('초기화 실패: '+(out.error||'알 수 없는 오류'), 'err');
@@ -591,7 +596,7 @@ async function rosterResetPw(name){
 async function rosterRemove(name){
   if(!confirm(`"${name}" 계정을 삭제할까요? 로그인 정보만 지워지고, 이미 제출한 과제 기록은 남아있어요.`)) return;
   try{
-    const res = await fetch('/api/roster-remove', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
+    const res = await fetch('/api/roster-remove', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({teacherPassword:teacherPwPrompt(), name})});
     const out = await res.json();
     if(out.ok){ setRosterStatus(`"${name}" 계정을 삭제했어요.`, 'ok'); loadRoster(); }
     else setRosterStatus('삭제 실패: '+(out.error||'알 수 없는 오류'), 'err');
@@ -626,14 +631,26 @@ async function showStudentSubmissions(name){
     <div id="subwrap" style="margin-top:8px;color:var(--sub);font-size:13px">불러오는 중...</div>`);
   const target = document.getElementById('subwrap');
   try{
-    const [subRes, journalRes, redoRes] = await Promise.all([
-      fetch('/api/mock-submissions', {cache:'no-store'}),
-      fetch('/api/journal-answers?student='+encodeURIComponent(name), {cache:'no-store'}),
-      fetch('/api/redo-requests?student='+encodeURIComponent(name), {cache:'no-store'})
-    ]);
-    const all = await subRes.json();
-    const journalList = await journalRes.json();
-    const redoList = await redoRes.json();
+    let all, journalList, redoList;
+    if(isSupabaseConfigured()){
+      const teacherPassword = teacherPwPrompt();
+      const subOut = await supaRpc('lab_submissions_list', {p_teacher_password: teacherPassword});
+      if(!Array.isArray(subOut)){ target.textContent = '불러오기 실패: 교사 비밀번호가 올바르지 않습니다.'; return; }
+      all = subOut;
+      journalList = (await supaSelect('lab_journal_answers', 'student_name=eq.'+encodeURIComponent(name)))
+        .map(j=>({chapter_id:j.chapter_id, round_id:j.round_id, text:j.text}));
+      redoList = (await supaSelect('lab_redo_requests', 'student_name=eq.'+encodeURIComponent(name)))
+        .map(r=>({id:r.id, chapter_id:r.chapter_id, round_id:r.round_id, note:r.note}));
+    } else {
+      const [subRes, journalRes, redoRes] = await Promise.all([
+        fetch('/api/mock-submissions', {cache:'no-store'}),
+        fetch('/api/journal-answers?student='+encodeURIComponent(name), {cache:'no-store'}),
+        fetch('/api/redo-requests?student='+encodeURIComponent(name), {cache:'no-store'})
+      ]);
+      all = await subRes.json();
+      journalList = await journalRes.json();
+      redoList = await redoRes.json();
+    }
     const journalMap = {}; journalList.forEach(j=>{ journalMap[redoKey(j.chapter_id, j.round_id)] = j; });
     const redoMap = {}; redoList.forEach(r=>{ redoMap[redoKey(r.chapter_id, r.round_id)] = r; });
     const mine = all.filter(s=>s.student_name===name).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
@@ -679,10 +696,14 @@ async function showStudentSubmissions(name){
     target.querySelectorAll('[data-redoaction]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         if(btn.dataset.redoaction==='clear'){
-          await fetch('/api/redo-requests-clear', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id:btn.dataset.id})});
+          if(isSupabaseConfigured()) await supaRpc('lab_redo_clear', {p_teacher_password:teacherPwPrompt(), p_id:btn.dataset.id});
+          else await fetch('/api/redo-requests-clear', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id:btn.dataset.id})});
         } else {
           const note = prompt('학생에게 남길 메모(선택, 비워도 됨):', '') || '';
-          await fetch('/api/redo-requests', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+          if(isSupabaseConfigured()) await supaRpc('lab_redo_upsert', {p_teacher_password:teacherPwPrompt(),
+            p_student_name: btn.dataset.student, p_class_no:'', p_chapter_id: btn.dataset.chapterId, p_chapter_title: btn.dataset.chapterTitle,
+            p_round_id: btn.dataset.roundId, p_round_title: btn.dataset.roundTitle, p_note: note});
+          else await fetch('/api/redo-requests', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
             student_name: btn.dataset.student, chapter_id: btn.dataset.chapterId, chapter_title: btn.dataset.chapterTitle,
             round_id: btn.dataset.roundId, round_title: btn.dataset.roundTitle, note
           })});

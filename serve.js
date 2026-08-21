@@ -207,8 +207,12 @@ function handleDeptConfig(req, res) {
   if (req.method === 'POST') {
     return readJsonBody(req, 20_000, (err, body) => {
       if (err || typeof body !== 'object') return sendJson(res, 400, { ok:false, error:'invalid body' });
-      fs.writeFileSync(DEPTCONFIG_FILE, JSON.stringify(body, null, 2), 'utf-8');
-      return sendJson(res, 200, { ok:true });
+      const { teacherPassword, ...cfg } = body;
+      fs.writeFileSync(DEPTCONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf-8');
+      // 학생 로비는 이제 이 설정을 수파베이스(lab_deptconfig)에서 읽으므로, 여기도 같이 반영해야 실제로 보인다.
+      supaRpc('lab_deptconfig_save', { p_teacher_password: teacherPassword || '', p_data: cfg })
+        .then(out => sendJson(res, out && out.ok ? 200 : 403, out))
+        .catch(e => sendJson(res, 500, { ok:false, error: e.message }));
     });
   }
   res.writeHead(405); res.end('method not allowed');

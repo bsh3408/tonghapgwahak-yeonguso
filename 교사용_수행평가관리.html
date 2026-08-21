@@ -367,6 +367,11 @@ async function loadDeptConfigAdmin(){
     wrap.innerHTML = `<div style="color:var(--danger);font-size:13px">불러오기 실패: ${e.message}</div>`;
   }
 }
+let _teacherPwCache = null;
+function teacherPwPrompt(){
+  if(_teacherPwCache == null) _teacherPwCache = window.prompt('교사 비밀번호(학생 로비에 반영하려면 필요해요)') || '';
+  return _teacherPwCache;
+}
 async function saveDeptConfig(){
   const cfg = {};
   DEPT_META.forEach(d=>{
@@ -378,7 +383,7 @@ async function saveDeptConfig(){
   const statusEl = document.getElementById('deptStatus');
   statusEl.textContent = '저장 중...'; statusEl.className = 'status info';
   try{
-    const res = await fetch('/api/deptconfig', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
+    const res = await fetch('/api/deptconfig', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({teacherPassword:teacherPwPrompt()}, cfg))});
     const out = await res.json();
     if(out.ok){ statusEl.textContent = '저장 완료 — 학생이 로비를 새로고침하면 반영됩니다'; statusEl.className = 'status ok'; }
     else { statusEl.textContent = '저장 실패: '+(out.error||'알 수 없는 오류'); statusEl.className = 'status err'; }

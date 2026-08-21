@@ -312,8 +312,14 @@ const DEPTS=[
 /* 교사용 관리 페이지에서 저장한 연구동 공개/마감일 설정을 읽어와 DEPTS를 덮어쓴다 */
 async function loadDeptConfig(){
  try{
-  const res=await fetch('/api/deptconfig', {cache:'no-store'});
-  const cfg=await res.json();
+  let cfg;
+  if(isSupabaseConfigured()){
+   const rows=await supaSelect('lab_deptconfig', 'id=eq.1');
+   cfg=(rows&&rows[0]&&rows[0].data)||{};
+  } else {
+   const res=await fetch('/api/deptconfig', {cache:'no-store'});
+   cfg=await res.json();
+  }
   DEPTS.forEach(d=>{
    const c=cfg[d.id];
    if(!c) return;

@@ -935,7 +935,7 @@ function scene(){
     const walking=c.st==='walk';
     const isLegend=!!def.rareDraw;
     const col=isLegend ? '#f5d060' : DEGREE[inst.degree||'bachelor'].color;
-    add(c.pos.x+c.pos.y,`<g transform="translate(${px},${py})" class="clk" onclick="talkAssistant('${inst.poolId}')">
+    add(c.pos.x+c.pos.y,`<g transform="translate(${px},${py})" class="clk" data-poolid="${inst.poolId}">
       <circle cx="0" cy="-34" r="37" fill="transparent"/>
       <g class="${walking?'walk':'npc'} ${c.say?'pop':''}" style="animation-delay:${i*.4}s;pointer-events:none">
         <g transform="scale(${c.face},1)">
@@ -1956,6 +1956,14 @@ document.getElementById('newPw2').addEventListener('keydown', e=>{ if(e.key==='E
 })();
 
 setInterval(moveTick,90);
+
+/* 로비는 0.09초마다 통째로 다시 그려져서(조수 이동 애니메이션), 조수 원 위에 직접 붙인 onclick은
+   하필 다시 그려지는 순간과 겹치면 씹힐 수 있다 — #lab 자체(다시 안 그려지는 부모)에 한 번만
+   이벤트를 걸어두고, 클릭된 지점이 어떤 조수(data-poolid)인지 매번 찾아서 처리한다(이벤트 위임). */
+document.getElementById('lab').addEventListener('click', e=>{
+ const g = e.target.closest('[data-poolid]');
+ if(g) talkAssistant(g.dataset.poolid);
+});
 </script>
 </body>
 </html>

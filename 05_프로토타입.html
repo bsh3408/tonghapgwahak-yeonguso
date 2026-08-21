@@ -1819,7 +1819,21 @@ async function doChangePassword(){
       body:JSON.stringify({name:CURRENT_STUDENT.name, oldPassword, newPassword:p1})})).json();
   if(!out.ok){ setChangeErr(out.error||'비밀번호 변경에 실패했습니다.'); return; }
   finishLogin();
+  showOnboardingIntro();
  }catch(e){ setChangeErr('서버 연결 오류: '+e.message); }
+}
+
+/* 첫 로그인(비밀번호를 처음 바꾸는 순간)에만 뜨는 간단 안내 — 이 게임이 뭐고 뭘 해야 하는지 알려준다 */
+function showOnboardingIntro(){
+ modal(`<h2 style="text-align:center">👋 환영해요!</h2>
+  <div class="box" style="line-height:1.8;font-size:13.5px">
+   <b>신장고 통합과학연구소</b>는 통합과학2 수행평가를 게임처럼 풀 수 있는 곳이에요.
+   <div style="margin-top:10px"><b style="color:#a5822c">📋 꼭 해야 하는 것</b><br>
+    "과제(성적)"를 눌러서 단원 문제를 끝까지 풀고 제출하면, 그게 실제 수행평가 점수(40점 만점)로 반영돼요.</div>
+   <div style="margin-top:10px"><b style="color:var(--mint2)">🎓 안 해도 되는 것(재미로 하는 보너스)</b><br>
+    조수 뽑기·연구소 꾸미기·연구 활동·랭킹은 성적과 무관한 게임이에요. 안 해도 과제만 다 풀면 만점 받을 수 있어요.</div>
+  </div>
+  <button class="btn gold" onclick="closeModal()">시작하기</button>`);
 }
 
 function finishLogin(){

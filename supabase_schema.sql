@@ -324,6 +324,74 @@ begin
 end; $$;
 
 -- ============================================================
+-- 9) 연구포인트·특별연구포인트 — 교사가 학생 계정 관리 화면에서 직접 조절
+--    실제 사용(구매·가챠 등)은 학생 브라우저(localStorage)가 그대로 담당하고,
+--    이 테이블은 "현재 잔액을 교사가 볼 수 있는 거울"이자 "교사가 지급/차감을 예약해두는 우편함" 역할만 한다.
+--    ① 학생 클라이언트가 상태를 저장할 때마다 lab_points_sync로 현재 rc/src를 그대로 반영(거울).
+--    ② 교사가 lab_points_grant로 +50, -20 같은 증감분을 예약해두면,
+--    ③ 학생이 다음 로그인 때 lab_points_claim으로 그 증감분을 가져가 자기 localStorage에 더하고 반영한다.
+-- ============================================================
+create table if not exists public.lab_points (
+  name text primary key, class_no text,
+  rc int not null default 0, src int not null default 0,
+  updated_at timestamptz not null default now()
+);
+alter table public.lab_points enable row level security;
+drop policy if exists "anyone select points" on public.lab_points;
+create policy "anyone select points" on public.lab_points for select to anon using (true);
+
+create or replace function public.lab_points_sync(p_name text, p_class_no text, p_rc int, p_src int)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+begin
+  insert into lab_points(name, class_no, rc, src, updated_at)
+    values (p_name, p_class_no, greatest(0, p_rc), greatest(0, p_src), now())
+  on conflict (name) do update
+    set class_no = excluded.class_no, rc = excluded.rc, src = excluded.src, updated_at = now();
+  return jsonb_build_object('ok', true);
+end; $$;
+
+create table if not exists public.lab_points_grants (
+  id text primary key,
+  student_name text not null, class_no text,
+  rc_delta int not null default 0, src_delta int not null default 0,
+  note text, created_at timestamptz not null default now(),
+  claimed boolean not null default false
+);
+alter table public.lab_points_grants enable row level security;
+drop policy if exists "anyone select points grants" on public.lab_points_grants;
+create policy "anyone select points grants" on public.lab_points_grants for select to anon using (true);
+
+create or replace function public.lab_points_grant(p_teacher_password text, p_name text, p_class_no text,
+  p_rc_delta int, p_src_delta int, p_note text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 올바르지 않습니다.'); end if;
+  insert into lab_points_grants(id, student_name, class_no, rc_delta, src_delta, note)
+    values ('pg-' || substr(md5(random()::text || clock_timestamp()::text), 1, 16),
+      p_name, p_class_no, coalesce(p_rc_delta,0), coalesce(p_src_delta,0), p_note);
+  return jsonb_build_object('ok', true);
+end; $$;
+
+-- 학생이 로그인 직후 자기 이름으로 부르는 함수(비밀번호 불필요 — lab_journal_save와 같은 신뢰 수준).
+-- 미청구 지급분을 전부 모아서 lab_points 거울에도 즉시 반영해주고, 델타 합계를 돌려줘서
+-- 학생 화면(로컬 S.rc/S.src)에 그대로 더하게 한다.
+create or replace function public.lab_points_claim(p_student_name text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare total_rc int; total_src int; notes text[];
+begin
+  select coalesce(sum(rc_delta),0), coalesce(sum(src_delta),0), coalesce(array_agg(note) filter (where note is not null and note <> ''), '{}')
+    into total_rc, total_src, notes
+    from lab_points_grants where student_name = p_student_name and claimed = false;
+  if total_rc = 0 and total_src = 0 then
+    return jsonb_build_object('ok', true, 'rcDelta', 0, 'srcDelta', 0, 'notes', '[]'::jsonb);
+  end if;
+  update lab_points_grants set claimed = true where student_name = p_student_name and claimed = false;
+  update lab_points set rc = greatest(0, rc + total_rc), src = greatest(0, src + total_src), updated_at = now()
+    where name = p_student_name;
+  return jsonb_build_object('ok', true, 'rcDelta', total_rc, 'srcDelta', total_src, 'notes', to_jsonb(notes));
+end; $$;
+
+-- ============================================================
 -- anon 롤에게 위 함수들을 호출할 권한 부여(테이블 직접 권한은 안 줌 — RLS+정책만으로 제어)
 -- ============================================================
 grant execute on all functions in schema public to anon, authenticated;

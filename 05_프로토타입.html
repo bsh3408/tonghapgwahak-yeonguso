@@ -598,6 +598,33 @@ function saveLabState(){
    labTheme:S.labTheme, ownedThemes:S.ownedThemes
  })); }
  catch(e){}
+ syncPointsMirror();
+}
+/* 교사가 학생 계정 관리 화면에서 현재 잔액을 볼 수 있도록, 저장할 때마다 수파베이스에도 거울로 남겨둔다.
+   실패해도(오프라인 등) 학생 게임 진행에는 영향이 없어야 해서 fire-and-forget으로 던진다. */
+let _pointsMirrorTimer=null;
+function syncPointsMirror(){
+ if(!CURRENT_STUDENT || !isSupabaseConfigured()) return;
+ clearTimeout(_pointsMirrorTimer);
+ _pointsMirrorTimer=setTimeout(()=>{
+  supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:S.src}).catch(()=>{});
+ }, 800);
+}
+/* 로그인 직후, 선생님이 예약해둔 지급/차감(+연구포인트, +특별연구포인트)을 가져와 반영한다 */
+async function claimTeacherPointGrants(){
+ if(!isSupabaseConfigured()) return;
+ try{
+  const out=await supaRpc('lab_points_claim', {p_student_name:CURRENT_STUDENT.name});
+  if(!out.ok) return;
+  const rcDelta=out.rcDelta||0, srcDelta=out.srcDelta||0;
+  if(!rcDelta && !srcDelta) return;
+  S.rc=Math.max(0,S.rc+rcDelta); S.src=Math.max(0,S.src+srcDelta); saveLabState();
+  const parts=[];
+  if(rcDelta) parts.push(`연구포인트 ${rcDelta>0?'+':''}${rcDelta}🔬`);
+  if(srcDelta) parts.push(`특별연구포인트 ${srcDelta>0?'+':''}${srcDelta}💎`);
+  toast(`👩‍🏫 선생님이 ${parts.join(', ')} 반영했어요`, 'gold');
+  render();
+ }catch(e){}
 }
 
 /* 실제 챕터 게임(roundengine.js의 saveLabProgress)이 남긴 결과를 읽어와 반영한다.
@@ -1941,6 +1968,7 @@ function finishLogin(){
  document.getElementById('whoami').textContent='👤 '+CURRENT_STUDENT.name;
  loadLabState();
  seedTeacherTestPoints();
+ claimTeacherPointGrants();
  syncChapterResults();
  checkDailyAttendance();
  checkRedoRequests();

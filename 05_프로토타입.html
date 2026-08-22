@@ -577,7 +577,8 @@ function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'gue
 
 /* ================= 상태 (로그인한 학생별로 이 브라우저에 저장됨) ================= */
 // assistants: [{poolId, assignedDept(부서id|null), lastCollectedAt(ms)}]
-const S={rc:0,src:0,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright']};
+// 처음 로그인하는 학생의 초기값: 연구포인트 0 · 특별연구포인트 200 (사용자 지정, 2026-08-22)
+const S={rc:0,src:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright']};
 
 function loadLabState(){
  try{

@@ -1,5 +1,6 @@
 // 정적 파일 서버 (프로토타입 미리보기용) + 교사용 관리 페이지 저장 API + 제출기록 모의 저장소 + 학생 로그인
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
+const { execFile } = require('child_process');
 const ROOT = path.resolve(process.argv[2]);
 const PORT = +(process.env.PORT || process.argv[3] || 5173);
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8',
@@ -507,6 +508,30 @@ function syncEmbeddedFallback(filename, parsed) {
     next = html.replace(/<script src="chapterdata\.js"><\/script>/, snapshotTag + '\n<script src="chapterdata.js"></script>');
   }
   if (next !== html) fs.writeFileSync(htmlPath, next, 'utf-8');
+  return htmlFile;
+}
+
+// git add → commit → push를 순서대로 실행. 실패해도 저장 자체는 이미 끝난 뒤라 예외를 던지지 않고
+// {ok, error} 형태로만 알려준다(교사용 페이지가 "깃허브 반영" 상태를 배지로 보여줄 수 있게).
+function runGit(args) {
+  return new Promise((resolve, reject) => {
+    execFile('git', ['-C', ROOT, ...args], { timeout: 20000 }, (err, stdout, stderr) => {
+      if (err) return reject(new Error(stderr || err.message));
+      resolve(stdout);
+    });
+  });
+}
+async function gitAutoSync(files, message) {
+  try {
+    await runGit(['add', ...files]);
+    const status = await runGit(['status', '--porcelain', '--', ...files]);
+    if (!status.trim()) return { ok: true, pushed: false, reason: 'no-changes' };
+    await runGit(['commit', '-m', message]);
+    await runGit(['push']);
+    return { ok: true, pushed: true };
+  } catch (e) {
+    return { ok: false, pushed: false, error: e.message };
+  }
 }
 
 // PUT /api/data/ch14.json  { ...json body... } -> data/ch14.json 저장
@@ -520,11 +545,14 @@ function saveChapterData(req, res, filename) {
     let parsed;
     try { parsed = JSON.parse(body); }
     catch (e) { res.writeHead(400, {'Content-Type':'application/json; charset=utf-8'}); return res.end(JSON.stringify({ok:false, error:'invalid json: '+e.message})); }
-    fs.writeFile(target, JSON.stringify(parsed, null, 2), 'utf-8', (err) => {
+    fs.writeFile(target, JSON.stringify(parsed, null, 2), 'utf-8', async (err) => {
       if (err) { res.writeHead(500, {'Content-Type':'application/json; charset=utf-8'}); return res.end(JSON.stringify({ok:false, error:err.message})); }
-      try { syncEmbeddedFallback(filename, parsed); } catch (e) { /* 스냅샷 갱신 실패해도 저장 자체는 성공으로 처리 */ }
+      let htmlFile;
+      try { htmlFile = syncEmbeddedFallback(filename, parsed); } catch (e) { /* 스냅샷 갱신 실패해도 저장 자체는 성공으로 처리 */ }
+      const gitFiles = ['data/' + filename].concat(htmlFile ? [htmlFile] : []);
+      const sync = await gitAutoSync(gitFiles, `문제 데이터 자동 반영: ${filename}`);
       res.writeHead(200, {'Content-Type':'application/json; charset=utf-8'});
-      res.end(JSON.stringify({ok:true}));
+      res.end(JSON.stringify({ok:true, sync}));
     });
   });
 }

@@ -1164,13 +1164,13 @@ function termBox(term){
 async function paSheet(){
  const pa=paTotal();
  sheet('수행평가 현황 (40점 만점)','기본점수 + 문제를 풀어서 받는 점수를 한눈에 볼 수 있어요',`
-  <div class="banner gold">이 화면이 <b>성적과 관련된 전부</b>입니다. 조수·연구활동 같은 다른 게임 요소는 여기 안 나옵니다 — 안 해도 만점에는 지장 없어요.</div>
+  <div class="banner gold">이 화면이 <b>성적과 관련된 전부</b>입니다. 조수·연구활동 같은 다른 게임 요소는 여기 안 나오며, 참여하지 않아도 만점에는 지장이 없습니다.</div>
   <div class="box" style="text-align:center;background:linear-gradient(160deg,#eef7f4,#e2f2ec);border-color:#bce3d8">
    <div style="font-size:12px;color:var(--mint2);font-weight:800">총점(평가계획서 기준) 40점 만점</div>
-   <div style="font-size:11px;color:var(--dim);margin-top:3px">수행 1회 20점 + 수행 2회 20점 · 회차별 구성: 기본점수 8점(참여) + 문제를 풀면 받는 점수 최대 12점 — 이 20점 안에서 선생님이 개념 이해·자료 해석·태도를 보고 최종 확정합니다</div>
+   <div style="font-size:11px;color:var(--dim);margin-top:3px">수행 1회 20점 + 수행 2회 20점 · 회차별 구성: 기본점수 8점(참여) + 문제를 풀면 받는 점수 최대 12점입니다. 이 20점 안에서 선생님이 개념 이해·자료 해석·태도를 보고 최종 점수를 확정합니다.</div>
   </div>
   <div class="box" style="text-align:center">
-   <div style="font-size:12px;color:var(--dim);font-weight:800">① 기본점수 — 로그인해서 참여하면 보장돼요</div>
+   <div style="font-size:12px;color:var(--dim);font-weight:800">① 기본점수: 로그인해서 참여하면 보장돼요</div>
    <div style="font-size:38px;font-weight:900;color:var(--mint2);line-height:1.1">${pa.baseSum}<span style="font-size:15px">/16점</span></div>
    <div style="font-size:11px;color:var(--dim)">평가계획서 기준 회차당 기본점수 7점 + 참여 1점 = 8점(백지 제출·미참여여도 7점은 보장)</div>
   </div>
@@ -1378,7 +1378,7 @@ function answerOx(picked){
   toast('정답! +5🔬', 'gold');
   flyGain('rc', 5);
  } else {
-  toast(`오답 — ${q.explain||''}`, 'bad');
+  toast(`오답이에요. ${q.explain||''}`, 'bad');
  }
  st.idx++;
  render();
@@ -1966,7 +1966,7 @@ function seedTeacherTestPoints(){
  S.rc+=5000; S.src+=2000;
  try{ localStorage.setItem(seededKey,'1'); }catch(e){}
  saveLabState();
- toast('🧪 테스트 계정 — 연구포인트·특별연구포인트를 넉넉히 채워드렸어요', 'gold');
+ toast('🧪 테스트 계정이라 연구포인트·특별연구포인트를 넉넉히 채워드렸어요', 'gold');
 }
 
 /* 하루 1회 로그인 출석 보너스 */

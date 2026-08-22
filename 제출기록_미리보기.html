@@ -72,10 +72,10 @@ function teacherPw(){ return document.getElementById('teacherPw').value; }
 function updateHeaderForDataSource(){
   const real = isSupabaseConfigured();
   document.getElementById('subLine').textContent = real
-    ? '수파베이스(lab_submissions)에 실제로 쌓인 학생 제출기록입니다 — 교사 비밀번호로 보호돼요.'
+    ? '수파베이스(lab_submissions)에 실제로 쌓인 학생 제출기록입니다. 교사 비밀번호로 보호돼요.'
     : '수파베이스에 아직 연결하지 않은 상태에서, 학생이 게임을 제출하면 실제로 어떤 데이터가 쌓이는지 미리 확인하는 화면입니다. (이 로컬 서버의 임시 저장소 data/_submissions_mock.json를 보여줍니다)';
   document.getElementById('banner').innerHTML = real
-    ? '이 화면은 <b>실제 학생 제출기록</b>을 보여줍니다. 전체 삭제 버튼은 실수로 지우는 걸 막기 위해 꺼져 있어요 — 정말 지워야 하면 Supabase SQL 편집기에서 직접 실행하세요.'
+    ? '이 화면은 <b>실제 학생 제출기록</b>을 보여줍니다. 전체 삭제 버튼은 실수로 지우는 걸 막기 위해 꺼져 있어요. 정말 지워야 하면 Supabase SQL 편집기에서 직접 실행하세요.'
     : '실제 수파베이스에 연결하면 이 화면이 자동으로 실제 학생 제출기록을 보여주는 화면으로 바뀝니다. 지금은 전체 흐름(학생 이름 입력 → 게임 → 제출 → 자동 저장)이 설계대로 동작하는지 확인하는 용도입니다.';
   const clearBtn = document.getElementById('clearBtn');
   clearBtn.disabled = real;

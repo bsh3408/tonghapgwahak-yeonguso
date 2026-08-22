@@ -70,7 +70,7 @@ function restoreProgressIfAny(){
 }
 function showResumeNotice(){
   const el=document.createElement('div');
-  el.textContent='↩️ 저장된 진행 상황을 불러왔어요 — 이어서 풀 수 있어요';
+  el.textContent='↩️ 저장된 진행 상황을 불러왔어요. 이어서 풀 수 있어요';
   el.style.cssText='position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:999;'+
     'background:#eef7f4;color:#3fae95;border:1.5px solid #bce3d8;border-radius:20px;padding:8px 16px;'+
     'font-size:12.5px;font-weight:800;box-shadow:0 3px 10px rgba(90,70,50,.12)';
@@ -180,7 +180,7 @@ function confirmBackToDept(){
   const S=ENGINE_STATE;
   if(S && S.submitted){ location.href='05_프로토타입.html'; return; }
   engModal(`<h2 style="margin:0 0 8px">연구동으로 돌아갈까요?</h2>
-   <div style="font-size:13px;color:var(--dim);line-height:1.6">지금까지 푼 답은 자동으로 저장돼요 — 나중에 이 단원을 다시 열면 이어서 풀 수 있어요.</div>
+   <div style="font-size:13px;color:var(--dim);line-height:1.6">지금까지 푼 답은 자동으로 저장돼요. 나중에 이 단원을 다시 열면 이어서 풀 수 있어요.</div>
    <div style="display:flex;gap:8px;margin-top:14px">
     <button class="navbtn" style="flex:1;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="closeEngModal()">취소</button>
     <button class="navbtn" style="flex:1" onclick="location.href='05_프로토타입.html'">돌아가기</button>
@@ -545,10 +545,10 @@ async function syncToSupabase(){
   setSyncBadge(useReal ? '☁️ 결과 저장 중...' : '🧪 (미리보기) 결과 저장 중...', '');
   try{
     const res=await fetch(endpoint, { method:'POST', headers, body: JSON.stringify(payload) });
-    if(res.ok) setSyncBadge(useReal ? '☁️ 결과 저장 완료' : '🧪 (미리보기) 결과 저장 완료 — 제출기록_미리보기.html에서 확인', 'ok');
-    else setSyncBadge('⚠️ 저장 실패 — 선생님께 화면을 보여주세요', 'err');
+    if(res.ok) setSyncBadge(useReal ? '☁️ 결과 저장 완료' : '🧪 (미리보기) 결과 저장 완료: 제출기록_미리보기.html에서 확인', 'ok');
+    else setSyncBadge('⚠️ 저장에 실패했어요. 선생님께 화면을 보여주세요', 'err');
   }catch(e){
-    setSyncBadge('⚠️ 저장 실패(인터넷 연결 확인) — 선생님께 알려주세요', 'err');
+    setSyncBadge('⚠️ 저장에 실패했어요(인터넷 연결을 확인해 주세요). 선생님께 알려주세요', 'err');
   }
   syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload);
 }

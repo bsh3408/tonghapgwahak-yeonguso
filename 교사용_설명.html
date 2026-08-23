@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>통합과학연구소 교사용 설명서</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --mint:#3fae95; --mint2:#2c8a75; --bg:#fbfaf7; --card:#fff; --line:#e7e2d6;
+    --txt:#2b2b2b; --dim:#7a7a72; --gold:#c98a2c; --danger:#c85454;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:'Pretendard','Malgun Gothic',sans-serif;line-height:1.75}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 22px 70px}
+  h1{font-size:23px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:14px;margin:0 0 24px}
+  h2{font-size:17px;margin:34px 0 10px;padding-top:10px;border-top:1.5px solid var(--line)}
+  h2:first-of-type{border-top:none;margin-top:0}
+  .linkbox{background:linear-gradient(160deg,#eef7f4,#e2f2ec);border:1.5px solid #bce3d8;border-radius:14px;padding:14px 18px;margin-bottom:10px}
+  .linkbox .label{font-size:12px;color:var(--mint2);font-weight:800;margin-bottom:6px}
+  .linkbox a{display:block;font-size:14.5px;font-weight:700;color:var(--mint2);word-break:break-all;text-decoration:none}
+  .linkbox a:hover{text-decoration:underline}
+  .card{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:12px}
+  .card .t{font-weight:800;font-size:14.5px;margin-bottom:6px}
+  .card p{margin:4px 0;font-size:13.5px;color:#4a4a44}
+  code{background:#f3f0e8;border-radius:4px;padding:1px 5px;font-size:13px}
+  .banner{background:#fff7e6;border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;margin:14px 0;font-size:13.5px}
+  .banner b{color:var(--gold)}
+  .warn{background:#fdeeee;border:1.5px solid #eab4b4;border-radius:12px;padding:14px 16px;margin:14px 0;font-size:13.5px}
+  .warn b{color:var(--danger)}
+  ol,ul{margin:6px 0;padding-left:20px;font-size:13.5px;color:#4a4a44}
+  li{margin:4px 0}
+  .footer{margin-top:36px;font-size:12px;color:var(--dim);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📋 통합과학연구소 교사용 설명서</h1>
+  <p class="sub">신장고 통합과학2 수행평가 게임 — 관리 방법 안내</p>
+
+  <h2>1. 링크</h2>
+  <div class="linkbox">
+    <div class="label">학생용 게임 (실제 배포 주소, 언제든 접속 가능)</div>
+    <a href="https://bsh3408.github.io/tonghapgwahak-yeonguso/05_프로토타입.html" target="_blank">
+      https://bsh3408.github.io/tonghapgwahak-yeonguso/05_프로토타입.html</a>
+  </div>
+  <div class="linkbox">
+    <div class="label">교사용 관리 페이지 (이 컴퓨터에서만, 서버를 켠 상태에서만 접속 가능)</div>
+    <a href="http://localhost:5173/교사용_수행평가관리.html" target="_blank">http://localhost:5173/교사용_수행평가관리.html</a>
+  </div>
+
+  <h2>2. 교사용 페이지 여는 방법</h2>
+  <div class="card">
+    <p>연구소 프로그램 폴더 안의 <code>서버_시작.bat</code> 파일을 더블클릭하세요. 검은 창(서버)이 뜨고
+    자동으로 브라우저가 열립니다. <b>이 검은 창을 닫으면 서버도 함께 꺼지고, 교사용 페이지 접속이 안 됩니다.</b>
+    작업이 끝나기 전까지는 그대로 켜두세요.</p>
+    <p>맨 위 <code>교사 비밀번호</code> 칸에 미리 정해둔 교사 비밀번호를 입력해야 학생 계정 관리·게시판 답변·
+    연구동 설정 저장이 됩니다.</p>
+  </div>
+
+  <h2>3. 문제 수정하기</h2>
+  <div class="card">
+    <p>왼쪽에서 단원을 골라 문제를 고친 뒤 <code>💾 저장</code>을 누르세요.</p>
+    <ul>
+      <li>로컬 파일 저장과 동시에, <b>자동으로 깃허브에도 반영</b>됩니다(별도 조작 불필요).</li>
+      <li>학생용 배포 사이트에는 저장 후 <b>약 1분 뒤</b>부터 반영됩니다. 저장하자마자 학생 화면을 새로고침하면
+      아직 예전 내용이 보일 수 있어요.</li>
+      <li>저장 상태 메시지에 "깃허브에도 자동으로 반영했어요"가 뜨면 정상적으로 처리된 것입니다. 만약
+      "깃허브 반영에 실패했어요"가 뜨면(인터넷 연결 문제 등) 로컬 학생(이 컴퓨터로 접속한 학생)에게는 이미
+      반영됐지만 배포 사이트에는 아직 안 올라간 상태이니, 인터넷 연결을 확인하고 다시 저장해보세요.</li>
+    </ul>
+  </div>
+
+  <h2>4. 학생 계정 관리</h2>
+  <div class="card">
+    <p><b>명단 등록</b>: "이름,학번" 형식으로 한 줄씩 붙여넣고 등록하면 계정이 만들어집니다. 이미 등록된 이름은
+    건드리지 않으니, 새 학생이 생기면 그때마다 다시 붙여넣어도 안전합니다.</p>
+    <p><b>비밀번호 초기화</b>: 학생이 비밀번호를 잊어버리면 목록에서 "🔑 비번 초기화"를 누르세요. 다음 로그인 때
+    학번으로 로그인하고 새 비밀번호를 다시 정하게 됩니다.</p>
+    <p><b>연구포인트 · 특별연구포인트 조절</b>: 같은 화면 아래쪽 표에서 학생별 현재 잔액을 보고, 지급·차감량을
+    입력해 "반영"을 누르면 됩니다. <b>즉시 반영이 아니라 그 학생이 다음에 로그인할 때</b> 자동으로 적용됩니다.</p>
+  </div>
+
+  <h2>5. 연구동 공개 설정</h2>
+  <div class="card">
+    <p>연구동(단원 묶음)을 열고 닫거나 마감일을 정할 수 있습니다. 마감일이 지나도 자동으로 잠기지는 않고
+    안내만 표시되니, 실제로 막으려면 직접 "닫힘"으로 바꿔야 합니다.</p>
+  </div>
+
+  <h2>6. 오류신고 / Q&amp;A</h2>
+  <div class="card">
+    <p>학생이 남긴 글을 확인하고 답변을 달 수 있습니다. 답변을 등록하면 학생 화면에도 바로 보입니다.</p>
+  </div>
+
+  <h2>7. 제출기록 확인</h2>
+  <div class="linkbox">
+    <div class="label">제출기록 미리보기 (서버 켜진 상태에서)</div>
+    <a href="http://localhost:5173/제출기록_미리보기.html" target="_blank">http://localhost:5173/제출기록_미리보기.html</a>
+  </div>
+  <div class="card">
+    <p>학생들의 실제 제출기록(점수·서술답안·만점 클리어 여부)을 교사 비밀번호로 확인할 수 있습니다.</p>
+  </div>
+
+  <div class="banner">
+    💡 <b>배점 원칙</b>: 조수 뽑기·연구활동·랭킹 같은 게임 요소는 성적과 무관한 선택 요소입니다. 실제 20점
+    만점(회차당)은 로그인 참여(기본점수)와 실제 문제 풀이(추가점수)만으로 이미 채울 수 있도록 설계돼 있습니다.
+  </div>
+
+  <div class="warn">
+    ⚠️ 교사용 페이지와 <code>서버_시작.bat</code>은 <b>이 컴퓨터에만 있고 깃허브에는 올라가지 않습니다.</b>
+    다른 컴퓨터에서 관리하려면 이 폴더 전체를 옮기거나 별도로 준비해야 합니다.
+  </div>
+
+  <div class="footer">신장고등학교 통합과학2 · made by BYUN</div>
+</div>
+</body>
+</html>

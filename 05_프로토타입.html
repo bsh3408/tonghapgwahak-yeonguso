@@ -129,6 +129,8 @@ button,.mrow,.splitcard,.pabtn,.clk,.opt{
 .tmpl{font-size:10.5px;font-weight:800;color:#3d8fa8;background:#e4f3f8;border:1px solid #b7dfeb;border-radius:6px;padding:2px 7px;white-space:nowrap}
 .kind{font-size:10px;font-weight:900;border-radius:6px;padding:2px 6px;white-space:nowrap}
 .kind.chapter{background:#eef7f4;color:#2f8a72;border:1px solid #bce3d8}
+.kind.chapter-obj{background:#e2eef8;color:#2f6fa8;border:1px solid #b7d3ec}
+.kind.chapter-essay{background:#f3ecfb;color:#7c4fc4;border:1px solid #ddc8f2}
 .mt{flex:1;min-width:0;font-size:13.5px;font-weight:700}.mt small{display:block;font-size:11px;color:var(--dim);font-weight:600}
 .bg{font-size:11px;font-weight:800;border-radius:8px;padding:4px 9px;white-space:nowrap}
 .bg.p{background:#e6f7ea;color:#3f9a5c;border:1px solid #b6e4c3}
@@ -1307,9 +1309,13 @@ function missionSheet(did){
   if(m.status==='soon')return `<div class="mrow soon">🔒<span class="mt">${m.t}<small>학기 중 추가 예정</small></span></div>`;
   const b=m.cleared?'<span class="bg p">클리어</span>':`<span class="bg n">${m.passLabel||'도전하기'}</span>`;
   const chNum=m.dataFile.split('/').pop().replace('.json','');
+  // 수행평가 미션(kind:'chapter')은 객관식/서술형으로 나뉘어 있어서, 배지도 그 모드에 맞춰
+  // 이름과 색을 다르게 보여준다(솔로 미션은 서술형이 없는 단원이라 객관식 취급).
+  const kindClass = m.kind==='chapter' ? 'chapter-'+(m.mode==='essay'?'essay':'obj') : m.kind;
+  const kindLabel = m.kind==='chapter' ? (m.mode==='essay'?'서술형':'객관식') : KIND_LABEL[m.kind];
   return `<div class="mrow" style="cursor:pointer;flex-wrap:wrap" onclick="playGame('${m.id}')">
    ${m.cleared?'<span style="color:var(--green);font-weight:900">✓</span>':'<span style="width:12px"></span>'}
-   <span class="kind ${m.kind}">${KIND_LABEL[m.kind]}</span>
+   <span class="kind ${kindClass}">${kindLabel}</span>
    <span class="mt">${m.t}<small>${MJ[m.mj].ic} ${MJ[m.mj].n} · 개념 「${m.cp}」 · 최고기록 ${m.best||0}점</small></span>
    ${m.mode==='obj' ? '' : `<a href="javascript:void(0)" onclick="event.stopPropagation();journalSheet('${chNum}')"
      title="의견·논술형·심화읽기 다시 쓰기" style="flex:none;text-decoration:none;background:#fff;border:1.5px solid var(--line);

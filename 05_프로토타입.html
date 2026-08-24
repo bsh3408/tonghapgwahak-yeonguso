@@ -298,33 +298,47 @@ const KIND_LABEL={gauge:'게이지',quiz:'객관식',short:'서답형',ask:'질�
 /* 실제 수행평가 게임(챕터N_*.html, data/chN.json)과 1:1로 연결된 과제.
    status:'ready'인 항목을 누르면 이 로비를 벗어나 실제 게임 페이지로 이동한다.
    완료 결과(점수·통과 여부)는 그 게임이 localStorage에 남기고, 이 로비가 돌아올 때 읽어서 반영한다. */
-function chapterMission(id, opts){
- return Object.assign({id, kind:'chapter',
-   file:`챕터${opts.num}_${opts.slug}.html`, dataFile:`data/ch${opts.num}.json`,
-   chapterId:`ch${opts.num}_seed_v1`, t:opts.t, status:'ready', point:1, cp:opts.cp, mj:opts.mj}, {});
+/* 서술형(의견)과 그 외 문제(객관식·분류·짝짓기·순서·그래프해석·보기조합)를 별도 미션으로 나눠서
+   재도전 편의성을 준다 — 객관식만 다시 풀거나 서술형만 다시 쓰고 싶을 때 전체를 다시 안 해도 됨.
+   둘 다 같은 데이터 파일(dataFile)·같은 chapterId(라운드 단위 크레딧·서술답안 저장에 계속 씀)를
+   공유하고, 게임 페이지로 이동할 때 붙는 ?mode=obj/essay를 roundengine.js가 읽어 라운드를 걸러낸다.
+   resultKey만 미션마다 달라서 "이 미션을 clear했는지" 기록이 서로 안 섞인다.
+   opts.noEssay:true면 서술형이 아예 없는 단원(ch21 기출문제 풀기)이라 객관식 미션 하나만 만든다. */
+function chapterMissions(id, opts){
+ const base={file:`챕터${opts.num}_${opts.slug}.html`, dataFile:`data/ch${opts.num}.json`,
+   chapterId:`ch${opts.num}_seed_v1`, baseTitle:opts.t, status:'ready', point:1, cp:opts.cp, mj:opts.mj};
+ if(opts.noEssay){
+  return [Object.assign({}, base, {id:id+'_obj', kind:'chapter', mode:'obj', solo:true,
+    resultKey:base.chapterId+'__obj', t:opts.t})];
+ }
+ const obj=Object.assign({}, base, {id:id+'_obj', kind:'chapter', mode:'obj',
+   resultKey:base.chapterId+'__obj', t:opts.t+' · 객관식'});
+ const essay=Object.assign({}, base, {id:id+'_essay', kind:'chapter', mode:'essay',
+   resultKey:base.chapterId+'__essay', t:opts.t+' · 서술형'});
+ return [obj, essay];
 }
 
 /* term: 1=전반부(중간고사 전 마감·수행1회 10점 풀) 2=후반부(기말고사 전 마감·수행2회 10점 풀)
    0=성적 미반영 보너스 */
 const DEPTS=[
  {id:'d1',n:'고생물 연구동',u:'Ⅰ-1. 환경 변화와 생물 다양성',ic:'🦴',c:'#f6e3d2',open:1,term:1,ms:[
-  chapterMission('ch10',{num:10,slug:'지질시대와지구환경의변화',t:'지질 시대와 지구 환경의 변화',cp:'지질 시대와 화석',mj:'earth'}),
-  chapterMission('ch11',{num:11,slug:'생물의진화와다양성',t:'생물의 진화와 다양성',cp:'변이와 자연선택',mj:'bio'})]},
+  ...chapterMissions('ch10',{num:10,slug:'지질시대와지구환경의변화',t:'지질 시대와 지구 환경의 변화',cp:'지질 시대와 화석',mj:'earth'}),
+  ...chapterMissions('ch11',{num:11,slug:'생물의진화와다양성',t:'생물의 진화와 다양성',cp:'변이와 자연선택',mj:'bio'})]},
  {id:'d2',n:'물질 변환동',u:'Ⅰ-2. 우리 주변의 변화',ic:'⚗️',c:'#e2eef8',open:1,term:1,ms:[
-  chapterMission('ch12',{num:12,slug:'산화와환원',t:'산화와 환원',cp:'산화와 환원',mj:'chem'}),
-  chapterMission('ch13',{num:13,slug:'산과염기와중화반응',t:'산과 염기와 중화 반응',cp:'중화 반응과 이온',mj:'chem'}),
-  chapterMission('ch20',{num:20,slug:'물질변화와에너지의출입',t:'물질 변화와 에너지의 출입',cp:'발열 반응과 흡열 반응',mj:'chem'}),
-  chapterMission('ch21',{num:21,slug:'화학기출문제풀기',t:'화학 기출문제 풀기',cp:'기출 유형으로 개념 다지기',mj:'chem'})]},
+  ...chapterMissions('ch12',{num:12,slug:'산화와환원',t:'산화와 환원',cp:'산화와 환원',mj:'chem'}),
+  ...chapterMissions('ch13',{num:13,slug:'산과염기와중화반응',t:'산과 염기와 중화 반응',cp:'중화 반응과 이온',mj:'chem'}),
+  ...chapterMissions('ch20',{num:20,slug:'물질변화와에너지의출입',t:'물질 변화와 에너지의 출입',cp:'발열 반응과 흡열 반응',mj:'chem'}),
+  ...chapterMissions('ch21',{num:21,slug:'화학기출문제풀기',t:'화학 기출문제 풀기',cp:'기출 유형으로 개념 다지기',mj:'chem',noEssay:true})]},
  {id:'d3',n:'생태 관측동',u:'Ⅱ-1. 생태계와 환경',ic:'🌿',c:'#e4f4e6',open:0,term:2,ms:[
-  chapterMission('ch14',{num:14,slug:'생태계의구성과변화',t:'생태계의 구성과 생태계 변화',cp:'생태계 평형',mj:'bio'}),
-  chapterMission('ch15',{num:15,slug:'지구환경의변화',t:'지구 환경의 변화',cp:'지구 온난화',mj:'earth'})]},
+  ...chapterMissions('ch14',{num:14,slug:'생태계의구성과변화',t:'생태계의 구성과 생태계 변화',cp:'생태계 평형',mj:'bio'}),
+  ...chapterMissions('ch15',{num:15,slug:'지구환경의변화',t:'지구 환경의 변화',cp:'지구 온난화',mj:'earth'})]},
  {id:'d4',n:'에너지 발전동',u:'Ⅱ-2. 에너지',ic:'⚡',c:'#fdf1d6',open:0,term:2,ms:[
-  chapterMission('ch16',{num:16,slug:'태양에너지의생성과전환',t:'태양 에너지의 생성과 전환',cp:'에너지 전환',mj:'phys'}),
-  chapterMission('ch17',{num:17,slug:'전기에너지생산과효율',t:'전기에너지의 생산, 에너지 효율과 지구환경',cp:'전자기 유도',mj:'phys'})]},
+  ...chapterMissions('ch16',{num:16,slug:'태양에너지의생성과전환',t:'태양 에너지의 생성과 전환',cp:'에너지 전환',mj:'phys'}),
+  ...chapterMissions('ch17',{num:17,slug:'전기에너지생산과효율',t:'전기에너지의 생산, 에너지 효율과 지구환경',cp:'전자기 유도',mj:'phys'})]},
  {id:'d5',n:'데이터 분석동',u:'Ⅲ-1. 과학의 유용성과 빅데이터',ic:'📊',c:'#eee7fa',open:0,term:0,ms:[
-  chapterMission('ch18',{num:18,slug:'과학의유용성과빅데이터',t:'과학의 유용성과 빅데이터 활용',cp:'빅데이터',mj:'etc'})]},
+  ...chapterMissions('ch18',{num:18,slug:'과학의유용성과빅데이터',t:'과학의 유용성과 빅데이터 활용',cp:'빅데이터',mj:'etc'})]},
  {id:'d6',n:'미래기술 윤리동',u:'Ⅲ-2. 과학기술의 발전과 윤리',ic:'🤖',c:'#fbe6ee',open:0,term:0,ms:[
-  chapterMission('ch19',{num:19,slug:'과학기술의발전과윤리',t:'과학기술의 발전과 윤리',cp:'과학기술과 윤리',mj:'etc'})]}];
+  ...chapterMissions('ch19',{num:19,slug:'과학기술의발전과윤리',t:'과학기술의 발전과 윤리',cp:'과학기술과 윤리',mj:'etc'})]}];
 /* 교사용 관리 페이지에서 저장한 연구동 공개/마감일 설정을 읽어와 DEPTS를 덮어쓴다 */
 async function loadDeptConfig(){
  try{
@@ -642,13 +656,16 @@ function syncChapterResults(){
  let changed=false;
  ALLM().forEach(g=>{
   if(g.kind!=='chapter') return;
-  let raw; try{ raw=localStorage.getItem(sKey('lab_result_'+g.chapterId)); }catch(e){ raw=null; }
+  // resultKey는 chapterId에 미션(mode) 접미사가 붙은 값 — 객관식/서술형 미션의 "클리어" 기록이
+  // 서로 안 덮어써지게 분리해준다. 라운드 크레딧(evercorrect)은 그대로 chapterId를 공유해서 쓴다.
+  const rk=g.resultKey||g.chapterId;
+  let raw; try{ raw=localStorage.getItem(sKey('lab_result_'+rk)); }catch(e){ raw=null; }
   if(!raw) return;
   let result; try{ result=JSON.parse(raw); }catch(e){ return; }
   const scorePct=result.total? Math.round(result.score/result.total*100) : 0;
   g.best=Math.max(g.best||0, scorePct);
   if(result.passed) g.cleared=true;
-  const claimedAt=+(localStorage.getItem(sKey('lab_claimed_'+g.chapterId))||0);
+  const claimedAt=+(localStorage.getItem(sKey('lab_claimed_'+rk))||0);
   if(!result.at || result.at<=claimedAt) return; // 이미 반영한 결과 — 표시만 갱신하고 지급은 건너뜀
   const everSet=everCorrectSet(g.chapterId);
   let roundGain=0;
@@ -662,13 +679,16 @@ function syncChapterResults(){
    flyGain('rc', roundGain);
   }
   S.lastMini=scorePct;
-  try{ localStorage.setItem(sKey('lab_claimed_'+g.chapterId), String(result.at)); }catch(e){}
+  try{ localStorage.setItem(sKey('lab_claimed_'+rk), String(result.at)); }catch(e){}
   if(result.perfectClear){
-   const flagKey=sKey('lab_perfectflag_'+g.chapterId+'_'+result.at);
+   const flagKey=sKey('lab_perfectflag_'+rk+'_'+result.at);
    if(!localStorage.getItem(flagKey)){
     try{ localStorage.setItem(flagKey,'1'); }catch(e){}
-    try{ localStorage.setItem(sKey('lab_everperfect_'+g.chapterId),'1'); }catch(e){}
-    toast(`🌟 「${g.t}」 통과 + 서술답안 완성! 선생님께 +1점 대상인지 확인해보세요`, 'gold');
+    try{ localStorage.setItem(sKey('lab_everperfect_'+rk),'1'); }catch(e){}
+    const doneMsg = g.mode==='essay'
+     ? `🌟 「${g.baseTitle||g.t}」 서술답안을 모두 완성했어요`
+     : `🌟 「${g.baseTitle||g.t}」 통과했어요`;
+    toast(doneMsg, 'gold');
    }
   }
   changed=true;
@@ -708,10 +728,16 @@ async function loadChapterMetas(){
   try{
    const res=await fetch(g.dataFile, {cache:'no-store'});
    const data=await res.json();
-   g.t=data.meta.title;
+   g.baseTitle=data.meta.title;
+   g.t = g.solo ? data.meta.title : data.meta.title+(g.mode==='essay'?' · 서술형':' · 객관식');
    const opinionRoundsFull=data.rounds.filter(r=>r.kind==='opinion');
-   const gradable=data.rounds.length - opinionRoundsFull.length;
-   g.passLabel = data.meta.passCount>0 ? `${gradable}문제 중 ${data.meta.passCount}개 이상 정답해야 클리어` : '완주만 하면 인정(성적 무관)';
+   // gradablePoolCount가 있으면(무작위 풀 방식) 그 값이 실제 세션에 나오는 객관식류 문제 수다.
+   const gradableCount = data.gradablePoolCount!=null ? data.gradablePoolCount : (data.rounds.length - opinionRoundsFull.length);
+   if(g.mode==='essay'){
+    g.passLabel = opinionRoundsFull.length ? `서술형 ${opinionRoundsFull.length}개를 모두 성실하게 작성하면 완료로 인정` : '완주만 하면 인정(성적 무관)';
+   } else {
+    g.passLabel = data.meta.passCount>0 ? `${gradableCount}문제 중 ${data.meta.passCount}개 이상 정답해야 클리어` : '완주만 하면 인정(성적 무관)';
+   }
    g.opinionRounds=opinionRoundsFull.map(r=>r.id);
    g.opinionMinLens={}; opinionRoundsFull.forEach(r=>{ g.opinionMinLens[r.id]=r.minLen||20; });
   }catch(e){ g.passLabel = g.passLabel || '도전하기'; }
@@ -745,9 +771,15 @@ function paTotal(){
    구한 값을 여기 캐시해 두고, 상단 표시(N/40)에도 같이 반영한다. */
 let _cachedBonusTotal = 0;
 
-/* +1점 보너스 대상(통과+서술완성 단원 목록 · 전체 랭킹 top10 여부)을 모아 보여준다 */
+/* +1점 보너스 대상(통과+서술완성 단원 목록 · 전체 랭킹 top10 여부)을 모아 보여준다.
+   한 단원이 객관식·서술형 두 미션으로 나뉘어 있을 수 있어서, 그 단원의 미션이 전부(객관식 통과 +
+   서술형 완성) 클리어됐을 때만 "이 단원은 +1점 대상"으로 잡는다. */
 function everPerfectChapters(){
- return ALLM().filter(g=>g.kind==='chapter' && localStorage.getItem(sKey('lab_everperfect_'+g.chapterId))==='1');
+ const byChapter={};
+ ALLM().filter(g=>g.kind==='chapter').forEach(g=>{ (byChapter[g.chapterId]=byChapter[g.chapterId]||[]).push(g); });
+ return Object.values(byChapter)
+  .filter(group=>group.every(g=>localStorage.getItem(sKey('lab_everperfect_'+(g.resultKey||g.chapterId)))==='1'))
+  .map(group=>group[0]);
 }
 async function computeBonusInfo(){
  const perfects=everPerfectChapters();
@@ -1222,7 +1254,7 @@ async function paSheet(){
  box.outerHTML=`<div class="box" style="text-align:center;${bonus.total?'background:#fff3d6;border-color:#edd49a':''}">
    <div style="font-size:12px;color:${bonus.total?'#a5822c':'var(--dim)'};font-weight:800">③ 그 외 추가 보너스 (선생님 확인 후 반영)</div>
    <div style="font-size:38px;font-weight:900;color:${bonus.total?'var(--gold)':'var(--dim2)'};line-height:1.1">+${bonus.total}점</div>
-   ${bonus.perfects.length?`<div style="font-size:11.5px;color:#7a5c1c;margin-top:6px;text-align:left">🌟 통과+서술완성(+1점씩): ${bonus.perfects.map(g=>g.t).join(', ')}</div>`:''}
+   ${bonus.perfects.length?`<div style="font-size:11.5px;color:#7a5c1c;margin-top:6px;text-align:left">🌟 통과+서술완성(+1점씩): ${bonus.perfects.map(g=>g.baseTitle||g.t).join(', ')}</div>`:''}
    ${bonus.rankTop10?`<div style="font-size:11.5px;color:#7a5c1c;margin-top:4px">🏆 연구점수 전체 랭킹 top10(+1점)</div>`:''}
    ${!bonus.total?`<div style="font-size:11px;color:var(--dim)">아직 추가된 점수가 없어요. 단원을 통과하고 서술답안을 다 쓰거나 랭킹 top10에 들면 여기 표시돼요.</div>`:''}
   </div>`;
@@ -1279,9 +1311,9 @@ function missionSheet(did){
    ${m.cleared?'<span style="color:var(--green);font-weight:900">✓</span>':'<span style="width:12px"></span>'}
    <span class="kind ${m.kind}">${KIND_LABEL[m.kind]}</span>
    <span class="mt">${m.t}<small>${MJ[m.mj].ic} ${MJ[m.mj].n} · 개념 「${m.cp}」 · 최고기록 ${m.best||0}점</small></span>
-   <a href="javascript:void(0)" onclick="event.stopPropagation();journalSheet('${chNum}')"
+   ${m.mode==='obj' ? '' : `<a href="javascript:void(0)" onclick="event.stopPropagation();journalSheet('${chNum}')"
      title="의견·논술형·심화읽기 다시 쓰기" style="flex:none;text-decoration:none;background:#fff;border:1.5px solid var(--line);
-     border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px">✏️</a>
+     border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px">✏️</a>`}
    ${b}</div>`;}).join(''),
  'deptSheet()');}
 
@@ -1292,7 +1324,7 @@ function playGame(id){
  const dept=DEPTS.find(d=>d.ms.includes(g));
  try{ if(dept) sessionStorage.setItem('lastDeptId', dept.id); }catch(e){}
  saveLabState();
- location.href=g.file;
+ location.href=g.file+(g.mode?('?mode='+g.mode):'');
 }
 
 /* ================= 🏢 연구소 → 연구동 이동 (시각적 지도) ================= */
@@ -1356,7 +1388,11 @@ function oxEverCorrectSet(chNum){
 async function oxSheet(did){
  const d=DEPTS.find(x=>x.id===did);
  await loadOxData();
- const items=d.ms.filter(m=>m.kind==='chapter').flatMap(m=>{
+ // 한 단원이 객관식/서술형 두 미션으로 나뉘어 있어도 dataFile(=chNum)은 같으니, 중복 집계되지 않게
+ // 챕터당 한 번씩만 센다.
+ const seenCh=new Set();
+ const chapterMs=d.ms.filter(m=>m.kind==='chapter' && !seenCh.has(m.dataFile) && seenCh.add(m.dataFile));
+ const items=chapterMs.flatMap(m=>{
   const chNum=m.dataFile.split('/').pop().replace('.json','');
   const everSet=oxEverCorrectSet(chNum);
   return (OX_DATA[chNum]||[]).filter(q=>!everSet.has(q.stmt)).map(q=>({...q, chNum}));

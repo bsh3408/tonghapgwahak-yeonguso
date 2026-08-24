@@ -364,7 +364,7 @@ function readDeptChapters() {
   const out = [];
   let m;
   while ((m = deptRe.exec(html))) {
-    const chapters = [...m[3].matchAll(/chapterMission\('ch(\d+)'/g)].map(x => +x[1]);
+    const chapters = [...m[3].matchAll(/chapterMissions\('ch(\d+)'/g)].map(x => +x[1]);
     out.push({ id: m[1], name: m[2], chapters });
   }
   return out;
@@ -402,7 +402,7 @@ loadChapterData('data/ch${num}.json').then(({ROUNDS, META}) => startSession(ROUN
 }
 
 // POST /api/newchapter  { deptId, num, title, slug, cp, mj, targetMin } — 새 단원을 통째로 만든다.
-// 1) data/chN.json 생성 2) 챕터N_slug.html 생성 3) 05_프로토타입.html의 해당 연구동 ms 배열에 chapterMission(...) 추가
+// 1) data/chN.json 생성 2) 챕터N_slug.html 생성 3) 05_프로토타입.html의 해당 연구동 ms 배열에 ...chapterMissions(...) 추가
 // 4) 교사용_수행평가관리.html의 CHAPTERS 배열에 항목 추가. 3)·4)는 파일 텍스트를 직접 편집하는 방식이라
 // 실패해도(형식이 바뀌었거나 등) 1)·2)는 이미 만들어졌으니 warnings로 알리고 수동 추가를 안내한다.
 function handleNewChapter(req, res) {
@@ -446,7 +446,7 @@ function handleNewChapter(req, res) {
       let lobbyHtml = fs.readFileSync(LOBBY_HTML_FILE, 'utf-8');
       const deptRe = new RegExp(`(\\{id:'${deptId}'[\\s\\S]*?)\\]\\}`);
       if (deptRe.test(lobbyHtml)) {
-        const missionLine = `chapterMission('ch${num}',{num:${num},slug:'${jsEsc(slug)}',t:'${jsEsc(title)}',cp:'${jsEsc(cp)}',mj:'${jsEsc(mj)}'})`;
+        const missionLine = `...chapterMissions('ch${num}',{num:${num},slug:'${jsEsc(slug)}',t:'${jsEsc(title)}',cp:'${jsEsc(cp)}',mj:'${jsEsc(mj)}'})`;
         lobbyHtml = lobbyHtml.replace(deptRe, (m, p1) => p1 + ',\n  ' + missionLine + ']}');
         fs.writeFileSync(LOBBY_HTML_FILE, lobbyHtml, 'utf-8');
       } else {

@@ -40,7 +40,7 @@ function progressKey(){
   const S=ENGINE_STATE;
   const info=getStudentInfo();
   const name=info && info.name ? info.name : 'guest';
-  return 'chprogress_'+(S.meta.seedKey||S.meta.title)+'__'+name;
+  return 'chprogress_'+(S.meta.sessionKey||S.meta.seedKey||S.meta.title)+'__'+name;
 }
 function saveProgress(){
   const S=ENGINE_STATE; if(!S || S.submitted) return;
@@ -79,7 +79,23 @@ function showResumeNotice(){
 }
 function beginRounds(){ restoreProgressIfAny(); renderRound(); }
 
+/* 로비(05_프로토타입.html)가 "객관식"/"서술형" 미션을 따로 열 때 ?mode=obj 또는 ?mode=essay를
+   붙여서 이 페이지로 이동시킨다. 여기서 그 값을 읽어 라운드를 걸러내면, 통과 판정·진행저장·결과저장
+   로직은 그대로 재사용된다(gradable·opinionRounds 계산이 필터링된 결과에 맞게 자연히 좁혀짐).
+   mode가 없으면(기존 링크·더블클릭 등) 전과 동일하게 전체 라운드를 그대로 보여준다. */
+function sessionModeFromUrl(){
+  try{ return new URLSearchParams(location.search).get('mode'); }catch(e){ return null; }
+}
 function startSession(ROUNDS, META){
+  const mode = sessionModeFromUrl();
+  if(mode==='obj') ROUNDS = ROUNDS.filter(r=>r.kind!=='opinion');
+  else if(mode==='essay') ROUNDS = ROUNDS.filter(r=>r.kind==='opinion');
+  META.mode = mode;
+  META.sessionKey = (META.seedKey||META.title) + (mode?('__'+mode):'');
+  if(!ROUNDS.length){
+    app().innerHTML = `<div class="notice">▶ 이 단원에는 ${mode==='essay'?'서술형':'객관식류'} 문제가 없어요. 연구소로 돌아가 주세요.</div>`;
+    return;
+  }
   ENGINE_STATE={
     rounds: ROUNDS,
     meta: META,
@@ -475,23 +491,33 @@ function submitSession(){
 /* ---------- 통합과학연구소 로비(05_프로토타입.html)로 결과 전달 ----------
    같은 브라우저의 localStorage에 "이 단원을 언제, 몇 점으로 통과했는지"를 남겨서
    로비 화면이 새로고침 없이도(혹은 새로고침해도) 최신 결과를 반영할 수 있게 한다. */
+// 이 세션에 채점 대상 라운드가 아예 없으면(서술형 전용 미션 등) 무조건 통과 처리한다.
+// meta.passCount는 "몇 문제 중 몇 개"처럼 절대 개수로 정해져 있어서, gradable이 비어 있어도
+// 그대로 두면 correctN(0) < passCount가 되어 늘 실패로 나오는 문제가 있었다.
+function passThresholdFor(gradable){
+  if(!gradable.length) return 0;
+  const S=ENGINE_STATE;
+  return S.meta.passCount || Math.ceil(gradable.length*0.75);
+}
 function saveLabProgress(){
   const S=ENGINE_STATE;
   const gradable=S.rounds.filter(r=>r.kind!=='opinion');
   const roundResults=gradable.map(r=>({id:r.id, ok:gradeRound(r)}));
   const correctN=roundResults.filter(x=>x.ok).length;
-  const passThreshold=S.meta.passCount || Math.ceil(gradable.length*0.75);
+  const passThreshold=passThresholdFor(gradable);
   const opinionRounds=S.rounds.filter(r=>r.kind==='opinion');
   const allOpinionsFilled = opinionRounds.every(r=>(S.answers[r.id]||'').trim().length >= (r.minLen||20));
   const passed = correctN >= passThreshold;
   const perfectClear = passed && allOpinionsFilled;
-  const chapterId=S.meta.seedKey || S.meta.title;
+  // resultKey는 chapterId에 ?mode 접미사가 붙은 값(sessionKey) — 객관식/서술형 미션이 서로의
+  // "클리어" 기록을 덮어쓰지 않게 분리해준다. 라운드 크레딧·서술답안 저장은 그대로 chapterId(seedKey)를 쓴다.
+  const resultKey=S.meta.sessionKey || S.meta.seedKey || S.meta.title;
   const info=getStudentInfo();
   const studentName=info && info.name ? info.name : 'guest'; // 05_프로토타입.html의 sKey()와 동일한 규칙
   // 안전망: 'input' 이벤트로 이미 저장돼 있겠지만, 제출 시점 답안을 다시 한번 확실히 opinion_* 키에 남긴다.
   opinionRounds.forEach(r=>savePersistedOpinion(r, S.answers[r.id]||''));
   try{
-    localStorage.setItem('lab_result_'+chapterId+'__'+studentName, JSON.stringify({
+    localStorage.setItem('lab_result_'+resultKey+'__'+studentName, JSON.stringify({
       score: correctN, total: gradable.length,
       passed,
       roundResults, perfectClear,
@@ -511,7 +537,7 @@ async function syncToSupabase(){
   const gradable=S.rounds.filter(r=>r.kind!=='opinion');
   const results=gradable.map(r=>({id:r.id, title:r.title, kind:r.kind, ok:gradeRound(r)}));
   const correctN=results.filter(x=>x.ok).length;
-  const passThreshold=S.meta.passCount || Math.ceil(gradable.length*0.75);
+  const passThreshold=passThresholdFor(gradable);
   const opinionRounds=S.rounds.filter(r=>r.kind==='opinion');
   const opinionAnswers={};
   opinionRounds.forEach(r=>{ opinionAnswers[r.id]=(S.answers[r.id]||'').trim(); });
@@ -580,7 +606,7 @@ function renderResult(){
   const gradable = S.rounds.filter(r=>r.kind!=='opinion');
   const results = gradable.map(r=>({round:r, ok:gradeRound(r)}));
   const correctN = results.filter(x=>x.ok).length;
-  const passThreshold = S.meta.passCount || Math.ceil(gradable.length*0.75);
+  const passThreshold = passThresholdFor(gradable);
   const passed = correctN >= passThreshold;
   const opinionRounds = S.rounds.filter(r=>r.kind==='opinion');
 

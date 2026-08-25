@@ -392,6 +392,31 @@ begin
 end; $$;
 
 -- ============================================================
+-- 10) 게임 상태 전체 동기화 — 연구포인트·특별연구포인트·조수·연구점수·논문기록·테마·
+--     라운드별 크레딧 수령 기록·출석 기록·OX 기록을 통째로 JSON 하나에 저장.
+--     로그인할 때 이걸 끌어와서 그 학생의 "가장 최근에 저장된" 게임 상태로 덮어쓴다.
+--     (두 기기를 동시에 쓰지 않는다는 전제하에 마지막 저장이 항상 이긴다 — 단순한 방식)
+-- ============================================================
+create table if not exists public.lab_game_state (
+  name text primary key, class_no text,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.lab_game_state enable row level security;
+drop policy if exists "anyone select game state" on public.lab_game_state;
+create policy "anyone select game state" on public.lab_game_state for select to anon using (true);
+
+create or replace function public.lab_state_sync(p_name text, p_class_no text, p_data jsonb)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+begin
+  insert into lab_game_state(name, class_no, data, updated_at)
+    values (p_name, p_class_no, p_data, now())
+  on conflict (name) do update
+    set class_no = excluded.class_no, data = excluded.data, updated_at = now();
+  return jsonb_build_object('ok', true);
+end; $$;
+
+-- ============================================================
 -- anon 롤에게 위 함수들을 호출할 권한 부여(테이블 직접 권한은 안 줌 — RLS+정책만으로 제어)
 -- ============================================================
 grant execute on all functions in schema public to anon, authenticated;

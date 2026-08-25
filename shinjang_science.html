@@ -598,36 +598,70 @@ function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'gue
 /* ================= 상태 (로그인한 학생별로 이 브라우저에 저장됨) ================= */
 // assistants: [{poolId, assignedDept(부서id|null), lastCollectedAt(ms)}]
 // 처음 로그인하는 학생의 초기값: 연구포인트 0 · 특별연구포인트 200 (사용자 지정, 2026-08-22)
-const S={rc:0,src:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright']};
+const S={rc:0,src:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
+ everCorrect:{}, everPerfect:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false};
 
+/* localStorage 캐시(loadLabState)와 수파베이스 원격 스냅샷(pullGameStateFromServer) 양쪽이
+   같은 모양의 객체를 S에 적용하니 한 곳에 모아둔다. */
+function applyStateSnapshot(s){
+ if(!s) return;
+ S.rc=s.rc||0; S.src=s.src||0; S.lv=s.lv||1; S.fail=s.fail||0;
+ S.assistants=Array.isArray(s.assistants)?s.assistants:[]; S.researchScore=s.researchScore||0;
+ S.papers=Array.isArray(s.papers)?s.papers:[]; S.nobelCount=s.nobelCount||0;
+ S.labTheme=s.labTheme||'bright';
+ S.ownedThemes=Array.isArray(s.ownedThemes)&&s.ownedThemes.length?s.ownedThemes:['bright'];
+ S.everCorrect=(s.everCorrect&&typeof s.everCorrect==='object')?s.everCorrect:{};
+ S.everPerfect=(s.everPerfect&&typeof s.everPerfect==='object')?s.everPerfect:{};
+ S.claimed=(s.claimed&&typeof s.claimed==='object')?s.claimed:{};
+ S.oxEverCorrect=(s.oxEverCorrect&&typeof s.oxEverCorrect==='object')?s.oxEverCorrect:{};
+ S.lastAttendance=s.lastAttendance||null;
+ S.teacherSeeded=!!s.teacherSeeded;
+}
 function loadLabState(){
  try{
   const raw=localStorage.getItem(sKey('lab_state_v1'));
   if(!raw) return;
-  const s=JSON.parse(raw);
-  S.rc=s.rc||0; S.src=s.src||0; S.lv=s.lv||1; S.fail=s.fail||0;
-  S.assistants=Array.isArray(s.assistants)?s.assistants:[]; S.researchScore=s.researchScore||0;
-  S.papers=Array.isArray(s.papers)?s.papers:[]; S.nobelCount=s.nobelCount||0;
-  S.labTheme=s.labTheme||'bright';
-  S.ownedThemes=Array.isArray(s.ownedThemes)&&s.ownedThemes.length?s.ownedThemes:['bright'];
+  applyStateSnapshot(JSON.parse(raw));
  }catch(e){}
+}
+/* 로그인 직후 수파베이스에 저장된 "이 학생의 가장 최근 게임 상태"를 통째로 끌어와 덮어쓴다.
+   기기(폰·컴퓨터)를 바꿔도 연구포인트·조수·연구점수·크레딧 수령 기록이 항상 같게 보이게 하는 핵심.
+   동시에 두 기기를 쓰는 상황은 없다는 전제로, 그냥 "마지막에 저장된 값"을 그대로 신뢰한다. */
+async function pullGameStateFromServer(){
+ if(!CURRENT_STUDENT || !isSupabaseConfigured()) return false;
+ try{
+  const rows=await supaSelect('lab_game_state', 'name=eq.'+encodeURIComponent(CURRENT_STUDENT.name));
+  const row=rows&&rows[0];
+  if(!row || !row.data) return false;
+  applyStateSnapshot(row.data);
+  saveLabState(); // 로컬 캐시도 서버 기준으로 맞춰서, 오프라인일 때도 최신값이 남게 한다
+  return true;
+ }catch(e){ return false; }
 }
 function saveLabState(){
  try{ localStorage.setItem(sKey('lab_state_v1'), JSON.stringify({
    rc:S.rc, src:S.src, lv:S.lv, fail:S.fail,
    assistants:S.assistants, researchScore:S.researchScore, papers:S.papers, nobelCount:S.nobelCount,
-   labTheme:S.labTheme, ownedThemes:S.ownedThemes
+   labTheme:S.labTheme, ownedThemes:S.ownedThemes,
+   everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
+   lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded
  })); }
  catch(e){}
- syncPointsMirror();
+ syncGameStateMirror();
 }
-/* 교사가 학생 계정 관리 화면에서 현재 잔액을 볼 수 있도록, 저장할 때마다 수파베이스에도 거울로 남겨둔다.
+/* 저장할 때마다 게임 상태 전체를 수파베이스에도 올려서, 다른 기기로 로그인해도 같은 값이 보이게 한다.
+   교사용 페이지의 "현재 잔액" 표는 여전히 lab_points를 보고 있어서 그것도 같이 갱신해둔다.
    실패해도(오프라인 등) 학생 게임 진행에는 영향이 없어야 해서 fire-and-forget으로 던진다. */
-let _pointsMirrorTimer=null;
-function syncPointsMirror(){
+let _gameStateSyncTimer=null;
+function syncGameStateMirror(){
  if(!CURRENT_STUDENT || !isSupabaseConfigured()) return;
- clearTimeout(_pointsMirrorTimer);
- _pointsMirrorTimer=setTimeout(()=>{
+ clearTimeout(_gameStateSyncTimer);
+ _gameStateSyncTimer=setTimeout(()=>{
+  const data={rc:S.rc, src:S.src, lv:S.lv, fail:S.fail, assistants:S.assistants, researchScore:S.researchScore,
+   papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
+   everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
+   lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded};
+  supaRpc('lab_state_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_data:data}).catch(()=>{});
   supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:S.src}).catch(()=>{});
  }, 800);
 }
@@ -652,11 +686,10 @@ async function claimTeacherPointGrants(){
    ① 라운드별로 "이 학생이 이 라운드를 이미 한 번이라도 맞은 적 있는지"를 추적해서, 새로 맞은 라운드마다
       연구포인트 +10(재획득 없음). ② 통과(기준 문제 수 이상 정답) + 의견형 3개 모두 작성이면 "+1점 대상" 안내. */
 function everCorrectSet(chapterId){
- try{ return new Set(JSON.parse(localStorage.getItem(sKey('lab_evercorrect_'+chapterId))||'[]')); }
- catch(e){ return new Set(); }
+ return new Set(Array.isArray(S.everCorrect[chapterId])?S.everCorrect[chapterId]:[]);
 }
 function saveEverCorrectSet(chapterId, set){
- try{ localStorage.setItem(sKey('lab_evercorrect_'+chapterId), JSON.stringify([...set])); }catch(e){}
+ S.everCorrect[chapterId]=[...set];
 }
 function syncChapterResults(){
  let changed=false;
@@ -671,7 +704,7 @@ function syncChapterResults(){
   const scorePct=result.total? Math.round(result.score/result.total*100) : 0;
   g.best=Math.max(g.best||0, scorePct);
   if(result.passed) g.cleared=true;
-  const claimedAt=+(localStorage.getItem(sKey('lab_claimed_'+rk))||0);
+  const claimedAt=S.claimed[rk]||0;
   if(!result.at || result.at<=claimedAt) return; // 이미 반영한 결과 — 표시만 갱신하고 지급은 건너뜀
   const everSet=everCorrectSet(g.chapterId);
   let roundGain=0;
@@ -685,12 +718,10 @@ function syncChapterResults(){
    flyGain('rc', roundGain);
   }
   S.lastMini=scorePct;
-  try{ localStorage.setItem(sKey('lab_claimed_'+rk), String(result.at)); }catch(e){}
+  S.claimed[rk]=result.at;
   if(result.perfectClear){
-   const flagKey=sKey('lab_perfectflag_'+rk+'_'+result.at);
-   if(!localStorage.getItem(flagKey)){
-    try{ localStorage.setItem(flagKey,'1'); }catch(e){}
-    try{ localStorage.setItem(sKey('lab_everperfect_'+rk),'1'); }catch(e){}
+   if(!S.everPerfect[rk]){
+    S.everPerfect[rk]=true;
     const doneMsg = g.mode==='essay'
      ? `🌟 「${g.baseTitle||g.t}」 서술답안을 모두 완성했어요`
      : `🌟 「${g.baseTitle||g.t}」 통과했어요`;
@@ -784,7 +815,7 @@ function everPerfectChapters(){
  const byChapter={};
  ALLM().filter(g=>g.kind==='chapter').forEach(g=>{ (byChapter[g.chapterId]=byChapter[g.chapterId]||[]).push(g); });
  return Object.values(byChapter)
-  .filter(group=>group.every(g=>localStorage.getItem(sKey('lab_everperfect_'+(g.resultKey||g.chapterId)))==='1'))
+  .filter(group=>group.every(g=>S.everPerfect[g.resultKey||g.chapterId]))
   .map(group=>group[0]);
 }
 async function computeBonusInfo(){
@@ -1408,8 +1439,7 @@ async function loadOxData(){
 }
 let OX_STATE=null;
 function oxEverCorrectSet(chNum){
- try{ return new Set(JSON.parse(localStorage.getItem(sKey('ox_evercorrect_'+chNum))||'[]')); }
- catch(e){ return new Set(); }
+ return new Set(Array.isArray(S.oxEverCorrect[chNum])?S.oxEverCorrect[chNum]:[]);
 }
 async function oxSheet(did){
  const d=DEPTS.find(x=>x.id===did);
@@ -1460,10 +1490,9 @@ function answerOx(picked){
  const ok=picked===q.answer;
  if(ok){
   st.correct++;
-  const key=sKey('ox_evercorrect_'+q.chNum);
   const everSet=oxEverCorrectSet(q.chNum);
   everSet.add(q.stmt);
-  try{ localStorage.setItem(key, JSON.stringify([...everSet])); }catch(e){}
+  S.oxEverCorrect[q.chNum]=[...everSet];
   S.rc+=5; saveLabState();
   toast('정답! +5🔬', 'gold');
   flyGain('rc', 5);
@@ -2075,7 +2104,7 @@ function showOnboardingIntro(){
   <button class="btn gold" onclick="closeModal()">시작하기</button>`);
 }
 
-function finishLogin(){
+async function finishLogin(){
  // roundengine.js의 renderStudentGate가 쓰는 것과 같은 형식으로 남겨서,
  // 실제 과제(챕터) 게임을 열 때 이름을 다시 묻지 않게 한다.
  sessionStorage.setItem('studentInfo', JSON.stringify({name:CURRENT_STUDENT.name, classNo:CURRENT_STUDENT.studentId}));
@@ -2083,7 +2112,9 @@ function finishLogin(){
  document.getElementById('loginScreen').classList.add('hide');
  document.getElementById('labApp').classList.remove('hide');
  document.getElementById('whoami').textContent='👤 '+CURRENT_STUDENT.name;
- loadLabState();
+ loadLabState(); // 우선 로컬 캐시로 빠르게 화면부터 그리고
+ render();
+ await pullGameStateFromServer(); // 다른 기기에서 마지막으로 저장한 최신 상태로 덮어씀
  seedTeacherTestPoints();
  claimTeacherPointGrants();
  syncChapterResults();
@@ -2106,10 +2137,9 @@ function finishLogin(){
 const TEACHER_TEST_ACCOUNTS=['변석환'];
 function seedTeacherTestPoints(){
  if(!TEACHER_TEST_ACCOUNTS.includes(CURRENT_STUDENT.name)) return;
- const seededKey=sKey('lab_teacher_seeded');
- if(localStorage.getItem(seededKey)) return;
+ if(S.teacherSeeded) return;
  S.rc+=5000; S.src+=2000;
- try{ localStorage.setItem(seededKey,'1'); }catch(e){}
+ S.teacherSeeded=true;
  saveLabState();
  toast('🧪 테스트 계정이라 연구포인트·특별연구포인트를 넉넉히 채워드렸어요', 'gold');
 }
@@ -2117,11 +2147,9 @@ function seedTeacherTestPoints(){
 /* 하루 1회 로그인 출석 보너스 */
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 function checkDailyAttendance(){
- const key=sKey('lastAttendance');
- const last=localStorage.getItem(key);
  const today=todayStr();
- if(last===today) return;
- try{ localStorage.setItem(key, today); }catch(e){}
+ if(S.lastAttendance===today) return;
+ S.lastAttendance=today;
  S.rc+=30; saveLabState(); render();
  toast('🌞 오늘의 출석 보너스 +30🔬', 'gold');
  flyGain('rc', 30);

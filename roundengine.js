@@ -79,7 +79,7 @@ function showResumeNotice(){
 }
 function beginRounds(){ restoreProgressIfAny(); renderRound(); }
 
-/* 로비(05_프로토타입.html)가 "객관식"/"서술형" 미션을 따로 열 때 ?mode=obj 또는 ?mode=essay를
+/* 로비(shinjang_science.html)가 "객관식"/"서술형" 미션을 따로 열 때 ?mode=obj 또는 ?mode=essay를
    붙여서 이 페이지로 이동시킨다. 여기서 그 값을 읽어 라운드를 걸러내면, 통과 판정·진행저장·결과저장
    로직은 그대로 재사용된다(gradable·opinionRounds 계산이 필터링된 결과에 맞게 자연히 좁혀짐).
    mode가 없으면(기존 링크·더블클릭 등) 전과 동일하게 전체 라운드를 그대로 보여준다. */
@@ -142,7 +142,7 @@ function installLeaveDetection(){
   window.addEventListener('focus', engineRegisterReturn);
   document.addEventListener('visibilitychange', ()=>{ if(document.hidden) engineRegisterLeave(); else engineRegisterReturn(); });
 }
-/* 이 파일은 각 챕터 페이지에 단독으로 로드되므로(05_프로토타입.html과 별개 페이지) 그 앱의 sheet/modal을
+/* 이 파일은 각 챕터 페이지에 단독으로 로드되므로(shinjang_science.html과 별개 페이지) 그 앱의 sheet/modal을
    그대로 쓸 수 없다 — 여기서만 쓰는 아주 가벼운 모달을 자체적으로 그린다. */
 function engModal(html){
   let host=document.getElementById('engModalHost');
@@ -174,8 +174,8 @@ function engineRegisterLeave(){
     S.autoReturning=true;
     engModal(`<h2 style="margin:0 0 8px">⚠️ 창 이탈이 너무 많아요</h2>
      <div style="font-size:13.5px;color:#4b4037;line-height:1.6">창을 ${LEAVE_AUTO_RETURN_LIMIT}회 이상 벗어나서 연구동으로 자동으로 돌아갑니다.<br>집중해서 다시 도전해 주세요!</div>
-     <button class="navbtn" style="margin-top:14px" onclick="location.href='05_프로토타입.html'">확인</button>`);
-    setTimeout(()=>{ location.href='05_프로토타입.html'; }, 2200);
+     <button class="navbtn" style="margin-top:14px" onclick="location.href='shinjang_science.html'">확인</button>`);
+    setTimeout(()=>{ location.href='shinjang_science.html'; }, 2200);
   }
 }
 function engineRegisterReturn(){
@@ -205,12 +205,12 @@ function renderTop(){
 }
 function confirmBackToDept(){
   const S=ENGINE_STATE;
-  if(S && S.submitted){ location.href='05_프로토타입.html'; return; }
+  if(S && S.submitted){ location.href='shinjang_science.html'; return; }
   engModal(`<h2 style="margin:0 0 8px">연구동으로 돌아갈까요?</h2>
    <div style="font-size:13px;color:var(--dim);line-height:1.6">지금까지 푼 답은 자동으로 저장돼요. 나중에 이 단원을 다시 열면 이어서 풀 수 있어요.</div>
    <div style="display:flex;gap:8px;margin-top:14px">
     <button class="navbtn" style="flex:1;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="closeEngModal()">취소</button>
-    <button class="navbtn" style="flex:1" onclick="location.href='05_프로토타입.html'">돌아가기</button>
+    <button class="navbtn" style="flex:1" onclick="location.href='shinjang_science.html'">돌아가기</button>
    </div>`);
 }
 function renderSteps(){
@@ -418,7 +418,7 @@ function splitPromptPassage(prompt){
 }
 
 /* 의견형 답안은 세션(퀴즈 진행)과 별개로 학생별 로컬 저장소에 계속 남겨서,
-   나중에 05_프로토타입.html의 "내 생각 다시 쓰기"에서도 같은 답을 이어서 고칠 수 있게 한다. */
+   나중에 shinjang_science.html의 "내 생각 다시 쓰기"에서도 같은 답을 이어서 고칠 수 있게 한다. */
 function opinionStorageKey(r){
   const S=ENGINE_STATE;
   const chapterId=S.meta.seedKey || S.meta.title;
@@ -499,7 +499,7 @@ function submitSession(){
   saveLabProgress();
 }
 
-/* ---------- 통합과학연구소 로비(05_프로토타입.html)로 결과 전달 ----------
+/* ---------- 통합과학연구소 로비(shinjang_science.html)로 결과 전달 ----------
    같은 브라우저의 localStorage에 "이 단원을 언제, 몇 점으로 통과했는지"를 남겨서
    로비 화면이 새로고침 없이도(혹은 새로고침해도) 최신 결과를 반영할 수 있게 한다. */
 // 이 세션에 채점 대상 라운드가 아예 없으면(서술형 전용 미션 등) 무조건 통과 처리한다.
@@ -524,7 +524,7 @@ function saveLabProgress(){
   // "클리어" 기록을 덮어쓰지 않게 분리해준다. 라운드 크레딧·서술답안 저장은 그대로 chapterId(seedKey)를 쓴다.
   const resultKey=S.meta.sessionKey || S.meta.seedKey || S.meta.title;
   const info=getStudentInfo();
-  const studentName=info && info.name ? info.name : 'guest'; // 05_프로토타입.html의 sKey()와 동일한 규칙
+  const studentName=info && info.name ? info.name : 'guest'; // shinjang_science.html의 sKey()와 동일한 규칙
   // 안전망: 'input' 이벤트로 이미 저장돼 있겠지만, 제출 시점 답안을 다시 한번 확실히 opinion_* 키에 남긴다.
   opinionRounds.forEach(r=>savePersistedOpinion(r, S.answers[r.id]||''));
   try{
@@ -641,5 +641,5 @@ function renderResult(){
     ${opinionRounds.map(r=>`<div class="answerblock"><h4>${r.title}</h4><p>${(S.answers[r.id]||'').trim()}</p></div>`).join('')}
     <div class="finalnotice">${S.meta.scoreNotice || '이 화면의 정답률·소요시간·창 이탈 지표는 채점을 돕는 참고 자료일 뿐입니다. 실제 수행평가 점수는 선생님이 최종 확정합니다.'}</div>
     <div class="btnrow" style="margin-top:14px"><button class="navbtn" onclick="location.reload()">다시 도전하기</button></div>
-    <a class="backlink" href="05_프로토타입.html">🔙 연구동으로 돌아가기</a>`;
+    <a class="backlink" href="shinjang_science.html">🔙 연구동으로 돌아가기</a>`;
 }

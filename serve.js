@@ -15,11 +15,11 @@ const DEPTCONFIG_FILE = path.join(DATA_DIR, '_deptconfig.json');
 const BOARD_FILE = path.join(DATA_DIR, '_board.json');
 const REDO_FILE = path.join(DATA_DIR, '_redorequests.json');
 const JOURNAL_FILE = path.join(DATA_DIR, '_journalanswers.json');
-const LOBBY_HTML_FILE = path.join(ROOT, '05_프로토타입.html');
+const LOBBY_HTML_FILE = path.join(ROOT, 'shinjang_science.html');
 const ADMIN_HTML_FILE = path.join(ROOT, '교사용_수행평가관리.html');
 
 /* ---------- 수파베이스(학생 로그인 원본 저장소) ----------
-   학생 로그인은 이제 05_프로토타입.html이 수파베이스 RPC(lab_login 등)를 직접 호출해서 처리하므로,
+   학생 로그인은 이제 shinjang_science.html이 수파베이스 RPC(lab_login 등)를 직접 호출해서 처리하므로,
    이 로컬 서버(교사 컴퓨터에서만 켜짐)가 관리하는 명단(roster)도 같은 lab_students 테이블에 써야
    학생들이 실제로 로그인할 수 있다. supabase-config.js와 같은 URL/anon key를 그대로 쓴다. */
 const SUPABASE_URL = 'https://oqhldrkmcewcjslciqmp.supabase.co';
@@ -71,7 +71,7 @@ function findStudent(list, name) {
 
 // GET /api/roster?teacherPassword=...  |  POST /api/roster { teacherPassword, students:[{name, studentId}, ...] }
 // 교사가 명단을 등록/추가한다. 이미 등록된 이름은 비밀번호·변경여부를 건드리지 않는다(재업로드해도 안전).
-// 학생 로그인은 05_프로토타입.html이 수파베이스를 직접 보므로, 여기서도 로컬 파일이 아니라
+// 학생 로그인은 shinjang_science.html이 수파베이스를 직접 보므로, 여기서도 로컬 파일이 아니라
 // 같은 lab_students 테이블에(lab_roster_* RPC — 교사 비밀번호로 보호됨) 써야 실제로 로그인할 수 있다.
 function handleRoster(req, res, query) {
   if (req.method === 'GET') {
@@ -355,7 +355,7 @@ function handleJournalAnswers(req, res, query) {
 }
 
 /* ---------- 연구동별 단원 목록 조회 + 새 단원(챕터) 생성 ---------- */
-// 05_프로토타입.html의 DEPTS 배열을 정규식으로 읽어 {id, name, chapters:[번호,...]} 목록을 만든다.
+// shinjang_science.html의 DEPTS 배열을 정규식으로 읽어 {id, name, chapters:[번호,...]} 목록을 만든다.
 // 이 배열이 "진짜" 연구동-단원 매핑이라, 관리자 페이지는 매번 이걸 다시 읽어서 사이드바를 그린다.
 function readDeptChapters() {
   let html;
@@ -402,7 +402,7 @@ loadChapterData('data/ch${num}.json').then(({ROUNDS, META}) => startSession(ROUN
 }
 
 // POST /api/newchapter  { deptId, num, title, slug, cp, mj, targetMin } — 새 단원을 통째로 만든다.
-// 1) data/chN.json 생성 2) 챕터N_slug.html 생성 3) 05_프로토타입.html의 해당 연구동 ms 배열에 ...chapterMissions(...) 추가
+// 1) data/chN.json 생성 2) 챕터N_slug.html 생성 3) shinjang_science.html의 해당 연구동 ms 배열에 ...chapterMissions(...) 추가
 // 4) 교사용_수행평가관리.html의 CHAPTERS 배열에 항목 추가. 3)·4)는 파일 텍스트를 직접 편집하는 방식이라
 // 실패해도(형식이 바뀌었거나 등) 1)·2)는 이미 만들어졌으니 warnings로 알리고 수동 추가를 안내한다.
 function handleNewChapter(req, res) {
@@ -450,7 +450,7 @@ function handleNewChapter(req, res) {
         lobbyHtml = lobbyHtml.replace(deptRe, (m, p1) => p1 + ',\n  ' + missionLine + ']}');
         fs.writeFileSync(LOBBY_HTML_FILE, lobbyHtml, 'utf-8');
       } else {
-        warnings.push('학생 로비의 연구동 목록에 자동으로 넣지 못했어요. 05_프로토타입.html의 DEPTS 배열에 직접 추가해주세요.');
+        warnings.push('학생 로비의 연구동 목록에 자동으로 넣지 못했어요. shinjang_science.html의 DEPTS 배열에 직접 추가해주세요.');
       }
     } catch (e) { warnings.push('학생 로비 갱신 실패: ' + e.message); }
 
@@ -472,7 +472,7 @@ function handleNewChapter(req, res) {
 
 function serveStatic(req, res) {
   let p = decodeURIComponent(req.url.split('?')[0]);
-  if (p === '/') p = '/05_프로토타입.html';
+  if (p === '/') p = '/shinjang_science.html';
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT)) { res.writeHead(403); return res.end('forbidden'); }
   fs.readFile(f, (e, d) => {

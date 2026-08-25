@@ -1,5 +1,5 @@
 /* ===== 수파베이스 공용 설정 + 작은 헬퍼 =====
-   모든 페이지(05_프로토타입.html, 교사용_수행평가관리.html, 학생관리.html, 제출기록_미리보기.html,
+   모든 페이지(shinjang_science.html, 교사용_수행평가관리.html, 학생관리.html, 제출기록_미리보기.html,
    roundengine.js 등)가 이 파일을 <script src="supabase-config.js"></script>로 먼저 불러온 뒤 쓴다.
    SUPABASE_URL을 비워두면 로컬 서버(serve.js)의 /api/* 로 요청하는 옛 방식으로 자동 전환된다
    (로컬에서 npm 없이 serve.js만 띄워 테스트할 때 편하게 쓰려고 남겨둔 안전장치). */

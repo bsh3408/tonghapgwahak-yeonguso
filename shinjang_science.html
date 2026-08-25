@@ -2167,6 +2167,41 @@ document.getElementById('changeBtn').addEventListener('click', doChangePassword)
 document.getElementById('loginPw').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 document.getElementById('newPw2').addEventListener('keydown', e=>{ if(e.key==='Enter') doChangePassword(); });
 
+/* ================= 이용 가능 시간 제한: 평일(월~금) 08:00~17:00, 공휴일 제외 =================
+   기기 시간대 설정과 무관하게 항상 한국 표준시(Asia/Seoul) 기준으로 판단한다.
+   추석·설날처럼 매년 날짜가 바뀌는 공휴일은 학사일정을 보고 이 배열에 직접 추가/수정할 것
+   (신정·삼일절·어린이날·현충일·광복절·개천절·한글날·크리스마스처럼 날짜가 고정된 공휴일만 기본으로 넣어둠). */
+const SCHOOL_HOLIDAYS = [
+ '2026-08-15', // 광복절
+ '2026-10-03', // 개천절
+ '2026-10-09', // 한글날
+ '2026-12-25', // 크리스마스
+ '2027-01-01', // 신정
+ // TODO: 추석·설날 연휴는 실제 학사일정을 확인해서 여기에 'YYYY-MM-DD' 형식으로 추가하세요.
+];
+function isWithinServiceHours(){
+ const now=new Date();
+ const parts=new Intl.DateTimeFormat('en-US', {
+  timeZone:'Asia/Seoul', weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false,
+  year:'numeric', month:'2-digit', day:'2-digit'
+ }).formatToParts(now);
+ const get=t=>parts.find(p=>p.type===t).value;
+ const weekday=get('weekday'), hour=+get('hour'), minute=+get('minute');
+ const dateStr=`${get('year')}-${get('month')}-${get('day')}`;
+ if(weekday==='Sat'||weekday==='Sun') return false;
+ if(SCHOOL_HOLIDAYS.includes(dateStr)) return false;
+ const minutes=hour*60+minute;
+ return minutes>=8*60 && minutes<17*60;
+}
+if(!isWithinServiceHours()){
+ document.getElementById('loginScreen').innerHTML=`
+  <div class="logincard">
+   <div class="loginEnglish">Shinjang High School</div>
+   <div class="loginTitle">신장고 통합과학<span>연구소</span></div>
+   <div class="loginSub" style="margin-top:16px;line-height:1.7">🕐 지금은 이용 가능한 시간이 아니에요.<br>
+    평일(월~금) 오전 8시 ~ 오후 5시에 다시 접속해주세요.</div>
+  </div>`;
+} else {
 /* 세션 안에서 이미 로그인했다면(예: 실제 과제 게임에서 로비로 돌아온 경우) 다시 묻지 않는다 */
 (function initAuth(){
  const loggedName=sessionStorage.getItem('lab_logged_in');
@@ -2177,6 +2212,7 @@ document.getElementById('newPw2').addEventListener('keydown', e=>{ if(e.key==='E
   finishLogin();
  }
 })();
+}
 
 setInterval(moveTick,90);
 

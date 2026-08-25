@@ -150,6 +150,17 @@ function engModal(html){
   host.innerHTML=`<div class="engmodal"><div class="card">${html}</div></div>`;
 }
 function closeEngModal(){ const host=document.getElementById('engModalHost'); if(host) host.innerHTML=''; }
+/* 스페이스바로 열려 있는 모달의 첫 번째 버튼(대부분 "확인")을 눌러준다.
+   서술형 답안 입력칸 등에 포커스가 있을 땐 스페이스를 그냥 타이핑으로 쓰게 건드리지 않는다. */
+document.addEventListener('keydown', e=>{
+  if(e.code!=='Space') return;
+  const tag=(document.activeElement&&document.activeElement.tagName||'').toLowerCase();
+  if(tag==='textarea'||tag==='input'||tag==='select') return;
+  const btn=document.querySelector('#engModalHost .card button');
+  if(!btn) return;
+  e.preventDefault();
+  btn.click();
+});
 const LEAVE_AUTO_RETURN_LIMIT=5;
 function engineRegisterLeave(){
   const S=ENGINE_STATE; if(!S||S.submitted) return;

@@ -1127,7 +1127,7 @@ function sheet(t,c,h,back){document.getElementById('sheetHost').innerHTML=
  `<div class="sheet" onclick="if(event.target===this)closeSheet()"><div class="sbody">
   <div class="shead"><button class="back" onclick="${back||'closeSheet()'}">‹</button>
   <div><h2>${t}</h2><div class="cap">${c}</div></div></div><div class="scont">${h}</div></div></div>`;}
-function closeSheet(){document.getElementById('sheetHost').innerHTML='';}
+function closeSheet(){document.getElementById('sheetHost').innerHTML=''; clearInterval(_researchTimer);}
 function modal(h){document.getElementById('modalHost').innerHTML=`<div class="modal"><div class="card">${h}</div></div>`;}
 function closeModal(){document.getElementById('modalHost').innerHTML='';}
 /* 스페이스바로 열려 있는 모달의 첫 번째 버튼(대부분 "확인")을 눌러준다.
@@ -1686,8 +1686,8 @@ function remainingTimeLabel(inst){
 function useTimeBoost(idx){
  const inst=S.assistants[idx]; if(!inst) return;
  if(!inst.assignedDept){ toast('연구동에 배치한 조수만 연구시간을 단축할 수 있어요','bad'); return; }
- if(S.src<40){ toast('특별연구포인트가 부족해요 (40 필요)','bad'); return; }
- S.src-=40;
+ if(S.src<20){ toast('특별연구포인트가 부족해요 (20 필요)','bad'); return; }
+ S.src-=20;
  inst.lastCollectedAt -= 4*3600000; // 즉시 4시간치를 당겨받는 효과
  saveLabState(); render(); assistantSheet();
  toast('연구시간 단축권 사용! 4시간치가 당겨졌어요', 'gold');
@@ -1847,7 +1847,7 @@ function assistantSheet(){
        :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
         onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
       <button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)${assigned?'':';opacity:.4;cursor:not-allowed'}"
-        ${assigned?'':'disabled'} onclick="useTimeBoost(${idx})" title="${assigned?'':'연구동에 배치해야 쓸 수 있어요'}">⏩ 연구시간 단축 (💎40)</button>
+        ${assigned?'':'disabled'} onclick="useTimeBoost(${idx})" title="${assigned?'':'연구동에 배치해야 쓸 수 있어요'}">⏩ 연구시간 단축 (💎20)</button>
      </div>
     </div>`;}).join('')}
   <div class="box" style="font-size:11.5px;color:var(--dim);line-height:1.8">
@@ -1896,17 +1896,24 @@ function homeReady(inst){
  if(inst.assignedDept) return false;
  return (Date.now()-inst.lastCollectedAt)/3600000 >= HOME_RESEARCH_HOURS;
 }
-/* 집에서 대기 중인 조수의 논문 완성까지 남은 시간을 문구로 만든다(연구동 배치판의 remainingTimeLabel과 짝) */
+/* 집에서 대기 중인 조수의 논문 완성까지 남은 시간을 "H시간 M분"까지 분 단위로 보여준다(진행 바 옆에 표시) */
 function homeRemainingLabel(inst){
  const hoursLeft = HOME_RESEARCH_HOURS - (Date.now()-inst.lastCollectedAt)/3600000;
  if(hoursLeft<=0) return '📄 논문 완성! 수거할 수 있어요';
- return `⏱️ 논문 완성까지 약 ${hoursLabel(hoursLeft)}`;
+ const totalMin=Math.ceil(hoursLeft*60), h=Math.floor(totalMin/60), m=totalMin%60;
+ return `⏱️ 논문 완성까지 ${h>0?h+'시간 ':''}${m}분`;
 }
+function homeProgressPct(inst){
+ const elapsedHours=(Date.now()-inst.lastCollectedAt)/3600000;
+ return Math.max(0, Math.min(100, elapsedHours/HOME_RESEARCH_HOURS*100));
+}
+const INSTANT_PAPER_COST=40;
+let _researchTimer=null;
 function researchSheet(){
  const homeAssistants=S.assistants.map((inst,idx)=>({inst,idx})).filter(x=>!x.inst.assignedDept);
  const papers=[...S.papers].reverse();
  sheet('📄 연구 활동',
-  '연구동에 배치하지 않고 집(연구소)에 둔 조수는 24시간마다 논문을 한 편씩 완성해요(등급이 높을수록 더 좋은 점수)',
+  '연구동에 배치하지 않고 집(연구소)에 둔 조수는 24시간마다 논문을 한 편씩 완성해요(등급이 높을수록 더 좋은 점수). 급하면 특별연구포인트로 바로 쓸 수도 있어요',
   (homeAssistants.length===0
    ? `<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">
       지금 집에서 대기 중인 조수가 없어요. 연구동에서 데려오거나(🏠 로비로 돌아오게 하기),
@@ -1915,8 +1922,13 @@ function researchSheet(){
      const def=assistantDef(inst.poolId), ready=homeReady(inst);
      return `<div class="assistcard">
       <div class="ahead">${rarityBadgeHtml(def,inst.degree)}<span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span></div>
-      <div class="astat">${homeRemainingLabel(inst)}</div>
-      <button class="collectbtn" style="width:100%;margin-top:8px" onclick="collectHomeResearch(${idx})" ${ready?'':'disabled'}>${ready?'논문 수거':'연구 중...'}</button>
+      <div class="bar"><i id="homebar-${idx}" style="width:${homeProgressPct(inst)}%"></i></div>
+      <div class="astat" id="hometime-${idx}">${homeRemainingLabel(inst)}</div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+       <button class="collectbtn" id="homebtn-${idx}" style="flex:1" onclick="collectHomeResearch(${idx})" ${ready?'':'disabled'}>${ready?'논문 수거':'연구 중...'}</button>
+       <button class="collectbtn" style="flex:1;background:#fff;color:var(--txt);border:1.5px solid var(--line)"
+         onclick="instantWritePaper(${idx})" ${S.src<INSTANT_PAPER_COST?'disabled':''}>💎${INSTANT_PAPER_COST} 즉시 작성</button>
+      </div>
      </div>`;}).join('')) +
   `<div class="box" style="text-align:center"><div style="font-size:12px;color:var(--dim);font-weight:800">누적 ${CURRENT_STUDENT?CURRENT_STUDENT.name:''}연구소 연구점수</div>
    <div style="font-size:30px;font-weight:900;color:var(--mint2)">${S.researchScore.toLocaleString()}🏆</div>
@@ -1928,10 +1940,29 @@ function researchSheet(){
      <span style="font-weight:900;color:${p.nobel?'var(--gold)':'var(--mint2)'}">+${p.score}🏆</span>
     </div>`).join('') : '<div style="font-size:12px;color:var(--dim)">아직 완성한 논문이 없어요</div>'}
   </div>`);
+ clearInterval(_researchTimer);
+ _researchTimer=setInterval(tickHomeResearchUI, 30000);
 }
-function collectHomeResearch(idx){
- const inst=S.assistants[idx]; if(!inst || inst.assignedDept) return;
- if(!homeReady(inst)){ toast('아직 24시간이 안 지났어요','bad'); return; }
+/* 열려 있는 연구 활동 화면의 진행 바·남은 시간만 다시 그려서(전체 새로고침 없이) 분 단위로 줄어드는 게 보이게 한다.
+   화면이 이미 닫혔거나 다른 화면으로 넘어갔으면(엘리먼트가 없으면) 스스로 인터벌을 끈다. */
+function tickHomeResearchUI(){
+ let found=false;
+ S.assistants.forEach((inst,idx)=>{
+  const barEl=document.getElementById('homebar-'+idx), timeEl=document.getElementById('hometime-'+idx);
+  if(!barEl && !timeEl) return;
+  found=true;
+  if(inst.assignedDept) return; // 그 사이 연구동에 배치됐으면 이 화면은 곧 닫힐 것 — 갱신만 건너뜀
+  if(barEl) barEl.style.width=homeProgressPct(inst)+'%';
+  if(timeEl) timeEl.textContent=homeRemainingLabel(inst);
+  const btnEl=document.getElementById('homebtn-'+idx);
+  if(btnEl && homeReady(inst) && btnEl.disabled){ btnEl.disabled=false; btnEl.textContent='논문 수거'; }
+ });
+ if(!found) clearInterval(_researchTimer);
+}
+/* 논문 완성 처리(점수 산정·기록·모달) — 무료 수거(collectHomeResearch)와
+   특별연구포인트 즉시 작성(instantWritePaper) 양쪽이 공유한다. */
+function completeHomePaper(idx, instant){
+ const inst=S.assistants[idx];
  const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor';
  const [lo,hi] = def.rareDraw ? LEGEND_SCORE_RANGE : (HOME_SCORE_RANGE[degKey]||HOME_SCORE_RANGE.bachelor);
  const score=lo+Math.floor(Math.random()*(hi-lo+1));
@@ -1945,13 +1976,25 @@ function collectHomeResearch(idx){
  saveLabState(); render(); postLabScore();
  flyGain('rs', score);
  modal(`<h2>${nobel?'🏅 노벨상 수상!':'📄 논문 완성'}</h2>
-  <div class="cap">${def.name}이(가) 24시간 연구 끝에 완성한 논문</div>
+  <div class="cap">${def.name}이(가) ${instant?'특별연구포인트로 바로 완성한':'24시간 연구 끝에 완성한'} 논문</div>
   <div class="box" style="text-align:center;${nobel?'background:#fff3d6;border-color:#edd49a':''}">
    <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">「${title}」</div>
    <div style="font-size:12px;color:var(--dim)">${nobel?'전 세계가 주목했습니다! 노벨상을 받았어요!':'학술지에 게재되었습니다!'}</div>
    <div style="font-size:30px;font-weight:900;color:${nobel?'var(--gold)':'var(--mint2)'};margin-top:6px">+${score}🏆</div>
   </div>
   <button class="btn" onclick="closeModal();researchSheet()">확인</button>`);
+}
+function collectHomeResearch(idx){
+ const inst=S.assistants[idx]; if(!inst || inst.assignedDept) return;
+ if(!homeReady(inst)){ toast('아직 24시간이 안 지났어요','bad'); return; }
+ completeHomePaper(idx, false);
+}
+/* 24시간을 안 기다리고 특별연구포인트로 바로 논문을 쓴다. 다음 논문까지의 24시간 타이머는 새로 리셋된다. */
+function instantWritePaper(idx){
+ const inst=S.assistants[idx]; if(!inst || inst.assignedDept) return;
+ if(S.src<INSTANT_PAPER_COST){ toast(`특별연구포인트가 부족해요 (${INSTANT_PAPER_COST} 필요)`,'bad'); return; }
+ S.src-=INSTANT_PAPER_COST;
+ completeHomePaper(idx, true);
 }
 
 /* ================= 랭킹 (서버에 모인 전체 학생 연구점수) ================= */

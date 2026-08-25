@@ -254,14 +254,14 @@ textarea:focus{border-color:var(--mint)}
     <div class="sm">문제를 풀면 점수도, 연구포인트도 얻어요</div>
   </div>
   <div class="splitcard game" onclick="researchSheet()">
-    <div class="lb">🏆 연구점수</div>
+    <div class="lb" id="rsLabel1">🏆 연구점수</div>
     <div class="big"><span id="rs2">0</span>점</div>
-    <div class="sm">연구 활동(논문 투고)으로 쌓여요</div>
+    <div class="sm">집에 둔 조수가 24시간마다 논문을 써서 쌓여요</div>
   </div>
 </div>
 
 <div class="heroRs" onclick="researchSheet()">
-  <div class="heroRsLabel">🏆 연구점수</div>
+  <div class="heroRsLabel" id="rsLabel2">🏆 연구점수</div>
   <div class="heroRsNum" id="rsHero">0</div>
 </div>
 
@@ -541,8 +541,12 @@ const SCIENTIST_INFO={
  a_uni2:'뉴턴과 별개로 미적분을 발명하고, 오늘날 컴퓨터의 기반인 이진법을 처음 체계화했어요.',
  a_uni3:'물리학·생물학·천문학까지 아우르며 서양 과학의 틀을 처음 세운 고대 최고의 박학다식한 학자예요.'
 };
-const RESEARCH_COST={bachelor:30,master:70,phd:150};
-const RESEARCH_SCORE_RANGE={bachelor:[10,30],master:[25,55],phd:[50,110]};
+/* 집(연구소)에 대기 중인 조수가 24시간을 채우면 논문 1편이 자동으로 완성된다(등급별 고정 범위,
+   레벨·전공보너스는 영향 없음). 170점을 넘기면 노벨상(추가 점수 없이 연출용). */
+const HOME_RESEARCH_HOURS=24;
+const HOME_SCORE_RANGE={bachelor:[10,50], master:[30,100], phd:[60,180]};
+const LEGEND_SCORE_RANGE=[100,200];
+const NOBEL_SCORE_THRESHOLD=170;
 const PAPER_TITLES={
  bio:['개체군 변이 양상 관찰 보고','생태계 평형 회복 모델 연구','생물다양성 지표 개발 연구',
   '멘델 유전 법칙 재현 실험','자연선택 시뮬레이션 모델 개발','DNA 복제 오류율 비교 연구',
@@ -851,7 +855,8 @@ function sayFor(){
 }
 /* 게임 규칙(어떻게 포인트를 받는지)을 알려주는 대사 — 조수마다 배치 여부에 따라 다르게 안내한다 */
 function ruleLineFor(inst, def){
- return '저를 연구동에 배치하면 시간이 지날수록 연구포인트가 쌓여요! 연구를 마치면 자동으로 로비에 돌아와서 알려드려요';
+ if(inst.assignedDept) return '저를 연구동에 배치하면 시간이 지날수록 연구포인트가 쌓여요! 연구를 마치면 자동으로 로비에 돌아와서 알려드려요';
+ return '저를 이렇게 연구소에 그냥 두시면 24시간마다 논문을 한 편씩 써요! 완성되면 연구점수를 받을 수 있어요';
 }
 /* 조수를 클릭할 때마다: 전공 소개 / 실제 업적 / 게임 규칙 안내 / 인터넷 밈 중 하나를 랜덤으로 말한다 */
 function sayForAssistant(inst, def){
@@ -1104,6 +1109,10 @@ function render(){
   const newRs=Math.floor(S.researchScore);
   rs.textContent=newRs.toLocaleString();
   rs2.textContent=newRs.toLocaleString();
+  const rsLabelText='🏆 '+(CURRENT_STUDENT?CURRENT_STUDENT.name:'')+'연구소 연구점수';
+  const rsLabel1El=document.getElementById('rsLabel1'), rsLabel2El=document.getElementById('rsLabel2');
+  if(rsLabel1El) rsLabel1El.textContent=rsLabelText;
+  if(rsLabel2El) rsLabel2El.textContent=rsLabelText;
   const rsHeroEl=document.getElementById('rsHero');
   if(rsHeroEl){
    rsHeroEl.textContent=newRs.toLocaleString();
@@ -1137,7 +1146,7 @@ function toast(m,c=''){const t=document.createElement('div');t.className='tst '+
 
 /* ================= 포인트(재화) 설명 ================= */
 const POINT_INFO=[
- {key:'rs', ic:'🏆', n:'연구점수', desc:'연구 활동(논문 투고)으로 쌓이는 점수예요. 전체 랭킹을 매기는 데 쓰이고, 랭킹 top10에 들면 수행평가에 +1점 보너스 대상이 돼요.'},
+ {key:'rs', ic:'🏆', n:'연구점수', desc:'연구동에 배치하지 않고 집(연구소)에 둔 조수가 24시간마다 논문을 완성하면 쌓이는 점수예요. 전체 랭킹을 매기는 데 쓰이고, 랭킹 top10에 들면 수행평가에 +1점 보너스 대상이 돼요.'},
  {key:'rc', ic:'🔬', n:'연구포인트', desc:'과제(수행평가) 문제를 맞히거나, OX 퀴즈를 맞히거나, 조수를 클릭해서 받아요. 조수 강화(레벨업)와 논문 투고에 써요.'},
  {key:'src', ic:'💎', n:'특별연구포인트', desc:'과제의 의견·논술형 라운드를 처음 작성해 저장할 때 얻어요. 조수 가챠(뽑기)와 연구시간 단축권에 써요.'}
 ];
@@ -1882,23 +1891,34 @@ async function postLabScore(){
   }
  }catch(e){}
 }
+/* 이 조수가(집에서 대기 중이어야 함) 24시간을 다 채웠는지 */
+function homeReady(inst){
+ if(inst.assignedDept) return false;
+ return (Date.now()-inst.lastCollectedAt)/3600000 >= HOME_RESEARCH_HOURS;
+}
+/* 집에서 대기 중인 조수의 논문 완성까지 남은 시간을 문구로 만든다(연구동 배치판의 remainingTimeLabel과 짝) */
+function homeRemainingLabel(inst){
+ const hoursLeft = HOME_RESEARCH_HOURS - (Date.now()-inst.lastCollectedAt)/3600000;
+ if(hoursLeft<=0) return '📄 논문 완성! 수거할 수 있어요';
+ return `⏱️ 논문 완성까지 약 ${hoursLabel(hoursLeft)}`;
+}
 function researchSheet(){
- if(S.assistants.length===0){
-  sheet('📄 연구 활동','',`<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">
-   조수가 있어야 논문을 쓸 수 있어요. 먼저 🎓 조수 연구실에서 대학원생을 뽑아보세요.</div>`);
-  return;
- }
+ const homeAssistants=S.assistants.map((inst,idx)=>({inst,idx})).filter(x=>!x.inst.assignedDept);
  const papers=[...S.papers].reverse();
- sheet('📄 연구 활동','조수를 골라 연구포인트를 투자하면 논문이 만들어져요 (1% 확률로 노벨상!)',
-  S.assistants.map((inst,idx)=>{
-   const def=assistantDef(inst.poolId), deg=DEGREE[inst.degree||'bachelor'], cost=RESEARCH_COST[inst.degree||'bachelor'];
-   const range=RESEARCH_SCORE_RANGE[inst.degree||'bachelor'];
-   return `<div class="assistcard">
-    <div class="ahead">${rarityBadgeHtml(def,inst.degree)}<span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span></div>
-    <div class="astat">연구포인트 ${cost} 투자 → 논문 작성 → 학술지 투고 시 연구점수 ${range[0]}~${range[1]}점 획득</div>
-    <button class="collectbtn" style="width:100%;margin-top:8px" onclick="writePaper(${idx})" ${S.rc<cost?'disabled':''}>논문 작성 (🔬${cost})</button>
-   </div>`;}).join('') +
-  `<div class="box" style="text-align:center"><div style="font-size:12px;color:var(--dim);font-weight:800">누적 연구점수</div>
+ sheet('📄 연구 활동',
+  '연구동에 배치하지 않고 집(연구소)에 둔 조수는 24시간마다 논문을 한 편씩 완성해요(등급이 높을수록 더 좋은 점수)',
+  (homeAssistants.length===0
+   ? `<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">
+      지금 집에서 대기 중인 조수가 없어요. 연구동에서 데려오거나(🏠 로비로 돌아오게 하기),
+      새로 조수를 뽑아서 배치하지 말고 그대로 두세요.</div>`
+   : homeAssistants.map(({inst,idx})=>{
+     const def=assistantDef(inst.poolId), ready=homeReady(inst);
+     return `<div class="assistcard">
+      <div class="ahead">${rarityBadgeHtml(def,inst.degree)}<span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span></div>
+      <div class="astat">${homeRemainingLabel(inst)}</div>
+      <button class="collectbtn" style="width:100%;margin-top:8px" onclick="collectHomeResearch(${idx})" ${ready?'':'disabled'}>${ready?'논문 수거':'연구 중...'}</button>
+     </div>`;}).join('')) +
+  `<div class="box" style="text-align:center"><div style="font-size:12px;color:var(--dim);font-weight:800">누적 ${CURRENT_STUDENT?CURRENT_STUDENT.name:''}연구소 연구점수</div>
    <div style="font-size:30px;font-weight:900;color:var(--mint2)">${S.researchScore.toLocaleString()}🏆</div>
    ${S.nobelCount?`<div style="font-size:12px;color:var(--gold);font-weight:800;margin-top:4px">🏅 노벨상 수상 ${S.nobelCount}회</div>`:''}</div>
   <div class="box"><h3>📜 논문 기록 (${papers.length}건)</h3>
@@ -1906,29 +1926,29 @@ function researchSheet(){
      ${p.nobel?'<span style="font-size:15px">🏅</span>':''}
      <span style="font-size:12px;font-weight:700;flex:1">「${p.title}」<small style="display:block;color:var(--dim);font-weight:500">${p.assistantName} · ${new Date(p.at).toLocaleDateString('ko-KR')}</small></span>
      <span style="font-weight:900;color:${p.nobel?'var(--gold)':'var(--mint2)'}">+${p.score}🏆</span>
-    </div>`).join('') : '<div style="font-size:12px;color:var(--dim)">아직 투고한 논문이 없어요</div>'}
+    </div>`).join('') : '<div style="font-size:12px;color:var(--dim)">아직 완성한 논문이 없어요</div>'}
   </div>`);
 }
-function writePaper(idx){
- const inst=S.assistants[idx]; if(!inst) return;
- const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor', cost=RESEARCH_COST[degKey];
- if(S.rc<cost){ toast('연구포인트가 부족해요','bad'); return; }
- S.rc-=cost;
+function collectHomeResearch(idx){
+ const inst=S.assistants[idx]; if(!inst || inst.assignedDept) return;
+ if(!homeReady(inst)){ toast('아직 24시간이 안 지났어요','bad'); return; }
+ const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor';
+ const [lo,hi] = def.rareDraw ? LEGEND_SCORE_RANGE : (HOME_SCORE_RANGE[degKey]||HOME_SCORE_RANGE.bachelor);
+ const score=lo+Math.floor(Math.random()*(hi-lo+1));
+ const nobel=score>NOBEL_SCORE_THRESHOLD;
+ if(nobel) S.nobelCount++;
  const titles=PAPER_TITLES[def.theme]||PAPER_TITLES.etc;
  const title=titles[Math.floor(Math.random()*titles.length)];
- const [lo,hi]=RESEARCH_SCORE_RANGE[degKey];
- let score=lo+Math.floor(Math.random()*(hi-lo+1));
- const nobel=Math.random()<0.01;
- if(nobel){ score+=300; S.nobelCount++; }
  S.researchScore+=score;
  S.papers.push({title, theme:def.theme, assistantName:def.name, degree:degKey, score, nobel, at:Date.now()});
+ inst.lastCollectedAt=Date.now(); // 다음 24시간 타이머 다시 시작
  saveLabState(); render(); postLabScore();
  flyGain('rs', score);
- modal(`<h2>${nobel?'🏅 노벨상 수상!':'📄 논문 투고 결과'}</h2>
-  <div class="cap">${def.name}이(가) 작성한 논문</div>
+ modal(`<h2>${nobel?'🏅 노벨상 수상!':'📄 논문 완성'}</h2>
+  <div class="cap">${def.name}이(가) 24시간 연구 끝에 완성한 논문</div>
   <div class="box" style="text-align:center;${nobel?'background:#fff3d6;border-color:#edd49a':''}">
    <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">「${title}」</div>
-   <div style="font-size:12px;color:var(--dim)">${nobel?'전 세계가 주목했습니다! 노벨상을 수상했어요!':'학술지에 게재되었습니다!'}</div>
+   <div style="font-size:12px;color:var(--dim)">${nobel?'전 세계가 주목했습니다! 노벨상을 받았어요!':'학술지에 게재되었습니다!'}</div>
    <div style="font-size:30px;font-weight:900;color:${nobel?'var(--gold)':'var(--mint2)'};margin-top:6px">+${score}🏆</div>
   </div>
   <button class="btn" onclick="closeModal();researchSheet()">확인</button>`);
@@ -1951,8 +1971,8 @@ async function rankSheet(){
   ${top10?`<div class="banner gold">🎉 전체 top10! 선생님께 확인하면 수행평가 +1점 대상일 수 있어요.</div>`:''}
   <div class="box"><h3>연구점수 전체 랭킹</h3>
    ${list.slice(0,10).map((s,i)=>`<div class="rk ${s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name)?'me':''}">
-    <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}${s.classNo?'('+s.classNo+')':''}<span class="v">${s.researchScore.toLocaleString()}🏆</span></div>`).join('')}
-   ${myRank>=10?`<div class="rk me"><span class="rn">${myRank+1}</span>나<span class="v">${S.researchScore.toLocaleString()}🏆</span></div>`:''}
+    <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}연구소${s.classNo?'('+s.classNo+')':''}<span class="v">연구점수 ${s.researchScore.toLocaleString()}🏆</span></div>`).join('')}
+   ${myRank>=10?`<div class="rk me"><span class="rn">${myRank+1}</span>${CURRENT_STUDENT?CURRENT_STUDENT.name:'나'}연구소<span class="v">연구점수 ${S.researchScore.toLocaleString()}🏆</span></div>`:''}
    <div style="font-size:11.5px;color:var(--dim2);margin-top:9px;border-top:1.5px solid var(--line);padding-top:9px">
     전체 학생 중 연구점수 1~10등은 선생님께 확인 후 수행평가 +1점 대상이 됩니다.</div></div>`;
 }

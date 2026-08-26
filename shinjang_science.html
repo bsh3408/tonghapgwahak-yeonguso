@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>통합과학연구소 · 프로토타입</title>
+<title>신장고통합과학연구소</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
@@ -278,7 +278,7 @@ textarea:focus{border-color:var(--mint)}
   <button onclick="shopSheet()"><span class="ic">🖼️</span>연구실 테마</button>
 </div>
 
-<div class="note">프로토타입 · 진행 상황은 이 브라우저에 저장됩니다(다른 기기·다른 브라우저와는 공유되지 않음).<br>
+<div class="note">진행 상황은 로그인할 때마다 서버와 동기화돼서 다른 기기로 접속해도 이어집니다.<br>
  <b style="color:#a5822c">📋 과제</b>: 누르면 실제 수행평가 게임 화면으로 이동합니다. 끝까지 풀고 제출하면 이 로비로 돌아왔을 때 결과가 반영돼요.<br>
  <b style="color:var(--mint2)">🎓 조수 · 📄 연구 활동</b>: 성적과 무관한 게임입니다. 🔬연구포인트·💎특별연구포인트·🏆연구점수는
  <b>오직 활동으로만</b> 생깁니다(자동 수입 없음, 조수 자동생산은 예외). 게임 요소에 참여하지 않아도
@@ -1645,16 +1645,22 @@ function weightedStartDegree(){
  for(const k of DEGREE_ORDER){ acc+=START_DEGREE_WEIGHTS[k]; if(roll<=acc) return k; }
  return 'bachelor';
 }
-function gachaPull(){
- if(S.src<100){ toast('특별연구포인트가 부족해요 (100 필요)','bad'); return; }
- S.src-=100;
+/* 특별연구포인트(희귀 화폐) 100 또는 연구포인트(흔한 화폐) 300으로도 뽑을 수 있다.
+   연구포인트는 지금까지 딱히 쓸 데가 없었는데, 이걸로 처음 생긴 "쓸 곳"이 됨. */
+const GACHA_COST={src:100, rc:300};
+function gachaPull(currency){
+ currency = currency==='rc' ? 'rc' : 'src';
+ const cost=GACHA_COST[currency], icon=currency==='rc'?'🔬':'💎', label=currency==='rc'?'연구포인트':'특별연구포인트';
+ if(S[currency]<cost){ toast(`${label}가 부족해요 (${cost} 필요)`,'bad'); return; }
+ S[currency]-=cost;
  const legends=ASSISTANTS_POOL.filter(a=>a.rareDraw);
  const isLegend=Math.random()<LEGEND_CHANCE; // 전설급 학자(6명 중 무작위) 등장 확률
  const picked = isLegend ? legends[Math.floor(Math.random()*legends.length)]
    : ASSISTANTS_POOL.filter(a=>!a.rareDraw)[Math.floor(Math.random()*ASSISTANTS_POOL.filter(a=>!a.rareDraw).length)];
  const startDegree = isLegend ? 'phd' : weightedStartDegree();
  const dup=S.assistants.some(a=>a.poolId===picked.id);
- if(dup){ S.src+=30; toast(`중복! ${picked.name} → 💎30 환급`); flyGain('src', 30); }
+ const refund=Math.round(cost*0.3);
+ if(dup){ S[currency]+=refund; toast(`중복! ${picked.name} → ${icon}${refund} 환급`); flyGain(currency, refund); }
  else{ S.assistants.push({poolId:picked.id, assignedDept:null, lastCollectedAt:Date.now(), degree:startDegree, lv:1});
   toast(`🎉 ${picked.name}(${rankName(picked,startDegree)} Lv.1) 영입!`, 'gold'); }
  saveLabState(); render(); assistantSheet();
@@ -1838,9 +1844,12 @@ function assistantSheet(){
  sheet('🎓 조수 연구실','조수 얼굴과 지금 어디서 활동 중인지 한눈에 볼 수 있어요',`
   <div class="box" style="text-align:center">
    <div style="font-size:12px;color:var(--dim);font-weight:800">대학원생 뽑기</div>
-   <div style="font-size:11.5px;color:var(--dim);margin:4px 0 10px">특별연구포인트 100 소모 · 시작 학위는 학사65% 석사25% 박사9% · ${Math.round(LEGEND_CHANCE*100)}% 확률로 전설급 학자(6명 중 무작위, 박사) 등장</div>
-   <div style="font-size:10.5px;color:var(--dim);margin-bottom:10px">💎 특별연구포인트는 <b>과제(수행평가)의 의견·논술형 라운드를 처음 작성해 저장</b>할 때 얻어요</div>
-   <button class="btn gold" onclick="gachaPull()">🎓 뽑기 · 100💎</button>
+   <div style="font-size:11.5px;color:var(--dim);margin:4px 0 10px">특별연구포인트 100 또는 연구포인트 300 소모 · 시작 학위는 학사65% 석사25% 박사9% · ${Math.round(LEGEND_CHANCE*100)}% 확률로 전설급 학자(6명 중 무작위, 박사) 등장</div>
+   <div style="font-size:10.5px;color:var(--dim);margin-bottom:10px">💎 특별연구포인트는 <b>의견·논술형 라운드를 처음 작성해 저장</b>할 때, 🔬 연구포인트는 <b>문제를 맞히거나 출석</b>하면 얻어요</div>
+   <div style="display:flex;gap:8px">
+    <button class="btn gold" style="flex:1;margin-top:0" onclick="gachaPull('src')">🎓 뽑기 · 100💎</button>
+    <button class="btn" style="flex:1;margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="gachaPull('rc')">🎓 뽑기 · 300🔬</button>
+   </div>
   </div>
   <div class="box" style="font-size:11px;color:var(--dim)">
    🔬 연구포인트는 <b>연구동에 배치</b>해서 얻어요. 연구를 마치면(최대 저장량을 채우면) 조수가

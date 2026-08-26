@@ -1175,7 +1175,7 @@ function toast(m,c=''){const t=document.createElement('div');t.className='tst '+
 /* ================= 포인트(재화) 설명 ================= */
 const POINT_INFO=[
  {key:'rs', ic:'🏆', n:'연구점수', desc:'연구동에 배치하지 않고 집(연구소)에 둔 조수가 24시간마다 논문을 완성하면 쌓이는 점수예요. 전체 랭킹을 매기는 데 쓰이고, 랭킹 top10에 들면 수행평가에 +1점 보너스 대상이 돼요.'},
- {key:'rc', ic:'🔬', n:'연구포인트', desc:'과제(수행평가) 문제를 맞히거나, 의견·논술형 라운드를 처음 작성해 저장하거나, OX 퀴즈를 맞히거나, 출석하면 받아요. 조수 뽑기·강화(레벨업)·연구실 테마 구매·연구시간 단축·논문 즉시작성에 써요.'}
+ {key:'rc', ic:'🔬', n:'연구포인트', desc:'과제(수행평가) 문제를 맞히거나, 의견·논술형 라운드를 처음 작성해 저장하거나, OX 퀴즈를 맞히거나, 출석하면 받아요. 조수 뽑기·강화(레벨업)·연구실 테마 구매·논문 즉시작성에 써요.'}
 ];
 function pointInfoModal(highlightKey){
  modal(`<h2>포인트란?</h2>
@@ -1710,15 +1710,6 @@ function remainingTimeLabel(inst){
  const remainHours=(cap-amt)/rate;
  return `⏱️ 남은 시간 약 ${hoursLabel(remainHours)}`;
 }
-function useTimeBoost(idx){
- const inst=S.assistants[idx]; if(!inst) return;
- if(!inst.assignedDept){ toast('연구동에 배치한 조수만 연구시간을 단축할 수 있어요','bad'); return; }
- if(S.rc<20){ toast('연구포인트가 부족해요 (20 필요)','bad'); return; }
- S.rc-=20;
- inst.lastCollectedAt -= 4*3600000; // 즉시 4시간치를 당겨받는 효과
- saveLabState(); render(); assistantSheet();
- toast('연구시간 단축권 사용! 4시간치가 당겨졌어요', 'gold');
-}
 function enhanceCostFor(inst){
  const deg=DEGREE[inst.degree||'bachelor'], lv=inst.lv||1;
  return Math.round(deg.enhCost*(1+(lv-1)*.6));
@@ -1872,8 +1863,6 @@ function assistantSheet(){
       ${maxed?`<span style="font-size:11px;color:var(--gold);font-weight:800;align-self:center">🏆 최고 레벨(박사 Lv.5)</span>`
        :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
         onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
-      <button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)${assigned?'':';opacity:.4;cursor:not-allowed'}"
-        ${assigned?'':'disabled'} onclick="useTimeBoost(${idx})" title="${assigned?'':'연구동에 배치해야 쓸 수 있어요'}">⏩ 연구시간 단축 (🔬20)</button>
      </div>
     </div>`;}).join('')}
   <div class="box" style="font-size:11.5px;color:var(--dim);line-height:1.8">
@@ -1933,7 +1922,7 @@ function homeProgressPct(inst){
  const elapsedHours=(Date.now()-inst.lastCollectedAt)/3600000;
  return Math.max(0, Math.min(100, elapsedHours/HOME_RESEARCH_HOURS*100));
 }
-const INSTANT_PAPER_COST=40;
+const INSTANT_PAPER_COST=150; // 연구시간 단축권이 없어지면서 이게 유일한 "돈으로 시간을 사는" 수단이라 값을 올림
 let _researchTimer=null;
 function researchSheet(){
  const homeAssistants=S.assistants.map((inst,idx)=>({inst,idx})).filter(x=>!x.inst.assignedDept);

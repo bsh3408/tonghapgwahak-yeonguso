@@ -243,7 +243,6 @@ textarea:focus{border-color:var(--mint)}
   <div class="pill" id="whoami" style="cursor:pointer" onclick="logout()" title="눌러서 로그아웃"></div>
   <div class="pill" style="cursor:pointer" onclick="pointInfoModal('rs')" title="눌러서 설명 보기">🏆 <b id="rs">0</b></div>
   <div class="pill" style="cursor:pointer" onclick="pointInfoModal('rc')" title="눌러서 설명 보기">🔬 <b id="rc">0</b></div>
-  <div class="pill" style="cursor:pointer" onclick="pointInfoModal('src')" title="눌러서 설명 보기">💎 <b id="src">0</b></div>
   <button class="pabtn" onclick="paSheet()"><span>📋<small>수행평가(과제)</small></span><b><span id="paS">0</span>/40</b></button>
 </div>
 
@@ -280,7 +279,7 @@ textarea:focus{border-color:var(--mint)}
 
 <div class="note">진행 상황은 로그인할 때마다 서버와 동기화돼서 다른 기기로 접속해도 이어집니다.<br>
  <b style="color:#a5822c">📋 과제</b>: 누르면 실제 수행평가 게임 화면으로 이동합니다. 끝까지 풀고 제출하면 이 로비로 돌아왔을 때 결과가 반영돼요.<br>
- <b style="color:var(--mint2)">🎓 조수 · 📄 연구 활동</b>: 성적과 무관한 게임입니다. 🔬연구포인트·💎특별연구포인트·🏆연구점수는
+ <b style="color:var(--mint2)">🎓 조수 · 📄 연구 활동</b>: 성적과 무관한 게임입니다. 🔬연구포인트·🏆연구점수는
  <b>오직 활동으로만</b> 생깁니다(자동 수입 없음, 조수 자동생산은 예외). 게임 요소에 참여하지 않아도
  실제 수행평가 챕터 문제만 풀면 40점 만점을 받을 수 있어요.</div>
 
@@ -597,15 +596,15 @@ function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'gue
 
 /* ================= 상태 (로그인한 학생별로 이 브라우저에 저장됨) ================= */
 // assistants: [{poolId, assignedDept(부서id|null), lastCollectedAt(ms)}]
-// 처음 로그인하는 학생의 초기값: 연구포인트 0 · 특별연구포인트 200 (사용자 지정, 2026-08-22)
-const S={rc:0,src:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
+// 처음 로그인하는 학생의 초기값: 연구포인트 0 (2026-08-27, 특별연구포인트 폐지·연구포인트로 통합)
+const S={rc:0,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
  everCorrect:{}, everPerfect:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false};
 
 /* localStorage 캐시(loadLabState)와 수파베이스 원격 스냅샷(pullGameStateFromServer) 양쪽이
    같은 모양의 객체를 S에 적용하니 한 곳에 모아둔다. */
 function applyStateSnapshot(s){
  if(!s) return;
- S.rc=s.rc||0; S.src=s.src||0; S.lv=s.lv||1; S.fail=s.fail||0;
+ S.rc=s.rc||0; S.lv=s.lv||1; S.fail=s.fail||0;
  S.assistants=Array.isArray(s.assistants)?s.assistants:[]; S.researchScore=s.researchScore||0;
  S.papers=Array.isArray(s.papers)?s.papers:[]; S.nobelCount=s.nobelCount||0;
  S.labTheme=s.labTheme||'bright';
@@ -640,7 +639,7 @@ async function pullGameStateFromServer(){
 }
 function saveLabState(){
  try{ localStorage.setItem(sKey('lab_state_v1'), JSON.stringify({
-   rc:S.rc, src:S.src, lv:S.lv, fail:S.fail,
+   rc:S.rc, lv:S.lv, fail:S.fail,
    assistants:S.assistants, researchScore:S.researchScore, papers:S.papers, nobelCount:S.nobelCount,
    labTheme:S.labTheme, ownedThemes:S.ownedThemes,
    everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
@@ -657,27 +656,26 @@ function syncGameStateMirror(){
  if(!CURRENT_STUDENT || !isSupabaseConfigured()) return;
  clearTimeout(_gameStateSyncTimer);
  _gameStateSyncTimer=setTimeout(()=>{
-  const data={rc:S.rc, src:S.src, lv:S.lv, fail:S.fail, assistants:S.assistants, researchScore:S.researchScore,
+  const data={rc:S.rc, lv:S.lv, fail:S.fail, assistants:S.assistants, researchScore:S.researchScore,
    papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
    everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
    lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded};
   supaRpc('lab_state_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_data:data}).catch(()=>{});
-  supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:S.src}).catch(()=>{});
+  // lab_points 테이블은 특별연구포인트가 있던 시절 스키마라 p_src가 필수 인자라서 0을 그대로 보낸다(교사용 페이지 표시용 거울).
+  supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:0}).catch(()=>{});
  }, 800);
 }
-/* 로그인 직후, 선생님이 예약해둔 지급/차감(+연구포인트, +특별연구포인트)을 가져와 반영한다 */
+/* 로그인 직후, 선생님이 예약해둔 연구포인트 지급/차감을 가져와 반영한다.
+   특별연구포인트가 폐지되기 전에 예약된 지급분(srcDelta)이 혹시 남아있으면 없애지 않고 연구포인트로 합쳐준다. */
 async function claimTeacherPointGrants(){
  if(!isSupabaseConfigured()) return;
  try{
   const out=await supaRpc('lab_points_claim', {p_student_name:CURRENT_STUDENT.name});
   if(!out.ok) return;
-  const rcDelta=out.rcDelta||0, srcDelta=out.srcDelta||0;
-  if(!rcDelta && !srcDelta) return;
-  S.rc=Math.max(0,S.rc+rcDelta); S.src=Math.max(0,S.src+srcDelta); saveLabState();
-  const parts=[];
-  if(rcDelta) parts.push(`연구포인트 ${rcDelta>0?'+':''}${rcDelta}🔬`);
-  if(srcDelta) parts.push(`특별연구포인트 ${srcDelta>0?'+':''}${srcDelta}💎`);
-  toast(`👩‍🏫 선생님이 ${parts.join(', ')} 반영했어요`, 'gold');
+  const rcDelta=(out.rcDelta||0)+(out.srcDelta||0);
+  if(!rcDelta) return;
+  S.rc=Math.max(0,S.rc+rcDelta); saveLabState();
+  toast(`👩‍🏫 선생님이 연구포인트 ${rcDelta>0?'+':''}${rcDelta}🔬 반영했어요`, 'gold');
   render();
  }catch(e){}
 }
@@ -735,7 +733,7 @@ function syncChapterResults(){
 
 /* 의견형(의견·논술형·심화읽기) 답안은 roundengine.js가 opinion_+챕터ID+_+라운드ID__학생이름 키에
    저장해둔다(과제 진행 중이든, journalSheet에서 나중에 고쳐 쓰든 같은 키를 공유). 처음으로 글자수
-   조건을 채워서 저장된 순간에만 특별연구포인트 +50을 지급한다. */
+   조건을 채워서 저장된 순간에만 연구포인트 +50을 지급한다. */
 function opinionKey(chapterId, roundId){ return sKey('opinion_'+chapterId+'_'+roundId); }
 function opinionAwardedKey(chapterId, roundId){ return sKey('opinion_awarded_'+chapterId+'_'+roundId); }
 function syncOpinionPoints(){
@@ -747,10 +745,10 @@ function syncOpinionPoints(){
    let text=''; try{ text=localStorage.getItem(opinionKey(g.chapterId,orId))||''; }catch(e){}
    const awardedKey=opinionAwardedKey(g.chapterId,orId);
    if(text.trim().length>=minLen && !localStorage.getItem(awardedKey)){
-    S.src+=50; changed=true;
+    S.rc+=50; changed=true;
     try{ localStorage.setItem(awardedKey,'1'); }catch(e){}
-    toast(`「${g.t}」 의견 작성 +50💎`, 'gold');
-    flyGain('src', 50);
+    toast(`「${g.t}」 의견 작성 +50🔬`, 'gold');
+    flyGain('rc', 50);
    }
   });
  });
@@ -1105,7 +1103,7 @@ function scene(){
 
 /* ================= 재화 획득 애니메이션 ================= */
 function bumpEl(el){ if(!el) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
-const FLYGAIN_META={ rc:{icon:'🔬',color:'#3f9a8a'}, src:{icon:'💎',color:'#6b6bd6'}, rs:{icon:'🏆',color:'#c4881a'} };
+const FLYGAIN_META={ rc:{icon:'🔬',color:'#3f9a8a'}, rs:{icon:'🏆',color:'#c4881a'} };
 function flyGain(kind, amount){
  if(!amount) return;
  const meta=FLYGAIN_META[kind]; if(!meta) return;
@@ -1136,7 +1134,6 @@ function flyGain(kind, amount){
 let _lastRsRendered=null;
 function render(){
   rc.textContent=Math.floor(S.rc).toLocaleString();
-  src.textContent=Math.floor(S.src).toLocaleString();
   const newRs=Math.floor(S.researchScore);
   rs.textContent=newRs.toLocaleString();
   rs2.textContent=newRs.toLocaleString();
@@ -1178,8 +1175,7 @@ function toast(m,c=''){const t=document.createElement('div');t.className='tst '+
 /* ================= 포인트(재화) 설명 ================= */
 const POINT_INFO=[
  {key:'rs', ic:'🏆', n:'연구점수', desc:'연구동에 배치하지 않고 집(연구소)에 둔 조수가 24시간마다 논문을 완성하면 쌓이는 점수예요. 전체 랭킹을 매기는 데 쓰이고, 랭킹 top10에 들면 수행평가에 +1점 보너스 대상이 돼요.'},
- {key:'rc', ic:'🔬', n:'연구포인트', desc:'과제(수행평가) 문제를 맞히거나, OX 퀴즈를 맞히거나, 조수를 클릭해서 받아요. 조수 강화(레벨업)와 논문 투고에 써요.'},
- {key:'src', ic:'💎', n:'특별연구포인트', desc:'과제의 의견·논술형 라운드를 처음 작성해 저장할 때 얻어요. 조수 가챠(뽑기)와 연구시간 단축권에 써요.'}
+ {key:'rc', ic:'🔬', n:'연구포인트', desc:'과제(수행평가) 문제를 맞히거나, 의견·논술형 라운드를 처음 작성해 저장하거나, OX 퀴즈를 맞히거나, 출석하면 받아요. 조수 뽑기·강화(레벨업)·연구실 테마 구매·연구시간 단축·논문 즉시작성에 써요.'}
 ];
 function pointInfoModal(highlightKey){
  modal(`<h2>포인트란?</h2>
@@ -1549,7 +1545,7 @@ async function journalSheet(chNum){
  }catch(e){}
  const opinionRounds=data.rounds.filter(r=>r.kind==='opinion');
  sheet(data.meta.title+' · 내 생각','저장하면 바로 반영돼요. 몇 번이든 다시 고칠 수 있어요',`
-  <div class="banner mint">처음 저장할 때만 라운드당 💎50을 드려요. 그 이후 수정은 몇 번이든 무료예요.</div>
+  <div class="banner mint">처음 저장할 때만 라운드당 🔬50을 드려요. 그 이후 수정은 몇 번이든 무료예요.</div>
   ${opinionRounds.map(r=>{
    const val=localStorage.getItem(opinionKey(chapterId,r.id))||'';
    const promptText=(r.prompt||'').split('\n\n')[0].replace(/^▶\s*/,'');
@@ -1578,10 +1574,10 @@ function saveJournal(chapterId, roundId, minLen, chapterTitle, roundTitle){
  const awardedKey=opinionAwardedKey(chapterId,roundId);
  const meetsMin=text.trim().length>=minLen;
  if(meetsMin && !localStorage.getItem(awardedKey)){
-  S.src+=50; saveLabState(); render();
+  S.rc+=50; saveLabState(); render();
   try{ localStorage.setItem(awardedKey,'1'); }catch(e){}
-  toast('저장 완료 +50💎', 'gold');
-  flyGain('src', 50);
+  toast('저장 완료 +50🔬', 'gold');
+  flyGain('rc', 50);
  } else {
   toast('저장했어요');
  }
@@ -1645,22 +1641,18 @@ function weightedStartDegree(){
  for(const k of DEGREE_ORDER){ acc+=START_DEGREE_WEIGHTS[k]; if(roll<=acc) return k; }
  return 'bachelor';
 }
-/* 특별연구포인트(희귀 화폐) 100 또는 연구포인트(흔한 화폐) 300으로도 뽑을 수 있다.
-   연구포인트는 지금까지 딱히 쓸 데가 없었는데, 이걸로 처음 생긴 "쓸 곳"이 됨. */
-const GACHA_COST={src:100, rc:300};
-function gachaPull(currency){
- currency = currency==='rc' ? 'rc' : 'src';
- const cost=GACHA_COST[currency], icon=currency==='rc'?'🔬':'💎', label=currency==='rc'?'연구포인트':'특별연구포인트';
- if(S[currency]<cost){ toast(`${label}가 부족해요 (${cost} 필요)`,'bad'); return; }
- S[currency]-=cost;
+const GACHA_COST=300;
+function gachaPull(){
+ if(S.rc<GACHA_COST){ toast(`연구포인트가 부족해요 (${GACHA_COST} 필요)`,'bad'); return; }
+ S.rc-=GACHA_COST;
  const legends=ASSISTANTS_POOL.filter(a=>a.rareDraw);
  const isLegend=Math.random()<LEGEND_CHANCE; // 전설급 학자(6명 중 무작위) 등장 확률
  const picked = isLegend ? legends[Math.floor(Math.random()*legends.length)]
    : ASSISTANTS_POOL.filter(a=>!a.rareDraw)[Math.floor(Math.random()*ASSISTANTS_POOL.filter(a=>!a.rareDraw).length)];
  const startDegree = isLegend ? 'phd' : weightedStartDegree();
  const dup=S.assistants.some(a=>a.poolId===picked.id);
- const refund=Math.round(cost*0.3);
- if(dup){ S[currency]+=refund; toast(`중복! ${picked.name} → ${icon}${refund} 환급`); flyGain(currency, refund); }
+ const refund=Math.round(GACHA_COST*0.3);
+ if(dup){ S.rc+=refund; toast(`중복! ${picked.name} → 🔬${refund} 환급`); flyGain('rc', refund); }
  else{ S.assistants.push({poolId:picked.id, assignedDept:null, lastCollectedAt:Date.now(), degree:startDegree, lv:1});
   toast(`🎉 ${picked.name}(${rankName(picked,startDegree)} Lv.1) 영입!`, 'gold'); }
  saveLabState(); render(); assistantSheet();
@@ -1721,8 +1713,8 @@ function remainingTimeLabel(inst){
 function useTimeBoost(idx){
  const inst=S.assistants[idx]; if(!inst) return;
  if(!inst.assignedDept){ toast('연구동에 배치한 조수만 연구시간을 단축할 수 있어요','bad'); return; }
- if(S.src<20){ toast('특별연구포인트가 부족해요 (20 필요)','bad'); return; }
- S.src-=20;
+ if(S.rc<20){ toast('연구포인트가 부족해요 (20 필요)','bad'); return; }
+ S.rc-=20;
  inst.lastCollectedAt -= 4*3600000; // 즉시 4시간치를 당겨받는 효과
  saveLabState(); render(); assistantSheet();
  toast('연구시간 단축권 사용! 4시간치가 당겨졌어요', 'gold');
@@ -1844,12 +1836,8 @@ function assistantSheet(){
  sheet('🎓 조수 연구실','조수 얼굴과 지금 어디서 활동 중인지 한눈에 볼 수 있어요',`
   <div class="box" style="text-align:center">
    <div style="font-size:12px;color:var(--dim);font-weight:800">대학원생 뽑기</div>
-   <div style="font-size:11.5px;color:var(--dim);margin:4px 0 10px">특별연구포인트 100 또는 연구포인트 300 소모 · 시작 학위는 학사65% 석사25% 박사9% · ${Math.round(LEGEND_CHANCE*100)}% 확률로 전설급 학자(6명 중 무작위, 박사) 등장</div>
-   <div style="font-size:10.5px;color:var(--dim);margin-bottom:10px">💎 특별연구포인트는 <b>의견·논술형 라운드를 처음 작성해 저장</b>할 때, 🔬 연구포인트는 <b>문제를 맞히거나 출석</b>하면 얻어요</div>
-   <div style="display:flex;gap:8px">
-    <button class="btn gold" style="flex:1;margin-top:0" onclick="gachaPull('src')">🎓 뽑기 · 100💎</button>
-    <button class="btn" style="flex:1;margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="gachaPull('rc')">🎓 뽑기 · 300🔬</button>
-   </div>
+   <div style="font-size:11.5px;color:var(--dim);margin:4px 0 10px">연구포인트 ${GACHA_COST} 소모 · 시작 학위는 학사65% 석사25% 박사9% · ${Math.round(LEGEND_CHANCE*100)}% 확률로 전설급 학자(6명 중 무작위, 박사) 등장</div>
+   <button class="btn gold" onclick="gachaPull()">🎓 뽑기 · ${GACHA_COST}🔬</button>
   </div>
   <div class="box" style="font-size:11px;color:var(--dim)">
    🔬 연구포인트는 <b>연구동에 배치</b>해서 얻어요. 연구를 마치면(최대 저장량을 채우면) 조수가
@@ -1885,7 +1873,7 @@ function assistantSheet(){
        :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
         onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
       <button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)${assigned?'':';opacity:.4;cursor:not-allowed'}"
-        ${assigned?'':'disabled'} onclick="useTimeBoost(${idx})" title="${assigned?'':'연구동에 배치해야 쓸 수 있어요'}">⏩ 연구시간 단축 (💎20)</button>
+        ${assigned?'':'disabled'} onclick="useTimeBoost(${idx})" title="${assigned?'':'연구동에 배치해야 쓸 수 있어요'}">⏩ 연구시간 단축 (🔬20)</button>
      </div>
     </div>`;}).join('')}
   <div class="box" style="font-size:11.5px;color:var(--dim);line-height:1.8">
@@ -1951,7 +1939,7 @@ function researchSheet(){
  const homeAssistants=S.assistants.map((inst,idx)=>({inst,idx})).filter(x=>!x.inst.assignedDept);
  const papers=[...S.papers].reverse();
  sheet('📄 연구 활동',
-  '연구동에 배치하지 않고 집(연구소)에 둔 조수는 24시간마다 논문을 한 편씩 완성해요(등급이 높을수록 더 좋은 점수). 급하면 특별연구포인트로 바로 쓸 수도 있어요',
+  '연구동에 배치하지 않고 집(연구소)에 둔 조수는 24시간마다 논문을 한 편씩 완성해요(등급이 높을수록 더 좋은 점수). 급하면 연구포인트로 바로 쓸 수도 있어요',
   (homeAssistants.length===0
    ? `<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">
       지금 집에서 대기 중인 조수가 없어요. 연구동에서 데려오거나(🏠 로비로 돌아오게 하기),
@@ -1965,7 +1953,7 @@ function researchSheet(){
       <div style="display:flex;gap:6px;margin-top:8px">
        <button class="collectbtn" id="homebtn-${idx}" style="flex:1" onclick="collectHomeResearch(${idx})" ${ready?'':'disabled'}>${ready?'논문 수거':'연구 중...'}</button>
        <button class="collectbtn" style="flex:1;background:#fff;color:var(--txt);border:1.5px solid var(--line)"
-         onclick="instantWritePaper(${idx})" ${S.src<INSTANT_PAPER_COST?'disabled':''}>💎${INSTANT_PAPER_COST} 즉시 작성</button>
+         onclick="instantWritePaper(${idx})" ${S.rc<INSTANT_PAPER_COST?'disabled':''}>🔬${INSTANT_PAPER_COST} 즉시 작성</button>
       </div>
      </div>`;}).join('')) +
   `<div class="box" style="text-align:center"><div style="font-size:12px;color:var(--dim);font-weight:800">누적 ${CURRENT_STUDENT?CURRENT_STUDENT.name:''}연구소 연구점수</div>
@@ -1998,7 +1986,7 @@ function tickHomeResearchUI(){
  if(!found) clearInterval(_researchTimer);
 }
 /* 논문 완성 처리(점수 산정·기록·모달) — 무료 수거(collectHomeResearch)와
-   특별연구포인트 즉시 작성(instantWritePaper) 양쪽이 공유한다. */
+   연구포인트 즉시 작성(instantWritePaper) 양쪽이 공유한다. */
 function completeHomePaper(idx, instant){
  const inst=S.assistants[idx];
  const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor';
@@ -2014,7 +2002,7 @@ function completeHomePaper(idx, instant){
  saveLabState(); render(); postLabScore();
  flyGain('rs', score);
  modal(`<h2>${nobel?'🏅 노벨상 수상!':'📄 논문 완성'}</h2>
-  <div class="cap">${def.name}이(가) ${instant?'특별연구포인트로 바로 완성한':'24시간 연구 끝에 완성한'} 논문</div>
+  <div class="cap">${def.name}이(가) ${instant?'연구포인트로 바로 완성한':'24시간 연구 끝에 완성한'} 논문</div>
   <div class="box" style="text-align:center;${nobel?'background:#fff3d6;border-color:#edd49a':''}">
    <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">「${title}」</div>
    <div style="font-size:12px;color:var(--dim)">${nobel?'전 세계가 주목했습니다! 노벨상을 받았어요!':'학술지에 게재되었습니다!'}</div>
@@ -2027,11 +2015,11 @@ function collectHomeResearch(idx){
  if(!homeReady(inst)){ toast('아직 24시간이 안 지났어요','bad'); return; }
  completeHomePaper(idx, false);
 }
-/* 24시간을 안 기다리고 특별연구포인트로 바로 논문을 쓴다. 다음 논문까지의 24시간 타이머는 새로 리셋된다. */
+/* 24시간을 안 기다리고 연구포인트로 바로 논문을 쓴다. 다음 논문까지의 24시간 타이머는 새로 리셋된다. */
 function instantWritePaper(idx){
  const inst=S.assistants[idx]; if(!inst || inst.assignedDept) return;
- if(S.src<INSTANT_PAPER_COST){ toast(`특별연구포인트가 부족해요 (${INSTANT_PAPER_COST} 필요)`,'bad'); return; }
- S.src-=INSTANT_PAPER_COST;
+ if(S.rc<INSTANT_PAPER_COST){ toast(`연구포인트가 부족해요 (${INSTANT_PAPER_COST} 필요)`,'bad'); return; }
+ S.rc-=INSTANT_PAPER_COST;
  completeHomePaper(idx, true);
 }
 
@@ -2147,10 +2135,10 @@ const TEACHER_TEST_ACCOUNTS=['변석환'];
 function seedTeacherTestPoints(){
  if(!TEACHER_TEST_ACCOUNTS.includes(CURRENT_STUDENT.name)) return;
  if(S.teacherSeeded) return;
- S.rc+=5000; S.src+=2000;
+ S.rc+=7000;
  S.teacherSeeded=true;
  saveLabState();
- toast('🧪 테스트 계정이라 연구포인트·특별연구포인트를 넉넉히 채워드렸어요', 'gold');
+ toast('🧪 테스트 계정이라 연구포인트를 넉넉히 채워드렸어요', 'gold');
 }
 
 /* 하루 1회 로그인 출석 보너스 */

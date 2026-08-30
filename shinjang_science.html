@@ -308,6 +308,8 @@ const KIND_LABEL={gauge:'게이지',quiz:'객관식',short:'서답형',ask:'질�
 function chapterMissions(id, opts){
  const base={file:`챕터${opts.num}_${opts.slug}.html`, dataFile:`data/ch${opts.num}.json`,
    chapterId:`ch${opts.num}_seed_v1`, baseTitle:opts.t, status:'ready', point:1, cp:opts.cp, mj:opts.mj};
+ // opts.term이 있으면 이 단원이 속한 연구동의 term과 상관없이 그 값을 우선한다(단원을 다른 회차 배점으로 옮길 때 씀).
+ if(opts.term!=null) base.term=opts.term;
  if(opts.noEssay){
   return [Object.assign({}, base, {id:id+'_obj', kind:'chapter', mode:'obj', solo:true,
     resultKey:base.chapterId+'__obj', t:opts.t})];
@@ -328,10 +330,10 @@ const DEPTS=[
  {id:'d2',n:'물질 변환동',u:'Ⅰ-2. 우리 주변의 변화',ic:'⚗️',c:'#e2eef8',open:1,term:1,ms:[
   ...chapterMissions('ch12',{num:12,slug:'산화와환원',t:'산화와 환원',cp:'산화와 환원',mj:'chem'}),
   ...chapterMissions('ch13',{num:13,slug:'산과염기와중화반응',t:'산과 염기와 중화 반응',cp:'중화 반응과 이온',mj:'chem'}),
-  ...chapterMissions('ch20',{num:20,slug:'물질변화와에너지의출입',t:'물질 변화와 에너지의 출입',cp:'발열 반응과 흡열 반응',mj:'chem'}),
+  ...chapterMissions('ch20',{num:20,slug:'물질변화와에너지의출입',t:'물질 변화와 에너지의 출입',cp:'발열 반응과 흡열 반응',mj:'chem',term:2}),
   ...chapterMissions('ch21',{num:21,slug:'화학기출문제풀기',t:'화학 기출문제 풀기',cp:'기출 유형으로 개념 다지기',mj:'chem',noEssay:true})]},
  {id:'d3',n:'생태 관측동',u:'Ⅱ-1. 생태계와 환경',ic:'🌿',c:'#e4f4e6',open:0,term:2,ms:[
-  ...chapterMissions('ch14',{num:14,slug:'생태계의구성과변화',t:'생태계의 구성과 생태계 변화',cp:'생태계 평형',mj:'bio'}),
+  ...chapterMissions('ch14',{num:14,slug:'생태계의구성과변화',t:'생태계의 구성과 생태계 변화',cp:'생태계 평형',mj:'bio',term:1}),
   ...chapterMissions('ch15',{num:15,slug:'지구환경의변화',t:'지구 환경의 변화',cp:'지구 온난화',mj:'earth'})]},
  {id:'d4',n:'에너지 발전동',u:'Ⅱ-2. 에너지',ic:'⚡',c:'#fdf1d6',open:0,term:2,ms:[
   ...chapterMissions('ch16',{num:16,slug:'태양에너지의생성과전환',t:'태양 에너지의 생성과 전환',cp:'에너지 전환',mj:'phys'}),
@@ -369,7 +371,7 @@ function deptDueLabel(d){
 }
 const ALLM=()=>DEPTS.flatMap(d=>d.ms);
 const READY=()=>ALLM().filter(g=>g.status==='ready');
-const gameTerm=g=>DEPTS.find(d=>d.ms.includes(g)).term;
+const gameTerm=g=>g.term!=null ? g.term : DEPTS.find(d=>d.ms.includes(g)).term;
 const TERM_LABEL={1:'수행 1회 · 전반부 (중간고사 전 마감)',2:'수행 2회 · 후반부 (기말고사 전 마감)',0:'보너스 (성적 미반영)'};
 /* 연구실 배경 테마: 밝고 모던함(bright)이 기본 무료 테마, 나머지는 연구포인트로 구매해서 바꿔 쓸 수 있다.
    각 이미지는 게임과 같은 2:1 아이소메트릭 탑뷰로 그려진 1024x1024 정사각형 컨셉아트다(assets/lab/concepts/).

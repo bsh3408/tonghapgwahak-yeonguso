@@ -2048,6 +2048,11 @@ async function doLogin(){
  const password=document.getElementById('loginPw').value;
  setLoginErr('');
  if(!name || !password){ setLoginErr('이름과 비밀번호를 모두 입력하세요.'); return; }
+ // 이용 시간이 아닐 땐 교사 테스트 계정만 로그인할 수 있다(상단 "테스트" 버튼으로 로그인창을 연 경우).
+ if(!isWithinServiceHours() && !TEACHER_TEST_ACCOUNTS.includes(name)){
+  setLoginErr('지금은 이용 가능한 시간이 아니에요. 평일 오전 8시~오후 5시에 다시 접속해주세요.');
+  return;
+ }
  try{
   const out = isSupabaseConfigured()
    ? await supaRpc('lab_login', {p_name:name, p_password:password})
@@ -2187,25 +2192,37 @@ function isWithinServiceHours(){
  const minutes=hour*60+minute;
  return minutes>=8*60 && minutes<17*60;
 }
-if(!isWithinServiceHours()){
- document.getElementById('loginScreen').innerHTML=`
+/* 세션 안에서 이미 로그인했다면(예: 실제 과제 게임에서 로비로 돌아온 경우) 이용 시간과 무관하게
+   다시 묻지 않는다 — 이용 시간이 끊기는 건 "새 로그인"만 막는 것이지, 이미 하던 걸 끊는 게 아니다. */
+function tryAutoLogin(){
+ const loggedName=sessionStorage.getItem('lab_logged_in');
+ if(!loggedName) return false;
+ let studentId=null;
+ try{ const info=JSON.parse(sessionStorage.getItem('studentInfo')||'null'); if(info&&info.name===loggedName) studentId=info.classNo; }catch(e){}
+ CURRENT_STUDENT={name:loggedName, studentId};
+ finishLogin();
+ return true;
+}
+if(!tryAutoLogin() && !isWithinServiceHours()){
+ // 로그인 폼 자체는 지우지 않고 화면 위에 안내를 덮어씌운다(테스트 버튼을 누르면 그대로 로그인 폼이 드러남).
+ // 교사 테스트 계정(TEACHER_TEST_ACCOUNTS)은 doLogin()에서 이용 시간과 무관하게 통과되도록 따로 처리돼 있다.
+ document.getElementById('loginScreen').style.display='none';
+ const block=document.createElement('div');
+ block.className='loginwrap';
+ block.innerHTML=`
   <div class="logincard">
    <div class="loginEnglish">Shinjang High School</div>
    <div class="loginTitle">신장고 통합과학<span>연구소</span></div>
    <div class="loginSub" style="margin-top:16px;line-height:1.7">🕐 지금은 이용 가능한 시간이 아니에요.<br>
     평일(월~금) 오전 8시 ~ 오후 5시에 다시 접속해주세요.</div>
-  </div>`;
-} else {
-/* 세션 안에서 이미 로그인했다면(예: 실제 과제 게임에서 로비로 돌아온 경우) 다시 묻지 않는다 */
-(function initAuth(){
- const loggedName=sessionStorage.getItem('lab_logged_in');
- if(loggedName){
-  let studentId=null;
-  try{ const info=JSON.parse(sessionStorage.getItem('studentInfo')||'null'); if(info&&info.name===loggedName) studentId=info.classNo; }catch(e){}
-  CURRENT_STUDENT={name:loggedName, studentId};
-  finishLogin();
- }
-})();
+  </div>
+  <button id="devTestBtn" style="position:fixed;top:10px;right:10px;font-size:11px;padding:4px 10px;
+    border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--dim);opacity:.5;cursor:pointer;z-index:99">테스트</button>`;
+ document.body.appendChild(block);
+ document.getElementById('devTestBtn').addEventListener('click', ()=>{
+  block.remove();
+  document.getElementById('loginScreen').style.display='';
+ });
 }
 
 setInterval(moveTick,90);

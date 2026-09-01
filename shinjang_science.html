@@ -414,9 +414,9 @@ const DEGREE_ORDER=['bachelor','master','phd'];
 // rate(시간당 생산량)와 cap(최대 저장량)을 같게 잡아서, 레벨·배치보너스·세트효과가 뭐든 항상
 // 정확히 60분(1시간)이면 최대치에 도달한다 — 분 단위로 계속 실시간 누적되니 "분당" 체감이 되게 함.
 const DEGREE={
-  bachelor:{n:'학사',rate:40,cap:40,color:'#8d8175',enhCost:40},
-  master:{n:'석사',rate:120,cap:120,color:'#3f6fa8',enhCost:90},
-  phd:{n:'박사',rate:300,cap:300,color:'#8a6bd6',enhCost:180}
+  bachelor:{n:'학사',rate:20,cap:20,color:'#8d8175',enhCost:25},
+  master:{n:'석사',rate:60,cap:60,color:'#3f6fa8',enhCost:55},
+  phd:{n:'박사',rate:150,cap:150,color:'#8a6bd6',enhCost:110}
 };
 const MAX_LV=5;
 const ENHANCE_SUCCESS=[.95,.85,.70,.55,.40]; // 인덱스=lv-1: 그 레벨에서 강화 시도했을 때 성공 확률
@@ -722,7 +722,7 @@ function syncChapterResults(){
   const everSet=everCorrectSet(g.chapterId);
   let roundGain=0;
   (result.roundResults||[]).forEach(rr=>{
-   if(rr.ok && !everSet.has(rr.id)){ everSet.add(rr.id); roundGain+=10; }
+   if(rr.ok && !everSet.has(rr.id)){ everSet.add(rr.id); roundGain+=20; }
   });
   if(roundGain>0){
    S.rc+=roundGain; changed=true;

@@ -611,8 +611,8 @@ function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'gue
 
 /* ================= 상태 (로그인한 학생별로 이 브라우저에 저장됨) ================= */
 // assistants: [{poolId, assignedDept(부서id|null), lastCollectedAt(ms)}]
-// 처음 로그인하는 학생의 초기값: 연구포인트 0 (2026-08-27, 특별연구포인트 폐지·연구포인트로 통합)
-const S={rc:0,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
+// 처음 로그인하는 학생의 초기값: 연구포인트 200 (사용자 지정, 2026-08-27)
+const S={rc:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
  everCorrect:{}, everPerfect:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false};
 
 /* localStorage 캐시(loadLabState)와 수파베이스 원격 스냅샷(pullGameStateFromServer) 양쪽이
@@ -1663,7 +1663,7 @@ function weightedStartDegree(){
  for(const k of DEGREE_ORDER){ acc+=START_DEGREE_WEIGHTS[k]; if(roll<=acc) return k; }
  return 'bachelor';
 }
-const GACHA_COST=300;
+const GACHA_COST=100;
 function gachaPull(){
  if(S.rc<GACHA_COST){ toast(`연구포인트가 부족해요 (${GACHA_COST} 필요)`,'bad'); return; }
  S.rc-=GACHA_COST;

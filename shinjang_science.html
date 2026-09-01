@@ -420,11 +420,12 @@ const DEGREE={
 };
 const MAX_LV=5;
 // 강화 비용을 낮춰서 "많이 시도"는 쉽게 하되, 성공 확률도 같이 낮춰서 "레벨 올리기"는 오히려 더 어렵게 만듦
-const ENHANCE_SUCCESS=[.65,.50,.35,.20,.10]; // 인덱스=lv-1: 그 레벨에서 강화 시도했을 때 성공 확률
-// 박사(전설 포함)는 Lv.5를 넘어서도 계속 강화 가능 — Lv.5 확률(10%)에서 레벨마다 2%p씩 더 낮아지되 5% 밑으로는 안 내려감
+const ENHANCE_SUCCESS=[.90,.75,.60,.45,.30]; // 인덱스=lv-1: 그 레벨에서 강화 시도했을 때 성공 확률
+// 박사(전설 포함)는 Lv.5를 넘어서도 계속 강화 가능 — Lv.5 확률(30%)에서 레벨마다 80%씩(20%씩 줄어드는 게 아니라
+// 곱셈으로 0.8배씩) 낮아지는 기하급수적 감소, 2% 밑으로는 안 내려감
 function successRateFor(lv){
  if(lv<=MAX_LV) return ENHANCE_SUCCESS[lv-1];
- return Math.max(0.05, ENHANCE_SUCCESS[MAX_LV-1]-(lv-MAX_LV)*0.02);
+ return Math.max(0.02, ENHANCE_SUCCESS[MAX_LV-1]*Math.pow(0.8, lv-MAX_LV));
 }
 // 전설급 학자는 등급 표시에 "박사" 대신 legendTitle(개척자·선구자 등)을 쓴다
 function rankName(def, degreeKey){ return def.rareDraw ? def.legendTitle : DEGREE[degreeKey||'bachelor'].n; }

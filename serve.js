@@ -16,7 +16,7 @@ const BOARD_FILE = path.join(DATA_DIR, '_board.json');
 const REDO_FILE = path.join(DATA_DIR, '_redorequests.json');
 const JOURNAL_FILE = path.join(DATA_DIR, '_journalanswers.json');
 const LOBBY_HTML_FILE = path.join(ROOT, 'shinjang_science.html');
-const ADMIN_HTML_FILE = path.join(ROOT, '교사용_수행평가관리.html');
+const ADMIN_HTML_FILE = path.join(ROOT, 'teacher.html');
 
 /* ---------- 수파베이스(학생 로그인 원본 저장소) ----------
    학생 로그인은 이제 shinjang_science.html이 수파베이스 RPC(lab_login 등)를 직접 호출해서 처리하므로,
@@ -403,7 +403,7 @@ loadChapterData('data/ch${num}.json').then(({ROUNDS, META}) => startSession(ROUN
 
 // POST /api/newchapter  { deptId, num, title, slug, cp, mj, targetMin } — 새 단원을 통째로 만든다.
 // 1) data/chN.json 생성 2) 챕터N_slug.html 생성 3) shinjang_science.html의 해당 연구동 ms 배열에 ...chapterMissions(...) 추가
-// 4) 교사용_수행평가관리.html의 CHAPTERS 배열에 항목 추가. 3)·4)는 파일 텍스트를 직접 편집하는 방식이라
+// 4) teacher.html의 CHAPTERS 배열에 항목 추가. 3)·4)는 파일 텍스트를 직접 편집하는 방식이라
 // 실패해도(형식이 바뀌었거나 등) 1)·2)는 이미 만들어졌으니 warnings로 알리고 수동 추가를 안내한다.
 function handleNewChapter(req, res) {
   if (req.method !== 'POST') { res.writeHead(405); return res.end('method not allowed'); }

@@ -2137,7 +2137,7 @@ async function doLogin(){
    ? await supaRpc('lab_login', {p_name:name, p_password:password})
    : await (await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,password})})).json();
   if(!out.ok){ setLoginErr(out.error||'로그인에 실패했습니다.'); return; }
-  CURRENT_STUDENT={name, studentId:out.studentId};
+  CURRENT_STUDENT={name, studentId:out.studentId, sessionToken:out.sessionToken||null};
   if(out.mustChange){
    document.getElementById('loginStep1').classList.add('hide');
    document.getElementById('loginStep2').classList.remove('hide');
@@ -2183,6 +2183,8 @@ async function finishLogin(){
  // 실제 과제(챕터) 게임을 열 때 이름을 다시 묻지 않게 한다.
  sessionStorage.setItem('studentInfo', JSON.stringify({name:CURRENT_STUDENT.name, classNo:CURRENT_STUDENT.studentId}));
  sessionStorage.setItem('lab_logged_in', CURRENT_STUDENT.name);
+ if(CURRENT_STUDENT.sessionToken) sessionStorage.setItem('lab_session_token', CURRENT_STUDENT.sessionToken);
+ startSessionHeartbeat();
  document.getElementById('loginScreen').classList.add('hide');
  document.getElementById('labApp').classList.remove('hide');
  document.getElementById('whoami').textContent='👤 '+CURRENT_STUDENT.name;
@@ -2231,10 +2233,41 @@ function checkDailyAttendance(){
  flyGain('rc', 30);
 }
 
-function logout(){
- if(!confirm('로그아웃할까요?')) return;
+/* ================= 동시 로그인 방지 =================
+   로그인 성공 시 서버(lab_students.session_token)에 이 기기만의 토큰을 새로 심어두고,
+   일정 주기로 "아직 쓰고 있다"는 하트비트를 보낸다. 다른 기기가 새로 로그인하면 서버 쪽
+   토큰이 그 기기 것으로 바뀌므로, 하트비트 응답에서 kicked:true가 오면 이 기기를 강제 로그아웃한다. */
+let _sessionHeartbeatTimer=null;
+const SESSION_HEARTBEAT_MS=90000;
+function stopSessionHeartbeat(){ clearInterval(_sessionHeartbeatTimer); _sessionHeartbeatTimer=null; }
+function startSessionHeartbeat(){
+ stopSessionHeartbeat();
+ if(!isSupabaseConfigured() || !CURRENT_STUDENT || !CURRENT_STUDENT.sessionToken) return;
+ _sessionHeartbeatTimer=setInterval(async()=>{
+  if(!CURRENT_STUDENT || !CURRENT_STUDENT.sessionToken) return;
+  try{
+   const out=await supaRpc('lab_session_heartbeat', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken});
+   if(out && out.kicked) forceKickToLogin();
+  }catch(e){ /* 네트워크 문제로 하트비트 한 번 실패한 정도로는 강제 로그아웃하지 않는다 */ }
+ }, SESSION_HEARTBEAT_MS);
+}
+function forceKickToLogin(){
+ stopSessionHeartbeat();
  sessionStorage.removeItem('studentInfo');
  sessionStorage.removeItem('lab_logged_in');
+ sessionStorage.removeItem('lab_session_token');
+ alert('다른 기기에서 같은 아이디로 로그인해서, 이 기기는 로그아웃됐어요.');
+ location.reload();
+}
+function logout(){
+ if(!confirm('로그아웃할까요?')) return;
+ stopSessionHeartbeat();
+ if(isSupabaseConfigured() && CURRENT_STUDENT && CURRENT_STUDENT.sessionToken){
+  supaRpc('lab_session_logout', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken}).catch(()=>{});
+ }
+ sessionStorage.removeItem('studentInfo');
+ sessionStorage.removeItem('lab_logged_in');
+ sessionStorage.removeItem('lab_session_token');
  location.reload();
 }
 
@@ -2280,7 +2313,7 @@ function tryAutoLogin(){
  if(!loggedName) return false;
  let studentId=null;
  try{ const info=JSON.parse(sessionStorage.getItem('studentInfo')||'null'); if(info&&info.name===loggedName) studentId=info.classNo; }catch(e){}
- CURRENT_STUDENT={name:loggedName, studentId};
+ CURRENT_STUDENT={name:loggedName, studentId, sessionToken:sessionStorage.getItem('lab_session_token')||null};
  finishLogin();
  return true;
 }

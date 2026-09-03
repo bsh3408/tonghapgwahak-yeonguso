@@ -58,22 +58,63 @@ create table if not exists public.lab_students (
   salt text not null,
   password_hash text not null,
   must_change boolean not null default true,
-  logged_in_at timestamptz
+  logged_in_at timestamptz,
+  -- 동시 로그인 방지용: 마지막으로 로그인 성공한 기기의 세션 토큰과, 그 기기가 마지막으로
+  -- "저 아직 쓰고 있어요"라고 알려온 시각. session_at이 SESSION_TIMEOUT_MINUTES보다 오래되면
+  -- 그 기기는 이미 닫혔다고 보고 다른 기기의 새 로그인을 허용한다.
+  session_token text,
+  session_at timestamptz
 );
+-- 기존에 이미 만들어져 있던 테이블이라면 위 컬럼이 없을 수 있어 아래 alter를 한 번 더 보장한다.
+alter table public.lab_students add column if not exists session_token text;
+alter table public.lab_students add column if not exists session_at timestamptz;
 alter table public.lab_students enable row level security;
 -- anon에게 테이블 직접 접근 정책 없음 → 아래 함수로만.
 
+-- 이 시간(분) 동안 lab_session_heartbeat가 안 오면 그 기기의 세션은 끊긴 것으로 보고 풀어준다.
+create or replace function public.lab_session_timeout_minutes() returns int language sql immutable as $$ select 5 $$;
+
 create or replace function public.lab_login(p_name text, p_password text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
-declare s lab_students%rowtype;
+declare s lab_students%rowtype; newtoken text;
 begin
   select * into s from lab_students where name = trim(p_name);
   if not found then return jsonb_build_object('ok', false, 'error', '등록되지 않은 이름입니다. 선생님께 문의하세요.'); end if;
   if encode(digest(p_password || s.salt, 'sha256'), 'hex') <> s.password_hash then
     return jsonb_build_object('ok', false, 'error', '비밀번호가 올바르지 않습니다.');
   end if;
-  update lab_students set logged_in_at = now() where name = s.name;
-  return jsonb_build_object('ok', true, 'mustChange', s.must_change, 'studentId', s.student_id);
+  -- 다른 기기가 최근(lab_session_timeout_minutes분 이내)까지 활동 중이었으면 새 로그인을 막는다.
+  if s.session_token is not null and s.session_at is not null
+     and s.session_at > now() - (lab_session_timeout_minutes() || ' minutes')::interval then
+    return jsonb_build_object('ok', false, 'error',
+      '다른 기기에서 이미 로그인 중이에요. 그 기기에서 로그아웃하거나, '||lab_session_timeout_minutes()||'분간 그 기기를 쓰지 않으면 여기서 로그인할 수 있어요.');
+  end if;
+  newtoken := encode(gen_random_bytes(16), 'hex');
+  update lab_students set logged_in_at = now(), session_token = newtoken, session_at = now() where name = s.name;
+  return jsonb_build_object('ok', true, 'mustChange', s.must_change, 'studentId', s.student_id, 'sessionToken', newtoken);
+end; $$;
+
+-- 로그인 중인 기기가 주기적으로 불러서 "아직 쓰고 있다"고 알린다. 그 사이 다른 기기가 로그인해서
+-- session_token이 바뀌었으면(kicked:true) 클라이언트는 그 즉시 이 기기를 로그아웃시켜야 한다.
+create or replace function public.lab_session_heartbeat(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare s lab_students%rowtype;
+begin
+  select * into s from lab_students where name = trim(p_name);
+  if not found or s.session_token is distinct from p_token then
+    return jsonb_build_object('ok', false, 'kicked', true);
+  end if;
+  update lab_students set session_at = now() where name = s.name;
+  return jsonb_build_object('ok', true);
+end; $$;
+
+-- 명시적 로그아웃 시 세션을 즉시 풀어서, 그 기기가 아직 5분 안 지났어도 바로 다른 기기에서 로그인할 수 있게 한다.
+create or replace function public.lab_session_logout(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+begin
+  update lab_students set session_token = null, session_at = null
+    where name = trim(p_name) and session_token = p_token;
+  return jsonb_build_object('ok', true);
 end; $$;
 
 create or replace function public.lab_change_password(p_name text, p_old text, p_new text)

@@ -70,6 +70,7 @@ button.card{background:#fff;border:2px solid var(--line);border-radius:12px;padd
 .seqempty{text-align:center;color:var(--dim2);font-size:12.5px;padding:14px 0}
 .btnrow{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
 .btnrow .navbtn{flex:1;margin-top:0;min-width:120px}
+.topreroll{border-color:var(--gold);color:#a97a13}
 .resetbtn{padding:14px 18px;background:#fff;border:2px solid var(--line);border-radius:14px;color:var(--dim);font-weight:800;font-size:15px}
 
 /* quiz/combo option */

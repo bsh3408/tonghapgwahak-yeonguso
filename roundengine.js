@@ -68,14 +68,76 @@ function restoreProgressIfAny(){
   if(saved.startTime) S.startTime = saved.startTime;
   showResumeNotice();
 }
-function showResumeNotice(){
+function showNotice(msg){
   const el=document.createElement('div');
-  el.textContent='↩️ 저장된 진행 상황을 불러왔어요. 이어서 풀 수 있어요';
+  el.textContent=msg;
   el.style.cssText='position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:999;'+
     'background:#eef7f4;color:#3fae95;border:1.5px solid #bce3d8;border-radius:20px;padding:8px 16px;'+
     'font-size:12.5px;font-weight:800;box-shadow:0 3px 10px rgba(90,70,50,.12)';
   document.body.appendChild(el);
   setTimeout(()=>el.remove(), 3200);
+}
+function showResumeNotice(){ showNotice('↩️ 저장된 진행 상황을 불러왔어요. 이어서 풀 수 있어요'); }
+
+/* ---------- 🔄 재도전권: 아직 못 맞힌 문제만 문제풀의 다른 문제로 새로 뽑는다 (연구포인트 소모) ----------
+   연구포인트는 shinjang_science.html의 S.rc가 아니라, 같은 localStorage(lab_state_v1__학생이름)를
+   직접 읽고 써서 반영한다(이 페이지는 그 스크립트를 안 불러오므로). 수파베이스가 설정돼 있으면
+   lab_state_sync RPC로 같은 모양을 그대로 다시 올려서 다른 기기와도 어긋나지 않게 한다. */
+const REROLL_COST=50;
+function labStateKey(){
+  const info=getStudentInfo();
+  return 'lab_state_v1__'+(info && info.name ? info.name : 'guest');
+}
+function readLabStateRaw(){
+  try{ const raw=localStorage.getItem(labStateKey()); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+}
+function spendRcForReroll(){
+  const st=readLabStateRaw();
+  const rc = st && typeof st.rc==='number' ? st.rc : 0;
+  if(!st || rc<REROLL_COST) return {ok:false, rc};
+  st.rc = rc-REROLL_COST;
+  try{ localStorage.setItem(labStateKey(), JSON.stringify(st)); }catch(e){}
+  if(typeof isSupabaseConfigured==='function' && isSupabaseConfigured()){
+    const info=getStudentInfo();
+    if(info && info.name) supaRpc('lab_state_sync', {p_name:info.name, p_class_no:info.studentId||'', p_data:st}).catch(()=>{});
+  }
+  return {ok:true, rc:st.rc};
+}
+function usedPoolIds(){
+  return new Set(ENGINE_STATE.rounds.filter(r=>r.kind!=='opinion').map(r=>r.id));
+}
+function remainingGradableIndices(){
+  const out=[];
+  ENGINE_STATE.rounds.forEach((r,i)=>{ if(r.kind!=='opinion' && gradeRound(r)!==true) out.push(i); });
+  return out;
+}
+function unusedPoolCandidates(){
+  const pool=window.__CHAPTER_POOL||[];
+  const used=usedPoolIds();
+  return pool.filter(p=>!used.has(p.id));
+}
+function canReroll(){
+  return remainingGradableIndices().length>0 && unusedPoolCandidates().length>0;
+}
+function rerollRemaining(){
+  const remainIdx=remainingGradableIndices();
+  if(!remainIdx.length){ showNotice('이미 남은 문제가 없어요.'); return; }
+  const candidates=unusedPoolCandidates();
+  if(!candidates.length){ showNotice('더 뽑을 수 있는 다른 문제가 없어요.'); return; }
+  const spend=spendRcForReroll();
+  if(!spend.ok){ showNotice(`연구포인트가 부족해요 (${REROLL_COST}🔬 필요 · 보유 ${spend.rc}🔬)`); return; }
+  const picks=shuffleWith(Math.random, candidates).slice(0, remainIdx.length);
+  const hydrated=hydrateRounds(picks, window.__CHAPTER_VARS||{}, Math.random);
+  let n=0;
+  remainIdx.forEach((idx,k)=>{
+    if(!hydrated[k]) return;
+    delete ENGINE_STATE.answers[ENGINE_STATE.rounds[idx].id];
+    ENGINE_STATE.rounds[idx]=hydrated[k];
+    n++;
+  });
+  saveProgress();
+  showNotice(`남은 문제 ${n}개를 새로 뽑았어요! (-${REROLL_COST}🔬)`);
+  renderRound();
 }
 function beginRounds(){ restoreProgressIfAny(); renderRound(); }
 
@@ -199,9 +261,17 @@ function renderTop(){
   top.innerHTML=`
     <div class="title">${S.meta.title}</div>
     <button class="topback" onclick="confirmBackToDept()">🔙 연구동으로 돌아가기</button>
+    <span id="topReroll"></span>
     <div class="leavebadge" id="leaveBadge">⏱️ 창 이탈 0회</div>
     <div class="steps" id="steps"></div>
     <div class="stepcap"><span id="stepCapL"></span><span id="stepCapR"></span></div>`;
+  renderTopReroll();
+}
+function renderTopReroll(){
+  const el=document.getElementById('topReroll'); if(!el) return;
+  el.innerHTML = canReroll()
+    ? `<button class="topback topreroll" onclick="rerollRemaining()">🔄 재도전권 (${REROLL_COST}🔬)</button>`
+    : '';
 }
 function confirmBackToDept(){
   const S=ENGINE_STATE;
@@ -235,7 +305,7 @@ function goPrev(){
 }
 
 function renderRound(){
-  const S=ENGINE_STATE; renderSteps();
+  const S=ENGINE_STATE; renderSteps(); renderTopReroll();
   const r=S.rounds[S.cur];
   const fns={classify:renderClassify, matchpairs:renderMatchpairs, ordering:renderOrdering,
     quiz:renderQuiz, graphread:renderQuiz, combo:renderCombo, opinion:renderOpinion};

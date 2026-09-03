@@ -131,6 +131,11 @@ async function loadChapterData(url){
     roundsTpl = picked.concat(data.rounds);
   }
 
+  // 재도전권(rerollRemaining, roundengine.js)이 "지금 안 쓰인 다른 문제"를 다시 뽑을 수 있게
+  // 원본 문제풀·변수를 전역에 남겨둔다(이 챕터를 새로 열 때마다 갱신됨).
+  window.__CHAPTER_POOL = Array.isArray(data.gradablePool) ? data.gradablePool : [];
+  window.__CHAPTER_VARS = vars;
+
   const ROUNDS=hydrateRounds(roundsTpl, vars, rng);
   const META=deepSubstitute(data.meta, vars);
   META.seedKey = seedKey; // 수파베이스 결과 저장 시 chapter_id로 사용

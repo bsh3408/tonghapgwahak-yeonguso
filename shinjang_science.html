@@ -1942,8 +1942,8 @@ async function fetchLabScores(){
    const res=await fetch('/api/labscore',{cache:'no-store'});
    list = await res.json();
   }
-  // 교사 테스트 계정은 실제 학생이 아니라서 전체 랭킹에는 안 보이게 뺀다
-  return list.filter(s=>!TEACHER_TEST_ACCOUNTS.includes(s.name));
+  // 교사 테스트 계정 등 실제 학생이 아닌 계정은 전체 랭킹에는 안 보이게 뺀다
+  return list.filter(s=>!RANK_EXCLUDE_ACCOUNTS.includes(s.name));
  }catch(e){ return []; }
 }
 async function postLabScore(){
@@ -2209,6 +2209,8 @@ async function finishLogin(){
 
 /* 교사 테스트 계정(변석환)은 이 브라우저에서 처음 로그인할 때 넉넉한 테스트용 포인트를 채워준다 */
 const TEACHER_TEST_ACCOUNTS=['변석환'];
+/* 실제 학생이 아니라서 전체 랭킹에서 빼야 하는 이름들 — 교사 테스트 계정 외에, 학생이 아닌 다른 계정도 여기 추가한다 */
+const RANK_EXCLUDE_ACCOUNTS=[...TEACHER_TEST_ACCOUNTS, '이지숙'];
 function seedTeacherTestPoints(){
  if(!TEACHER_TEST_ACCOUNTS.includes(CURRENT_STUDENT.name)) return;
  if(S.teacherSeeded) return;

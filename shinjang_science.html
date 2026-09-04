@@ -2209,6 +2209,7 @@ async function finishLogin(){
  sessionStorage.setItem('lab_logged_in', CURRENT_STUDENT.name);
  if(CURRENT_STUDENT.sessionToken) sessionStorage.setItem('lab_session_token', CURRENT_STUDENT.sessionToken);
  startSessionHeartbeat();
+ startAutoLogoutWatch();
  document.getElementById('loginScreen').classList.add('hide');
  document.getElementById('labApp').classList.remove('hide');
  document.getElementById('whoami').textContent='👤 '+CURRENT_STUDENT.name;
@@ -2275,24 +2276,54 @@ function startSessionHeartbeat(){
   }catch(e){ /* 네트워크 문제로 하트비트 한 번 실패한 정도로는 강제 로그아웃하지 않는다 */ }
  }, SESSION_HEARTBEAT_MS);
 }
-function forceKickToLogin(){
+/* 서버에 예약해둔 세션을 풀고(가능하면) 이 기기의 로그인 흔적을 지운 뒤 새로고침한다.
+   alertMsg가 있으면 새로고침 전에 안내를 띄운다(자동 로그아웃은 조용히, 다른 기기 때문에
+   쫓겨난 경우만 이유를 알려준다). keepalive를 켜면 reload로 탭이 넘어가는 순간에도 요청이 끝까지 간다. */
+function clearSessionAndReload(alertMsg, keepalive){
  stopSessionHeartbeat();
- sessionStorage.removeItem('studentInfo');
- sessionStorage.removeItem('lab_logged_in');
- sessionStorage.removeItem('lab_session_token');
- alert('다른 기기에서 같은 아이디로 로그인해서, 이 기기는 로그아웃됐어요.');
- location.reload();
-}
-function logout(){
- if(!confirm('로그아웃할까요?')) return;
- stopSessionHeartbeat();
+ clearAutoLogoutTimer();
  if(isSupabaseConfigured() && CURRENT_STUDENT && CURRENT_STUDENT.sessionToken){
-  supaRpc('lab_session_logout', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken}).catch(()=>{});
+  supaRpc('lab_session_logout', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken}, keepalive?{keepalive:true}:undefined).catch(()=>{});
  }
  sessionStorage.removeItem('studentInfo');
  sessionStorage.removeItem('lab_logged_in');
  sessionStorage.removeItem('lab_session_token');
+ if(alertMsg) alert(alertMsg);
  location.reload();
+}
+function forceKickToLogin(){
+ clearSessionAndReload('다른 기기에서 같은 아이디로 로그인해서, 이 기기는 로그아웃됐어요.');
+}
+function logout(){
+ if(!confirm('로그아웃할까요?')) return;
+ clearSessionAndReload();
+}
+
+/* ================= 자동 로그아웃(크롬북/태블릿을 로그아웃 없이 그냥 닫아버리는 경우 대비) =================
+   ① 클릭·터치·키 입력이 IDLE_LOGOUT_MS 동안 전혀 없으면(화면은 켜진 채 자리를 비운 경우) 로그아웃.
+   ② 화면이 꺼지거나(기기를 닫음) 다른 탭/앱으로 넘어간 지 HIDDEN_LOGOUT_MS가 지나면 로그아웃.
+   공용 기기에서 다음 학생이 이전 학생 계정을 그대로 이어 쓰는 사고를 막기 위한 것이라, 알림 없이 조용히
+   로그인 화면으로 돌려보낸다(어차피 진행 상황은 매번 저장돼 있어서 다시 로그인하면 이어할 수 있다). */
+const IDLE_LOGOUT_MS=15*60*1000;   // 15분 조작 없음
+const HIDDEN_LOGOUT_MS=5*60*1000;  // 화면이 꺼져있던(닫혀있던) 지 5분
+let _lastActivityAt=Date.now();
+let _hiddenSinceAt=null;
+let _autoLogoutTimer=null;
+function clearAutoLogoutTimer(){ clearInterval(_autoLogoutTimer); _autoLogoutTimer=null; }
+function markActivity(){ _lastActivityAt=Date.now(); }
+['click','keydown','touchstart','pointerdown'].forEach(ev=>document.addEventListener(ev, markActivity, {passive:true}));
+document.addEventListener('visibilitychange', ()=>{
+ if(document.hidden){ _hiddenSinceAt=Date.now(); }
+ else { markActivity(); _hiddenSinceAt=null; }
+});
+function startAutoLogoutWatch(){
+ clearAutoLogoutTimer();
+ _lastActivityAt=Date.now(); _hiddenSinceAt=null;
+ _autoLogoutTimer=setInterval(()=>{
+  if(!CURRENT_STUDENT) return;
+  if(Date.now()-_lastActivityAt>IDLE_LOGOUT_MS){ clearSessionAndReload(); return; }
+  if(_hiddenSinceAt && Date.now()-_hiddenSinceAt>HIDDEN_LOGOUT_MS){ clearSessionAndReload(null, true); return; }
+ }, 20000);
 }
 
 document.getElementById('loginBtn').addEventListener('click', doLogin);

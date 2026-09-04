@@ -1447,11 +1447,12 @@ function shopSheet(){
            <button class="buy" style="margin-top:4px;width:100%" onclick="buyLabTheme('${t.key}')">구매</button>`}
      </div>`;}).join('')}
   </div>`);}
-function buyLabTheme(key){
+async function buyLabTheme(key){
  const t=labThemeDef(key);
  if(S.ownedThemes.includes(key)){ selectLabTheme(key); return; }
- if(S.rc<t.cost){ toast('연구포인트가 부족해요','bad'); return; }
- S.rc-=t.cost; S.ownedThemes.push(key); S.labTheme=key;
+ const out=await callGameAction('lab_buy_theme', {p_key: key});
+ if(!out) return;
+ S.rc=out.rc; S.ownedThemes.push(key); S.labTheme=key;
  saveLabState(); render(); toast(t.n+' 테마 구매 완료'); scene(); shopSheet();
 }
 function selectLabTheme(key){
@@ -1713,15 +1714,12 @@ async function expandDeptSlot(did){
  toast(`배치 슬롯이 ${S.deptSlots}개로 늘었어요!`, 'gold');
  if(did) missionSheet(did); // 서버 응답이 온 뒤에야 최신 슬롯 수로 다시 그림(요청 직후엔 아직 반영 전이라 여기서 갱신)
 }
-function assignAssistant(idx, deptId){
+async function assignAssistant(idx, deptId){
  const inst=S.assistants[idx];
  if(!inst) return; // 강화 실패로 조수가 떠나 배열이 당겨진 직후, 화면이 아직 안 바뀐 상태에서 옛 idx로 눌린 경우 대비
- if(deptId && !inst.assignedDept && assignedCount()>=(S.deptSlots||DEFAULT_DEPT_SLOTS)){
-  toast(`배치 슬롯이 가득 찼어요 (${S.deptSlots||DEFAULT_DEPT_SLOTS}개) · 슬롯을 확장해보세요`, 'bad');
-  assistantSheet();
-  return;
- }
- inst.assignedDept = deptId || null;
+ const out=await callGameAction('lab_assign', {p_idx: idx, p_dept_id: deptId||null});
+ if(!out){ assistantSheet(); return; } // 거부됐으면(슬롯 꽉 참 등) 원래 상태 그대로 다시 그림
+ inst.assignedDept = out.assignedDept || null;
  inst.lastCollectedAt = Date.now(); // 로비↔연구동 전환 시점부터 새로 생산량을 센다
  saveLabState(); render(); assistantSheet();
 }
@@ -1808,41 +1806,25 @@ function enhanceAssistant(idx){
    <button class="btn gold" style="flex:1;margin-top:0" onclick="closeModal();doEnhanceAssistant(${idx})">강화한다</button>
   </div>`);
 }
-function doEnhanceAssistant(idx){
+async function doEnhanceAssistant(idx){
  const inst=S.assistants[idx]; if(!inst) return;
  const def=assistantDef(inst.poolId);
- const lv=inst.lv||1, cost=enhanceCostFor(inst), successRate=successRateFor(lv);
- if(S.rc<cost){ toast(`연구포인트가 부족해요 (${cost} 필요)`,'bad'); showEnhanceResult(null,{kind:'nocash',name:def.name,cost}); return; }
- S.rc-=cost;
- const success=Math.random()<successRate;
- if(!success){
-  const leaves=Math.random()<LEAVE_ON_FAIL_CHANCE;
-  if(!leaves){
-   saveLabState(); render(); assistantSheet();
-   showEnhanceResult(idx, {kind:'fail-stay', name:def.name});
-   return;
-  }
-  const line=QUIT_LINES[Math.floor(Math.random()*QUIT_LINES.length)];
-  const leftDegree=inst.degree||'bachelor';
+ const before=assistantEffectiveRateCap(inst); // 강화 전 시급(성공 연출에서 전/후 비교용)
+ const out=await callGameAction('lab_enhance', {p_idx: idx});
+ if(!out) return;
+ S.rc=out.rc;
+ if(out.kind==='fail-leave'){
   S.assistants.splice(idx,1);
   saveLabState(); render(); assistantSheet();
-  showEnhanceResult(null, {kind:'fail-leave', name:def.name, line, degree:leftDegree});
-  return;
- }
- const before=assistantEffectiveRateCap(inst);
- let newLabel;
- // 박사(전설 포함)는 승급할 다음 학위가 없으므로 레벨 제한 없이 계속 레벨만 오른다
- if(lv>=MAX_LV && inst.degree!=='phd'){
-  const curIdx=DEGREE_ORDER.indexOf(inst.degree||'bachelor'), nextKey=DEGREE_ORDER[curIdx+1];
-  inst.degree=nextKey; inst.lv=1;
-  newLabel=`${rankName(def,nextKey)} Lv.1`;
+  showEnhanceResult(null, {kind:'fail-leave', name:out.name||def.name, line:out.line, degree:out.leftDegree});
+ } else if(out.kind==='fail-stay'){
   saveLabState(); render(); assistantSheet();
-  showEnhanceResult(idx, {kind:'success-promote', name:def.name, newLabel, before});
+  showEnhanceResult(idx, {kind:'fail-stay', name:def.name});
  } else {
-  inst.lv=lv+1;
-  newLabel=`${rankName(def,inst.degree)} Lv.${inst.lv}`;
+  inst.degree=out.degree; inst.lv=out.lv;
+  const newLabel=`${rankName(def,inst.degree)} Lv.${inst.lv}`;
   saveLabState(); render(); assistantSheet();
-  showEnhanceResult(idx, {kind:'success-lv', name:def.name, newLabel, before});
+  showEnhanceResult(idx, {kind:out.kind, name:def.name, newLabel, before});
  }
 }
 /* 강화 결과를 눈에 띄게 보여주고, 창을 닫지 않고 바로 이어서 강화할 수 있게 한다 */
@@ -2048,63 +2030,48 @@ function tickHomeResearchUI(){
  });
  if(!found) clearInterval(_researchTimer);
 }
-/* 논문 완성 처리(점수 산정·기록·모달) — 무료 수거(collectHomeResearch)와
-   연구포인트 즉시 작성(instantWritePaper) 양쪽이 공유한다. */
-/* 점수 산정·기록만 담당(저장/렌더/모달은 안 함) — 1편씩 수거(completeHomePaper)와
-   한번에 수거(collectAllHomeResearch) 양쪽이 이 결과를 그대로 재사용한다. */
-function generateHomePaper(idx, instant){
+/* 논문 완성(점수 산정)은 서버 함수(lab_collect_paper/lab_instant_paper)가 직접 계산한다.
+   24시간 검사도 서버가 하므로, 클라이언트는 응답을 받아 화면에 반영만 한다. */
+function applyPaperOutcome(idx, out, instant){
  const inst=S.assistants[idx];
- // instant(연구포인트로 즉시작성)가 아니면, 콘솔에서 이 함수를 직접 호출해도(collectHomeResearch를
- // 건너뛰어도) 24시간이 안 지난 조수는 절대 논문을 못 만들게 여기서 다시 한번 막는다.
- if(!inst) return null;
- if(!instant && (inst.assignedDept || !homeReady(inst))) return null;
- const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor';
- const [lo,hi] = def.rareDraw ? LEGEND_SCORE_RANGE : (HOME_SCORE_RANGE[degKey]||HOME_SCORE_RANGE.bachelor);
- const score=lo+Math.floor(Math.random()*(hi-lo+1));
- const nobel=score>NOBEL_SCORE_THRESHOLD;
- if(nobel) S.nobelCount++;
- const titles=PAPER_TITLES[def.theme]||PAPER_TITLES.etc;
- const title=titles[Math.floor(Math.random()*titles.length)];
- S.researchScore+=score;
- const paper={title, theme:def.theme, assistantName:def.name, degree:degKey, score, nobel, at:Date.now()};
- S.papers.push(paper);
- inst.lastCollectedAt=Date.now(); // 다음 24시간 타이머 다시 시작
- return paper;
-}
-function completeHomePaper(idx, instant){
- const paper=generateHomePaper(idx, instant);
- if(!paper){ toast('아직 24시간이 안 지났어요','bad'); return; }
+ if(inst) inst.lastCollectedAt=Date.now();
+ if(out.nobel) S.nobelCount=(S.nobelCount||0)+1;
+ S.researchScore=out.researchScore;
+ if(instant) S.rc=out.rc;
+ S.papers.push({title:out.title, theme:out.theme, assistantName:out.assistantName, degree:out.degree, score:out.score, nobel:out.nobel, at:Date.now()});
  saveLabState(); render(); postLabScore();
- flyGain('rs', paper.score);
- modal(`<h2>${paper.nobel?'🏅 노벨상 수상!':'📄 논문 완성'}</h2>
-  <div class="cap">${paper.assistantName}이(가) ${instant?'연구포인트로 바로 완성한':'24시간 연구 끝에 완성한'} 논문</div>
-  <div class="box" style="text-align:center;${paper.nobel?'background:#fff3d6;border-color:#edd49a':''}">
-   <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">「${paper.title}」</div>
-   <div style="font-size:12px;color:var(--dim)">${paper.nobel?'전 세계가 주목했습니다! 노벨상을 받았어요!':'학술지에 게재되었습니다!'}</div>
-   <div style="font-size:30px;font-weight:900;color:${paper.nobel?'var(--gold)':'var(--mint2)'};margin-top:6px">+${paper.score}🏆</div>
+ flyGain('rs', out.score);
+ modal(`<h2>${out.nobel?'🏅 노벨상 수상!':'📄 논문 완성'}</h2>
+  <div class="cap">${out.assistantName}이(가) ${instant?'연구포인트로 바로 완성한':'24시간 연구 끝에 완성한'} 논문</div>
+  <div class="box" style="text-align:center;${out.nobel?'background:#fff3d6;border-color:#edd49a':''}">
+   <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">「${out.title}」</div>
+   <div style="font-size:12px;color:var(--dim)">${out.nobel?'전 세계가 주목했습니다! 노벨상을 받았어요!':'학술지에 게재되었습니다!'}</div>
+   <div style="font-size:30px;font-weight:900;color:${out.nobel?'var(--gold)':'var(--mint2)'};margin-top:6px">+${out.score}🏆</div>
   </div>
   <button class="btn" onclick="closeModal();researchSheet()">확인</button>`);
 }
-function collectHomeResearch(idx){
- const inst=S.assistants[idx]; if(!inst || inst.assignedDept) return;
- if(!homeReady(inst)){ toast('아직 24시간이 안 지났어요','bad'); return; }
- completeHomePaper(idx, false);
+async function collectHomeResearch(idx){
+ const out=await callGameAction('lab_collect_paper', {p_idx: idx});
+ if(out) applyPaperOutcome(idx, out, false);
 }
-/* 집에 대기 중인 조수 중 지금 논문이 완성된(homeReady) 조수를 한 번에 전부 수거한다. */
-function collectAllHomeResearch(){
- const readyIdx = S.assistants.map((inst,idx)=>idx).filter(idx=>{
-  const inst=S.assistants[idx]; return !inst.assignedDept && homeReady(inst);
+/* 집에 대기 중인 조수 중 지금 논문이 완성된(24시간 지난) 조수를 서버가 한 번에 전부 찾아 수거한다. */
+async function collectAllHomeResearch(){
+ const out=await callGameAction('lab_collect_all_papers');
+ if(!out) return;
+ S.researchScore=out.researchScore;
+ out.collected.forEach(p=>{
+  if(p.nobel) S.nobelCount=(S.nobelCount||0)+1;
+  S.papers.push({title:p.title, theme:p.theme, assistantName:p.assistantName, degree:p.degree, score:p.score, nobel:p.nobel, at:p.at});
  });
- if(!readyIdx.length){ toast('지금 수거할 수 있는 논문이 없어요','bad'); return; }
- const collected = readyIdx.map(idx=>generateHomePaper(idx, false)).filter(Boolean);
+ S.assistants.forEach(a=>{ if(!a.assignedDept) a.lastCollectedAt=Date.now(); }); // 서버가 갱신한 대상들과 대략 맞춰둠(다음 렌더에서 정확한 값은 재로그인 시 동기화)
  saveLabState(); render(); postLabScore();
- const totalScore = collected.reduce((sum,p)=>sum+p.score,0);
- const nobelN = collected.filter(p=>p.nobel).length;
+ const totalScore = out.collected.reduce((sum,p)=>sum+p.score,0);
+ const nobelN = out.collected.filter(p=>p.nobel).length;
  flyGain('rs', totalScore);
  modal(`<h2>📄 논문 일괄 수거</h2>
-  <div class="cap">${collected.length}편을 한 번에 수거했어요</div>
+  <div class="cap">${out.collected.length}편을 한 번에 수거했어요</div>
   <div class="box">
-   ${collected.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:12px">
+   ${out.collected.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:12px">
      <span>${p.nobel?'🏅 ':''}「${p.title}」<small style="display:block;color:var(--dim);font-weight:500">${p.assistantName}</small></span>
      <span style="font-weight:900;white-space:nowrap;color:${p.nobel?'var(--gold)':'var(--mint2)'}">+${p.score}🏆</span>
     </div>`).join('')}
@@ -2114,11 +2081,9 @@ function collectAllHomeResearch(){
   <button class="btn" onclick="closeModal();researchSheet()">확인</button>`);
 }
 /* 24시간을 안 기다리고 연구포인트로 바로 논문을 쓴다. 다음 논문까지의 24시간 타이머는 새로 리셋된다. */
-function instantWritePaper(idx){
- const inst=S.assistants[idx]; if(!inst || inst.assignedDept) return;
- if(S.rc<INSTANT_PAPER_COST){ toast(`연구포인트가 부족해요 (${INSTANT_PAPER_COST} 필요)`,'bad'); return; }
- S.rc-=INSTANT_PAPER_COST;
- completeHomePaper(idx, true);
+async function instantWritePaper(idx){
+ const out=await callGameAction('lab_instant_paper', {p_idx: idx});
+ if(out) applyPaperOutcome(idx, out, true);
 }
 
 /* ================= 랭킹 (서버에 모인 전체 학생 연구점수) ================= */

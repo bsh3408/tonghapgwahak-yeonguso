@@ -117,6 +117,19 @@ begin
   return jsonb_build_object('ok', true);
 end; $$;
 
+-- 교사가 특정 학생의 "다른 기기에서 로그인 중" 잠금을 강제로 풀어준다(학생이 로그아웃을 못 하는
+-- 상황 대비). 세션의 마지막 갱신 시각(session_at)도 함께 돌려줘서 왜 안 풀렸는지 진단할 수 있게 한다.
+create or replace function public.lab_session_force_clear(p_teacher_password text, p_name text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare s lab_students%rowtype;
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 올바르지 않습니다.'); end if;
+  select * into s from lab_students where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '등록되지 않은 이름입니다.'); end if;
+  update lab_students set session_token=null, session_at=null where name=trim(p_name);
+  return jsonb_build_object('ok', true, 'previousSessionAt', s.session_at, 'now', now());
+end; $$;
+
 create or replace function public.lab_change_password(p_name text, p_old text, p_new text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare s lab_students%rowtype; newsalt text;
@@ -473,33 +486,50 @@ $$;
 create table if not exists public.lab_assistants_pool (
   id text primary key, theme text not null, set_id text not null, rare_draw boolean not null default false
 );
+alter table public.lab_assistants_pool add column if not exists name text;
 truncate public.lab_assistants_pool;
-insert into public.lab_assistants_pool (id, theme, set_id, rare_draw) values
- ('a_bio1','bio','set_bio',true),('a_bio2','bio','set_bio',false),('a_bio3','bio','set_bio',false),
- ('a_bio4','bio','set_bio',false),('a_bio5','bio','set_bio',false),('a_bio6','bio','set_bio',false),
- ('a_bio7','bio','set_bio',false),('a_bio8','bio','set_bio',false),('a_bio9','bio','set_bio',false),
- ('a_bio10','bio','set_bio',false),
- ('a_chem1','chem','set_chem',false),('a_chem2','chem','set_chem',false),('a_chem3','chem','set_chem',true),
- ('a_chem4','chem','set_chem',false),('a_chem5','chem','set_chem',false),('a_chem6','chem','set_chem',false),
- ('a_chem7','chem','set_chem',false),('a_chem8','chem','set_chem',false),('a_chem9','chem','set_chem',false),
- ('a_chem10','chem','set_chem',false),
- ('a_earth1','earth','set_earth',false),('a_earth2','earth','set_earth',false),('a_earth3','earth','set_earth',false),
- ('a_earth4','earth','set_earth',false),('a_earth5','earth','set_earth',false),('a_earth6','earth','set_earth',true),
- ('a_earth7','earth','set_earth',false),('a_earth8','earth','set_earth',false),('a_earth9','earth','set_earth',false),
- ('a_earth10','earth','set_earth',false),
- ('a_phys1','phys','set_phys',true),('a_phys2','phys','set_phys',false),('a_phys3','phys','set_phys',false),
- ('a_phys4','phys','set_phys',false),('a_phys5','phys','set_phys',false),('a_phys6','phys','set_phys',false),
- ('a_phys7','phys','set_phys',false),('a_phys8','phys','set_phys',false),('a_phys9','phys','set_phys',false),
- ('a_phys10','phys','set_phys',false),
- ('a_etc1','etc','set_etc',true),('a_etc2','etc','set_etc',false),('a_etc3','etc','set_etc',false),
- ('a_etc4','etc','set_etc',false),('a_etc5','etc','set_etc',false),('a_etc6','etc','set_etc',false),
- ('a_etc7','etc','set_etc',false),('a_etc8','etc','set_etc',false),('a_etc9','etc','set_etc',false),
- ('a_etc10','etc','set_etc',false),
- ('a_davinci','uni','set_universal',true),('a_uni1','uni','set_universal',false),
- ('a_uni2','uni','set_universal',false),('a_uni3','uni','set_universal',false);
+alter table public.lab_assistants_pool alter column name set not null;
+insert into public.lab_assistants_pool (id, name, theme, set_id, rare_draw) values
+ ('a_bio1','찰스 다윈','bio','set_bio',true),('a_bio2','그레고어 멘델','bio','set_bio',false),
+ ('a_bio3','제임스 왓슨','bio','set_bio',false),('a_bio4','로절린드 프랭클린','bio','set_bio',false),
+ ('a_bio5','제인 구달','bio','set_bio',false),('a_bio6','루이 파스퇴르','bio','set_bio',false),
+ ('a_bio7','프랜시스 크릭','bio','set_bio',false),('a_bio8','알렉산더 플레밍','bio','set_bio',false),
+ ('a_bio9','바버라 매클린톡','bio','set_bio',false),('a_bio10','에드워드 제너','bio','set_bio',false),
+ ('a_chem1','앙투안 라부아지에','chem','set_chem',false),('a_chem2','드미트리 멘델레예프','chem','set_chem',false),
+ ('a_chem3','마리 퀴리','chem','set_chem',true),('a_chem4','라이너스 폴링','chem','set_chem',false),
+ ('a_chem5','프리츠 하버','chem','set_chem',false),('a_chem6','존 돌턴','chem','set_chem',false),
+ ('a_chem7','알프레드 노벨','chem','set_chem',false),('a_chem8','로버트 보일','chem','set_chem',false),
+ ('a_chem9','도러시 호지킨','chem','set_chem',false),('a_chem10','스반테 아레니우스','chem','set_chem',false),
+ ('a_earth1','알프레드 베게너','earth','set_earth',false),('a_earth2','찰스 라이엘','earth','set_earth',false),
+ ('a_earth3','제임스 허턴','earth','set_earth',false),('a_earth4','마리 타프','earth','set_earth',false),
+ ('a_earth5','밀루틴 밀란코비치','earth','set_earth',false),('a_earth6','니콜라우스 코페르니쿠스','earth','set_earth',true),
+ ('a_earth7','에드워드 로렌즈','earth','set_earth',false),('a_earth8','야코브 비에르크네스','earth','set_earth',false),
+ ('a_earth9','요하네스 케플러','earth','set_earth',false),('a_earth10','찬드라세카르','earth','set_earth',false),
+ ('a_phys1','아이작 뉴턴','phys','set_phys',true),('a_phys2','마이클 패러데이','phys','set_phys',false),
+ ('a_phys3','알베르트 아인슈타인','phys','set_phys',false),('a_phys4','제임스 클러크 맥스웰','phys','set_phys',false),
+ ('a_phys5','리제 마이트너','phys','set_phys',false),('a_phys6','갈릴레오 갈릴레이','phys','set_phys',false),
+ ('a_phys7','리처드 파인만','phys','set_phys',false),('a_phys8','닐스 보어','phys','set_phys',false),
+ ('a_phys9','어니스트 러더퍼드','phys','set_phys',false),('a_phys10','베르너 하이젠베르크','phys','set_phys',false),
+ ('a_etc1','앨런 튜링','etc','set_etc',true),('a_etc2','클로드 섀넌','etc','set_etc',false),
+ ('a_etc3','에이다 러브레이스','etc','set_etc',false),('a_etc4','그레이스 호퍼','etc','set_etc',false),
+ ('a_etc5','팀 버너스리','etc','set_etc',false),('a_etc6','찰스 배비지','etc','set_etc',false),
+ ('a_etc7','마빈 민스키','etc','set_etc',false),('a_etc8','존 매카시','etc','set_etc',false),
+ ('a_etc9','캐서린 존슨','etc','set_etc',false),('a_etc10','존 폰 노이만','etc','set_etc',false),
+ ('a_davinci','레오나르도 다빈치','uni','set_universal',true),('a_uni1','알렉산더 폰 훔볼트','uni','set_universal',false),
+ ('a_uni2','고트프리트 라이프니츠','uni','set_universal',false),('a_uni3','아리스토텔레스','uni','set_universal',false);
 alter table public.lab_assistants_pool enable row level security;
 drop policy if exists "anyone select assistants pool" on public.lab_assistants_pool;
 create policy "anyone select assistants pool" on public.lab_assistants_pool for select to anon using (true);
+
+-- 연구실 테마 가격표 — shinjang_science.html의 LAB_THEMES와 반드시 동일하게 유지
+create table if not exists public.lab_themes_catalog(key text primary key, cost int not null);
+truncate public.lab_themes_catalog;
+insert into public.lab_themes_catalog(key,cost) values
+ ('bright',0),('cozy',300),('playful',300),('classic',300),('space',400),('greenhouse',400),
+ ('neon',400),('ocean',400),('snu',1000),('yonsei',1000),('korea',1000),('skku',1000),('hanyang',1000);
+alter table public.lab_themes_catalog enable row level security;
+drop policy if exists "anyone select themes catalog" on public.lab_themes_catalog;
+create policy "anyone select themes catalog" on public.lab_themes_catalog for select to anon using (true);
 
 -- 뽑기(가챠) — GACHA_COST=100. 학사65%·석사25%·박사9%(전설 1% 제외 나머지 99% 중 비율), 전설 1%.
 -- 이미 보유한 조수가 또 나오면(중복) 30% 환급, 아니면 새로 배열에 추가.
@@ -602,6 +632,263 @@ begin
   insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
     on conflict (name) do update set rc=excluded.rc, updated_at=now();
   return jsonb_build_object('ok', true, 'rc', cur_rc, 'deptSlots', cur_slots);
+end; $$;
+
+-- 강화(레벨업) — 비용은 학위 기본값×(1+(lv-1)*0.6). 실패 시 대부분 그대로, 10% 확률로 조수가 떠남.
+-- Lv.5에서 성공하면 다음 학위로 승급(박사는 승급 없이 레벨만 계속 오름).
+create or replace function public.lab_enhance(p_name text, p_token text, p_idx int)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; lv int; enh_cost int; cost int;
+  success_rate numeric; cur_rc int; success boolean; leaves boolean;
+  new_assistants jsonb; new_data jsonb; kind text; new_lv int; new_degree text; line text; aname text;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
+  if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
+  inst := assistants->p_idx;
+  degree := coalesce(inst->>'degree','bachelor');
+  lv := coalesce((inst->>'lv')::int, 1);
+  select name into aname from lab_assistants_pool where id=inst->>'poolId';
+  enh_cost := case degree when 'bachelor' then 10 when 'master' then 25 when 'phd' then 50 else 10 end;
+  cost := round(enh_cost*(1+(lv-1)*0.6));
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  if cur_rc < cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||cost||' 필요)'); end if;
+
+  if lv<=5 then success_rate := (array[.90,.75,.60,.45,.30])[lv];
+  else success_rate := greatest(0.02, 0.30*power(0.8, lv-5)); end if;
+
+  cur_rc := cur_rc - cost;
+  success := random() < success_rate;
+
+  if not success then
+    leaves := random() < 0.1;
+    if not leaves then
+      new_data := jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc));
+      kind := 'fail-stay';
+    else
+      new_assistants := assistants - p_idx;
+      new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}', new_assistants);
+      kind := 'fail-leave';
+      line := (array['함께해서 더러웠고 다신 만나지 말자','저는 자유로운 집요정이에요!','이 구역은 이제 안녕, 저는 떠납니다',
+        '그동안 고마웠어요, 두 번 다시는 안 볼 사이예요','나만 없어 워라밸... 이제 저부터 챙길게요','이건 제 최종 결정입니다. 안녕히',
+        '다음 생에는 다른 연구실에서 만나요','저 그만할래요. 총총','인연이 아니었나 봐요, 여기까지가 제 최선이었어요',
+        '저는 이 연구실 그만두고 유튜버 할게요'])[floor(random()*10+1)::int];
+    end if;
+  else
+    if lv>=5 and degree<>'phd' then
+      new_degree := case degree when 'bachelor' then 'master' else 'phd' end;
+      new_lv := 1; kind := 'success-promote';
+    else
+      new_degree := degree; new_lv := lv+1; kind := 'success-lv';
+    end if;
+    inst := jsonb_set(jsonb_set(inst, '{degree}', to_jsonb(new_degree)), '{lv}', to_jsonb(new_lv));
+    new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
+    new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}', new_assistants);
+  end if;
+
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'kind', kind, 'rc', cur_rc, 'degree', new_degree, 'lv', new_lv, 'line', line, 'leftDegree', degree, 'name', aname);
+end; $$;
+
+-- 조수를 연구동에 배치/해제 — 배치 슬롯 한도를 서버가 직접 검사한다.
+create or replace function public.lab_assign(p_name text, p_token text, p_idx int, p_dept_id text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype; assistants jsonb; inst jsonb; cur_dept text; assigned_count int; slots int; new_assistants jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
+  if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
+  inst := assistants->p_idx;
+  cur_dept := inst->>'assignedDept';
+  slots := coalesce((gs.data->>'deptSlots')::int, 2);
+  if p_dept_id is not null and p_dept_id<>'' and cur_dept is null then
+    select count(*) into assigned_count from jsonb_array_elements(assistants) a where a->>'assignedDept' is not null;
+    if assigned_count >= slots then
+      return jsonb_build_object('ok', false, 'error', '배치 슬롯이 가득 찼어요 ('||slots||'개) · 슬롯을 확장해보세요');
+    end if;
+  end if;
+  inst := jsonb_set(inst, '{assignedDept}', case when p_dept_id is null or p_dept_id='' then 'null'::jsonb else to_jsonb(p_dept_id) end);
+  inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb((extract(epoch from now())*1000)::bigint));
+  new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
+  update lab_game_state set data=jsonb_set(gs.data,'{assistants}',new_assistants), updated_at=now() where name=trim(p_name);
+  return jsonb_build_object('ok', true, 'assignedDept', p_dept_id);
+end; $$;
+
+-- 연구포인트로 즉시 논문 작성(150🔬, 24시간 대기 없이 바로 완성).
+create or replace function public.lab_instant_paper(p_name text, p_token text, p_idx int)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; cur_rc int; cost int:=150;
+  lo int; hi int; score int; nobel boolean; new_assistants jsonb; new_data jsonb; rs int; nobel_count int; papers jsonb;
+  aname text; atheme text; now_ms bigint;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
+  if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
+  inst := assistants->p_idx;
+  if inst->>'assignedDept' is not null then return jsonb_build_object('ok', false, 'error', '연구동에 배치된 조수예요.'); end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  if cur_rc < cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||cost||' 필요)'); end if;
+
+  degree := coalesce(inst->>'degree','bachelor');
+  select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
+  if is_rare then lo:=100; hi:=200;
+  else case degree when 'bachelor' then lo:=10; hi:=50; when 'master' then lo:=30; hi:=100; else lo:=60; hi:=180; end case; end if;
+  score := lo + floor(random()*(hi-lo+1))::int;
+  nobel := score > 170;
+  now_ms := (extract(epoch from now())*1000)::bigint;
+
+  cur_rc := cur_rc - cost;
+  inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
+  new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
+  rs := coalesce((gs.data->>'researchScore')::int,0) + score;
+  nobel_count := coalesce((gs.data->>'nobelCount')::int,0) + (case when nobel then 1 else 0 end);
+  papers := coalesce(gs.data->'papers','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+    'title','「연구 성과 보고서」','theme', atheme, 'assistantName', aname, 'degree', degree, 'score', score, 'nobel', nobel, 'at', now_ms));
+  new_data := gs.data;
+  new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+  new_data := jsonb_set(new_data, '{assistants}', new_assistants);
+  new_data := jsonb_set(new_data, '{researchScore}', to_jsonb(rs));
+  new_data := jsonb_set(new_data, '{nobelCount}', to_jsonb(nobel_count));
+  new_data := jsonb_set(new_data, '{papers}', papers);
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'rc', cur_rc, 'score', score, 'nobel', nobel, 'researchScore', rs, 'title', '「연구 성과 보고서」', 'assistantName', aname);
+end; $$;
+
+-- 무료 논문 수거(24시간 지난 것만) — 서버가 직접 24시간 경과를 검사한다.
+create or replace function public.lab_collect_paper(p_name text, p_token text, p_idx int)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean;
+  lo int; hi int; score int; nobel boolean; new_assistants jsonb; new_data jsonb; rs int; nobel_count int; papers jsonb;
+  last_collected bigint; hours_elapsed numeric; aname text; atheme text; now_ms bigint;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
+  if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
+  inst := assistants->p_idx;
+  if inst->>'assignedDept' is not null then return jsonb_build_object('ok', false, 'error', '연구동에 배치된 조수예요.'); end if;
+  now_ms := (extract(epoch from now())*1000)::bigint;
+  last_collected := coalesce((inst->>'lastCollectedAt')::bigint, 0);
+  hours_elapsed := (now_ms - last_collected) / 3600000.0;
+  if hours_elapsed < 24 then return jsonb_build_object('ok', false, 'error', '아직 24시간이 안 지났어요'); end if;
+
+  degree := coalesce(inst->>'degree','bachelor');
+  select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
+  if is_rare then lo:=100; hi:=200;
+  else case degree when 'bachelor' then lo:=10; hi:=50; when 'master' then lo:=30; hi:=100; else lo:=60; hi:=180; end case; end if;
+  score := lo + floor(random()*(hi-lo+1))::int;
+  nobel := score > 170;
+
+  inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
+  new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
+  rs := coalesce((gs.data->>'researchScore')::int,0) + score;
+  nobel_count := coalesce((gs.data->>'nobelCount')::int,0) + (case when nobel then 1 else 0 end);
+  papers := coalesce(gs.data->'papers','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+    'title','「연구 성과 보고서」','theme', atheme, 'assistantName', aname, 'degree', degree, 'score', score, 'nobel', nobel, 'at', now_ms));
+  new_data := gs.data;
+  new_data := jsonb_set(new_data, '{assistants}', new_assistants);
+  new_data := jsonb_set(new_data, '{researchScore}', to_jsonb(rs));
+  new_data := jsonb_set(new_data, '{nobelCount}', to_jsonb(nobel_count));
+  new_data := jsonb_set(new_data, '{papers}', papers);
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  return jsonb_build_object('ok', true, 'score', score, 'nobel', nobel, 'researchScore', rs, 'title', '「연구 성과 보고서」', 'assistantName', aname);
+end; $$;
+
+-- 완성된 논문(24시간 지난 것) 전부 한 번에 수거.
+create or replace function public.lab_collect_all_papers(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; i int; n int;
+  degree text; is_rare boolean; lo int; hi int; score int; nobel boolean;
+  rs int; nobel_count int; papers jsonb; collected jsonb := '[]'::jsonb;
+  last_collected bigint; hours_elapsed numeric; aname text; atheme text; now_ms bigint;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
+  n := jsonb_array_length(assistants);
+  rs := coalesce((gs.data->>'researchScore')::int,0);
+  nobel_count := coalesce((gs.data->>'nobelCount')::int,0);
+  papers := coalesce(gs.data->'papers','[]'::jsonb);
+  now_ms := (extract(epoch from now())*1000)::bigint;
+
+  for i in 0..n-1 loop
+    inst := assistants->i;
+    if inst->>'assignedDept' is null then
+      last_collected := coalesce((inst->>'lastCollectedAt')::bigint, 0);
+      hours_elapsed := (now_ms - last_collected) / 3600000.0;
+      if hours_elapsed >= 24 then
+        degree := coalesce(inst->>'degree','bachelor');
+        select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
+        if is_rare then lo:=100; hi:=200;
+        else case degree when 'bachelor' then lo:=10; hi:=50; when 'master' then lo:=30; hi:=100; else lo:=60; hi:=180; end case; end if;
+        score := lo + floor(random()*(hi-lo+1))::int;
+        nobel := score > 170;
+        inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
+        assistants := jsonb_set(assistants, array[i::text], inst);
+        rs := rs + score;
+        if nobel then nobel_count := nobel_count + 1; end if;
+        papers := papers || jsonb_build_array(jsonb_build_object(
+          'title','「연구 성과 보고서」','theme', atheme, 'assistantName', aname, 'degree', degree, 'score', score, 'nobel', nobel, 'at', now_ms));
+        collected := collected || jsonb_build_array(jsonb_build_object('assistantName', aname, 'score', score, 'nobel', nobel,
+          'title', '「연구 성과 보고서」', 'theme', atheme, 'degree', degree, 'at', now_ms));
+      end if;
+    end if;
+  end loop;
+
+  if jsonb_array_length(collected) = 0 then
+    return jsonb_build_object('ok', false, 'error', '지금 수거할 수 있는 논문이 없어요');
+  end if;
+
+  update lab_game_state set data=(
+    (gs.data - 'assistants' - 'researchScore' - 'nobelCount' - 'papers')
+    || jsonb_build_object('assistants', assistants, 'researchScore', rs, 'nobelCount', nobel_count, 'papers', papers)
+  ), updated_at=now() where name=trim(p_name);
+  return jsonb_build_object('ok', true, 'collected', collected, 'researchScore', rs);
+end; $$;
+
+-- 연구실 테마 구매/전환 — 이미 보유했으면 무료로 전환만, 아니면 구매.
+create or replace function public.lab_buy_theme(p_name text, p_token text, p_key text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype; v_cost int; cur_rc int; owned jsonb; new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select cost into v_cost from lab_themes_catalog where key=p_key;
+  if v_cost is null then return jsonb_build_object('ok', false, 'error', '존재하지 않는 테마입니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  owned := coalesce(gs.data->'ownedThemes', '["bright"]'::jsonb);
+  if owned @> to_jsonb(p_key) then
+    update lab_game_state set data=jsonb_set(gs.data,'{labTheme}',to_jsonb(p_key)), updated_at=now() where name=trim(p_name);
+    return jsonb_build_object('ok', true, 'alreadyOwned', true, 'labTheme', p_key);
+  end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  if cur_rc < v_cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||v_cost||' 필요)'); end if;
+  cur_rc := cur_rc - v_cost;
+  owned := owned || jsonb_build_array(p_key);
+  new_data := gs.data;
+  new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+  new_data := jsonb_set(new_data, '{ownedThemes}', owned);
+  new_data := jsonb_set(new_data, '{labTheme}', to_jsonb(p_key));
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'alreadyOwned', false, 'rc', cur_rc, 'labTheme', p_key);
 end; $$;
 
 -- ============================================================

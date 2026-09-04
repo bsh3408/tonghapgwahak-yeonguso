@@ -425,7 +425,7 @@ const DEGREE_ORDER=['bachelor','master','phd'];
 const DEGREE={
   bachelor:{n:'학사',rate:20,cap:20,color:'#8d8175',enhCost:10},
   master:{n:'석사',rate:35,cap:35,color:'#3f6fa8',enhCost:25},
-  phd:{n:'박사',rate:55,cap:55,color:'#8a6bd6',enhCost:50}
+  phd:{n:'박사',rate:60,cap:60,color:'#8a6bd6',enhCost:50}
 };
 const MAX_LV=5;
 // 해고 시 돌려받는 연구포인트(투자 비용의 대략적인 환급) — 실제 지급은 서버(lab_dismiss)가 하고,
@@ -1621,7 +1621,7 @@ function themeOwnedCount(theme){
  return S.assistants.filter(a=>{const d=assistantDef(a.poolId); return d&&d.theme===theme;}).length;
 }
 // 전설급(다빈치 제외)은 박사 배율에 이 배수를 더 곱해서, 박사 Lv.5보다도 전설 Lv.1이 항상 더 높게 만든다
-const LEGEND_RATE_MULT=2.5;
+const LEGEND_RATE_MULT=2.2;
 /* 전설급 조수(다빈치 제외)를 자기 전공과 맞는 연구동에 배치해두면, 그 연구동에 같이 배치된
    "다른" 조수들의 획득량을 50% 올려준다(본인 몫에는 적용 안 됨 — 다빈치는 전공이 없어 제외). */
 function deptHasLegendBuff(deptId, excludePoolId){
@@ -1632,20 +1632,36 @@ function deptHasLegendBuff(deptId, excludePoolId){
   return d && d.rareDraw && d.theme!=='uni' && dept.ms.some(m=>m.mj===d.theme);
  });
 }
-function assistantEffectiveRateCap(inst){
+/* 생산 속도에 곱해지는 보너스들을 낱개로 계산해둔다 — "왜 같은 학사인데 나랑 다르지?" 질문에
+   화면에서 바로 답이 되도록, 카드에 어떤 보너스가 붙어서 지금 배율이 됐는지 보여주는 용도. */
+function assistantRateBreakdown(inst){
  const def=assistantDef(inst.poolId); const deg=DEGREE[inst.degree||'bachelor'];
  const lv=inst.lv||1;
- let rate=deg.rate*(1+(lv-1)*.15), cap=deg.cap*(1+(lv-1)*.15);
- if(def.rareDraw) { rate*=LEGEND_RATE_MULT; cap*=LEGEND_RATE_MULT; }
+ const lvMult=1+(lv-1)*.15;
+ const legendMult=def.rareDraw?LEGEND_RATE_MULT:1;
+ let deptMult=1, legendBuffMult=1;
  if(inst.assignedDept){
   const dept=DEPTS.find(d=>d.id===inst.assignedDept);
-  // 만능형(theme:'uni')은 전공 일치 여부와 무관하게 어느 연구동이든 배치 보너스를 받는다
-  if(dept && (def.theme==='uni' || dept.ms.some(m=>m.mj===def.theme))){ rate*=1.2; cap*=1.2; }
-  if(deptHasLegendBuff(inst.assignedDept, inst.poolId)){ rate*=1.5; cap*=1.5; }
+  if(dept && (def.theme==='uni' || dept.ms.some(m=>m.mj===def.theme))) deptMult=1.2;
+  if(deptHasLegendBuff(inst.assignedDept, inst.poolId)) legendBuffMult=1.5;
  }
  const themeMult=Math.pow(1.2, Math.max(0, themeOwnedCount(def.theme)-1));
- rate*=themeMult; cap*=themeMult;
- return {rate, cap};
+ const totalMult=lvMult*legendMult*deptMult*legendBuffMult*themeMult;
+ return {base:deg.rate, lvMult, legendMult, deptMult, legendBuffMult, themeMult, totalMult,
+  rate:deg.rate*totalMult, cap:deg.cap*totalMult};
+}
+function assistantEffectiveRateCap(inst){
+ const {rate,cap}=assistantRateBreakdown(inst); return {rate, cap};
+}
+/* 카드에 보여줄 보너스 칩 목록 — 기본(×1)인 항목은 안 보여주고, 실제로 붙어 있는 것만 나열한다 */
+function assistantBonusChips(inst){
+ const b=assistantRateBreakdown(inst); const chips=[];
+ if(b.lvMult>1) chips.push(`Lv.${inst.lv||1} +${Math.round((b.lvMult-1)*100)}%`);
+ if(b.legendMult>1) chips.push(`✨전설 ×${b.legendMult}`);
+ if(b.deptMult>1) chips.push(`🏢전공일치 +20%`);
+ if(b.legendBuffMult>1) chips.push(`🌟전설버프 +50%`);
+ if(b.themeMult>1) chips.push(`👥같은전공 ${themeOwnedCount(assistantDef(inst.poolId).theme)}명 +${Math.round((b.themeMult-1)*100)}%`);
+ return chips;
 }
 function collectableAmount(inst){
  if(!inst.assignedDept) return 0; // 로비(연구소)에서 대기 중인 조수는 연구포인트를 생산하지 않는다
@@ -1893,6 +1909,9 @@ function assistantSheet(){
       <span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span><span style="font-size:11px;color:${isLegend?'var(--gold)':'var(--dim)'};font-weight:${isLegend?800:400}">${SET_NAMES[def.setId]}</span></div>
      <div class="astat">${assistantLocationLabel(inst)}${assigned?` · ${remainingTimeLabel(inst)}`:''}</div>
      <div class="astat">분당 ${(rate/60).toFixed(1)}🔬(1시간이면 최대치) · 최대 저장 ${Math.round(cap)}🔬 · 전공 ${MJ[def.theme]?MJ[def.theme].n:def.theme}</div>
+     ${(()=>{const chips=assistantBonusChips(inst); return chips.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 4px">
+       ${chips.map(c=>`<span style="font-size:10px;font-weight:800;color:var(--mint2);background:#eef7f4;border:1px solid #bce3d8;border-radius:9px;padding:2px 7px">${c}</span>`).join('')}
+      </div>`:`<div style="font-size:10px;color:var(--dim2);margin:2px 0 4px">지금 붙은 보너스 없음(기본 배율)</div>`;})()}
      <select onchange="assignAssistant(${idx}, this.value)">
       <option value="">배치 안 함(연구소 대기)</option>
       ${openDepts.map(d=>`<option value="${d.id}" ${inst.assignedDept===d.id?'selected':''}>${d.n}${(def.theme==='uni'||d.ms.some(m=>m.mj===def.theme))?' (적합·+20%)':''}</option>`).join('')}

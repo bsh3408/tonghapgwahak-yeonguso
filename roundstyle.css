@@ -1,9 +1,10 @@
+@font-face{font-family:'OgRenaissanceSecret';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2312-1@1.1/OG_Renaissance_Secret-Rg.woff2') format('woff2');font-display:swap}
 :root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
  --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--txt);font-size:16.5px;line-height:1.65;
- font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;overflow-x:hidden}
+ font-family:"OgRenaissanceSecret","Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;overflow-x:hidden}
 button{font-family:inherit;cursor:pointer}
 /* 크롬북(터치스크린 포함) 환경 대응: 버튼 연타 시 텍스트가 선택되거나 탭 지연이 생기지 않도록 */
 button,.clsbtn,.pairbtn,.opt,.card.pool,.navbtn,.prevbtn,.resetbtn,.rmbtn{

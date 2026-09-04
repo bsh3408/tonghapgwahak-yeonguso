@@ -8,12 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
 <style>
+/* 전체 글씨체 — 눈누(noonnu.cc) 'OG 르네상스 비밀' */
+@font-face{font-family:'OgRenaissanceSecret';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2312-1@1.1/OG_Renaissance_Secret-Rg.woff2') format('woff2');font-display:swap}
 :root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
  --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72;--purple:#a892e0;--green:#6ec98a;--blue:#7fb3e8}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.55;
- font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;overflow-x:hidden}
+ font-family:"OgRenaissanceSecret","Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;overflow-x:hidden}
 button{font-family:inherit;cursor:pointer;color:inherit}
 /* 크롬북(터치스크린 포함) 환경 대응 */
 button,.mrow,.splitcard,.pabtn,.clk,.opt{
@@ -426,6 +428,9 @@ const DEGREE={
   phd:{n:'박사',rate:55,cap:55,color:'#8a6bd6',enhCost:50}
 };
 const MAX_LV=5;
+// 해고 시 돌려받는 연구포인트(투자 비용의 대략적인 환급) — 실제 지급은 서버(lab_dismiss)가 하고,
+// 여기 값은 확인창에 미리 보여주는 용도.
+const DISMISS_REFUND={bachelor:50, master:120, phd:250};
 // 강화 비용을 낮춰서 "많이 시도"는 쉽게 하되, 성공 확률도 같이 낮춰서 "레벨 올리기"는 오히려 더 어렵게 만듦
 const ENHANCE_SUCCESS=[.90,.75,.60,.45,.30]; // 인덱스=lv-1: 그 레벨에서 강화 시도했을 때 성공 확률
 // 박사(전설 포함)는 Lv.5를 넘어서도 계속 강화 가능 — Lv.5 확률(30%)에서 레벨마다 80%씩(20%씩 줄어드는 게 아니라
@@ -564,12 +569,14 @@ const SCIENTIST_INFO={
  a_uni2:'뉴턴과 별개로 미적분을 발명하고, 오늘날 컴퓨터의 기반인 이진법을 처음 체계화했어요.',
  a_uni3:'물리학·생물학·천문학까지 아우르며 서양 과학의 틀을 처음 세운 고대 최고의 박학다식한 학자예요.'
 };
-/* 집(연구소)에 대기 중인 조수가 24시간을 채우면 논문 1편이 자동으로 완성된다(등급별 고정 범위,
-   레벨·전공보너스는 영향 없음). 170점을 넘기면 노벨상(추가 점수 없이 연출용). */
+/* 집(연구소)에 대기 중인 조수가 24시간을 채우면 논문 1편이 자동으로 완성된다. 같은 등급이면
+   항상 같은 점수(레벨·전공보너스는 영향 없음) — 실제 계산은 서버 함수 lab_paper_score가 한다.
+   이 상수들은 화면에 참고 수치를 보여주는 용도일 뿐, 점수 산정에는 쓰이지 않는다. */
 const HOME_RESEARCH_HOURS=24;
-const HOME_SCORE_RANGE={bachelor:[10,50], master:[30,100], phd:[60,180]};
-const LEGEND_SCORE_RANGE=[100,200];
-const NOBEL_SCORE_THRESHOLD=170;
+const HOME_SCORE_FIXED={bachelor:30, master:65, phd:120};
+const LEGEND_SCORE_FIXED=150;
+const NOBEL_BONUS=50;
+const NOBEL_CHANCE=0.05;
 const PAPER_TITLES={
  bio:['개체군 변이 양상 관찰 보고','생태계 평형 회복 모델 연구','생물다양성 지표 개발 연구',
   '멘델 유전 법칙 재현 실험','자연선택 시뮬레이션 모델 개발','DNA 복제 오류율 비교 연구',
@@ -622,7 +629,7 @@ function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'gue
 // assistants: [{poolId, assignedDept(부서id|null), lastCollectedAt(ms)}]
 // 처음 로그인하는 학생의 초기값: 연구포인트 200 (사용자 지정, 2026-08-27)
 const DEFAULT_DEPT_SLOTS=2, DEPT_SLOT_COST=100;
-const S={rc:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
+const S={rc:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,totalResearchEarned:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
  deptSlots:DEFAULT_DEPT_SLOTS,
  everCorrect:{}, everPerfect:{}, everPassed:{}, opinionAwarded:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false};
 
@@ -633,6 +640,7 @@ function applyStateSnapshot(s){
  S.rc=s.rc||0; S.lv=s.lv||1; S.fail=s.fail||0;
  S.deptSlots=s.deptSlots||DEFAULT_DEPT_SLOTS;
  S.assistants=Array.isArray(s.assistants)?s.assistants:[]; S.researchScore=s.researchScore||0;
+ S.totalResearchEarned=s.totalResearchEarned||S.researchScore||0;
  S.papers=Array.isArray(s.papers)?s.papers:[]; S.nobelCount=s.nobelCount||0;
  S.labTheme=s.labTheme||'bright';
  S.ownedThemes=Array.isArray(s.ownedThemes)&&s.ownedThemes.length?s.ownedThemes:['bright'];
@@ -669,7 +677,7 @@ async function pullGameStateFromServer(){
 function saveLabState(){
  try{ localStorage.setItem(sKey('lab_state_v1'), JSON.stringify({
    rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots,
-   assistants:S.assistants, researchScore:S.researchScore, papers:S.papers, nobelCount:S.nobelCount,
+   assistants:S.assistants, researchScore:S.researchScore, totalResearchEarned:S.totalResearchEarned, papers:S.papers, nobelCount:S.nobelCount,
    labTheme:S.labTheme, ownedThemes:S.ownedThemes,
    everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
    claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
@@ -684,6 +692,7 @@ function saveLabState(){
 let _gameStateSyncTimer=null;
 function gameStateSyncPayload(){
  return {rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots, assistants:S.assistants, researchScore:S.researchScore,
+  totalResearchEarned:S.totalResearchEarned,
   papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
   everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
   claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
@@ -1731,6 +1740,19 @@ function forceReturnAssistant(idx){
  if(amt>0) flyGain('rc', amt);
  announceReturn(def.name, hours, amt);
 }
+/* 조수 해고 — 되돌릴 수 없어서 반드시 확인창을 거친다. 환급액은 학위(degree)별로 다르고 서버가 최종 지급한다. */
+async function dismissAssistant(idx){
+ const inst=S.assistants[idx]; if(!inst) return;
+ const def=assistantDef(inst.poolId), deg=DEGREE[inst.degree||'bachelor'];
+ const refund=DISMISS_REFUND[inst.degree||'bachelor'];
+ if(!confirm(`${def.name}(${deg.n})을(를) 정말 해고할까요?\n연구포인트 ${refund}🔬을 돌려받고, 이 조수는 되돌릴 수 없이 떠나요.`)) return;
+ const out=await callGameAction('lab_dismiss', {p_idx: idx});
+ if(!out) return;
+ S.rc=out.rc;
+ S.assistants.splice(idx,1);
+ saveLabState(); render(); assistantSheet();
+ toast(`${out.assistantName}을(를) 해고하고 연구포인트 +${out.refund}🔬 돌려받았어요`, 'gold');
+}
 /* 연구동에 배치된 조수의 남은 연구 시간을 문구로 만든다 */
 function remainingTimeLabel(inst){
  const {rate,cap}=assistantEffectiveRateCap(inst);
@@ -1882,6 +1904,8 @@ function assistantSheet(){
       ${maxed?`<span style="font-size:11px;color:var(--gold);font-weight:800;align-self:center">🏆 최고 레벨(박사 Lv.5)</span>`
        :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
         onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
+      <button class="collectbtn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)"
+       onclick="dismissAssistant(${idx})">🚪 해고 (🔬+${DISMISS_REFUND[inst.degree||'bachelor']})</button>
      </div>
     </div>`;}).join('')}
   <div class="box" style="font-size:11.5px;color:var(--dim);line-height:1.8">
@@ -1909,7 +1933,7 @@ async function fetchLabScores(){
   let list;
   if(isSupabaseConfigured()){
    const rows = await supaSelect('lab_scores', 'order=research_score.desc');
-   list = rows.map(r=>({name:r.name, classNo:r.class_no, researchScore:r.research_score}));
+   list = rows.map(r=>({name:r.name, classNo:r.class_no, researchScore:r.research_score, totalResearchEarned:r.total_research_earned}));
   } else {
    const res=await fetch('/api/labscore',{cache:'no-store'});
    list = await res.json();
@@ -2006,6 +2030,7 @@ function applyPaperOutcome(idx, out, instant){
  if(inst) inst.lastCollectedAt=Date.now();
  if(out.nobel) S.nobelCount=(S.nobelCount||0)+1;
  S.researchScore=out.researchScore;
+ S.totalResearchEarned=(S.totalResearchEarned||0)+out.score;
  if(instant) S.rc=out.rc;
  S.papers.push({title:out.title, theme:out.theme, assistantName:out.assistantName, degree:out.degree, score:out.score, nobel:out.nobel, at:Date.now()});
  saveLabState(); render(); postLabScore();
@@ -2028,6 +2053,7 @@ async function collectAllHomeResearch(){
  const out=await callGameAction('lab_collect_all_papers');
  if(!out) return;
  S.researchScore=out.researchScore;
+ S.totalResearchEarned=(S.totalResearchEarned||0)+out.collected.reduce((sum,p)=>sum+p.score,0);
  out.collected.forEach(p=>{
   if(p.nobel) S.nobelCount=(S.nobelCount||0)+1;
   S.papers.push({title:p.title, theme:p.theme, assistantName:p.assistantName, degree:p.degree, score:p.score, nobel:p.nobel, at:p.at});
@@ -2059,6 +2085,9 @@ async function instantWritePaper(idx){
 async function rankSheet(){
  sheet('🏆 전체 랭킹','연구점수 기준 · 성적과는 무관하지만, 1~10등은 +1점 대상이에요',`
   <div class="box" id="rankBox" style="text-align:center;color:var(--dim)">불러오는 중...</div>`);
+ // "총 누적 연구점수"는 항상 서버가 실제 논문으로 준 점수만 더한 값 — 지금은 연구점수 자체가 깎이지 않아서
+ // 두 값이 거의 항상 같지만, 혹시 표시되는 연구점수만 이상하게 튀는 경우가 있으면(치트 시도 등) 이 값과
+ // 비교해서 걸러낼 수 있게 같이 보여준다.
  let list=await fetchLabScores();
  const myRank=list.findIndex(s=>s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name));
  const box=document.getElementById('rankBox');
@@ -2071,11 +2100,16 @@ async function rankSheet(){
  box.outerHTML=`
   ${top10?`<div class="banner gold">🎉 전체 top10! 선생님께 확인하면 수행평가 +1점 대상일 수 있어요.</div>`:''}
   <div class="box"><h3>연구점수 전체 랭킹</h3>
-   ${list.slice(0,10).map((s,i)=>`<div class="rk ${s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name)?'me':''}">
-    <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}연구소${s.classNo?'('+s.classNo+')':''}<span class="v">연구점수 ${s.researchScore.toLocaleString()}🏆</span></div>`).join('')}
-   ${myRank>=10?`<div class="rk me"><span class="rn">${myRank+1}</span>${CURRENT_STUDENT?CURRENT_STUDENT.name:'나'}연구소<span class="v">연구점수 ${S.researchScore.toLocaleString()}🏆</span></div>`:''}
+   ${list.slice(0,10).map((s,i)=>`<div class="rk ${s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name)?'me':''}" style="flex-wrap:wrap">
+    <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}연구소${s.classNo?'('+s.classNo+')':''}
+    <span class="v">연구점수 ${s.researchScore.toLocaleString()}🏆</span>
+    <div style="flex-basis:100%;text-align:right;font-size:10.5px;color:var(--dim2)">총 누적 ${(s.totalResearchEarned??s.researchScore).toLocaleString()}🏆</div></div>`).join('')}
+   ${myRank>=10?`<div class="rk me" style="flex-wrap:wrap"><span class="rn">${myRank+1}</span>${CURRENT_STUDENT?CURRENT_STUDENT.name:'나'}연구소
+    <span class="v">연구점수 ${S.researchScore.toLocaleString()}🏆</span>
+    <div style="flex-basis:100%;text-align:right;font-size:10.5px;color:var(--dim2)">총 누적 ${(S.totalResearchEarned||S.researchScore).toLocaleString()}🏆</div></div>`:''}
    <div style="font-size:11.5px;color:var(--dim2);margin-top:9px;border-top:1.5px solid var(--line);padding-top:9px">
-    전체 학생 중 연구점수 1~10등은 선생님께 확인 후 수행평가 +1점 대상이 됩니다.</div></div>`;
+    전체 학생 중 연구점수 1~10등은 선생님께 확인 후 수행평가 +1점 대상이 됩니다. '총 누적'은 지금까지 논문으로
+    실제로 받은 점수 합계예요 — 위 연구점수와 차이가 크면 이상 징후로 볼 수 있어요.</div></div>`;
 }
 
 /* ================= 로그인 ================= */

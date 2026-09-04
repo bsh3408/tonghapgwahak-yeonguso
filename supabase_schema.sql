@@ -324,18 +324,27 @@ create table if not exists public.lab_scores (
   research_score int not null default 0,
   updated_at timestamptz not null default now()
 );
+alter table public.lab_scores add column if not exists total_research_earned int not null default 0;
 alter table public.lab_scores enable row level security;
 drop policy if exists "anyone select scores" on public.lab_scores;
 create policy "anyone select scores" on public.lab_scores for select to anon using (true);
 
+-- p_research_score는 더 이상 신뢰하지 않는다 — 예전엔 클라이언트가 계산한 S.researchScore를
+-- 그대로 덮어썼는데, 그러면 학생이 이 함수를 직접 호출해서 랭킹(수행평가 top10 +1점 보너스와
+-- 직결됨)을 조작할 수 있었다. 이제 서버가 갖고 있는 lab_game_state.data를 유일한 진실로 삼는다.
 create or replace function public.lab_score_upsert(p_name text, p_token text, p_class_no text, p_research_score int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype; real_score int; real_total int;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
-  insert into lab_scores(name, class_no, research_score, updated_at)
-    values (p_name, p_class_no, greatest(0, p_research_score), now())
-  on conflict (name) do update set class_no = excluded.class_no, research_score = excluded.research_score, updated_at = now();
-  return jsonb_build_object('ok', true);
+  select * into gs from lab_game_state where name=trim(p_name);
+  real_score := coalesce((gs.data->>'researchScore')::int, 0);
+  real_total := coalesce((gs.data->>'totalResearchEarned')::int, real_score);
+  insert into lab_scores(name, class_no, research_score, total_research_earned, updated_at)
+    values (p_name, p_class_no, real_score, real_total, now())
+  on conflict (name) do update set class_no = excluded.class_no, research_score = excluded.research_score,
+    total_research_earned = excluded.total_research_earned, updated_at = now();
+  return jsonb_build_object('ok', true, 'researchScore', real_score, 'totalResearchEarned', real_total);
 end; $$;
 
 -- ============================================================
@@ -967,12 +976,65 @@ begin
   return jsonb_build_object('ok', true, 'assignedDept', p_dept_id);
 end; $$;
 
+-- 조수 해고 — 배치 여부와 상관없이 목록에서 제거하고, 학위(degree)별로 정해진 만큼 연구포인트(rc)를
+-- 일부 돌려준다(투자한 강화 비용의 대략적인 환급 개념). 전설급은 항상 phd로 시작하므로 phd 환급액을 쓴다.
+create or replace function public.lab_dismiss(p_name text, p_token text, p_idx int)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; refund int; cur_rc int; new_assistants jsonb; aname text;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
+  if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
+  inst := assistants->p_idx;
+  degree := coalesce(inst->>'degree','bachelor');
+  select name into aname from lab_assistants_pool where id=inst->>'poolId';
+  case degree
+    when 'bachelor' then refund := 50;
+    when 'master' then refund := 120;
+    else refund := 250; -- phd(전설급 포함)
+  end case;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0) + refund;
+  new_assistants := assistants - p_idx;
+  update lab_game_state set data = jsonb_set(jsonb_set(gs.data,'{assistants}',new_assistants),'{rc}',to_jsonb(cur_rc)), updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'rc', cur_rc, 'refund', refund, 'assistantName', aname);
+end; $$;
+
+-- 논문 완성 점수(연구점수) 계산 — 학위(degree)와 전설급(is_rare) 두 값만으로 결정되는
+-- 고정값이다. 예전엔 학위별 범위(예: 학사 10~50) 안에서 무작위로 뽑아서 같은 학사라도
+-- 조수마다/뽑을 때마다 받는 점수가 들쭉날쭉했는데, "같은 등급이면 항상 같은 점수"가 되도록
+-- 완전히 통일했다. 대신 "노벨상"은 점수 자체가 아니라 5% 확률의 별도 보너스 이벤트로 분리해서,
+-- 낮은 확률로 터지는 재미는 그대로 남겨뒀다.
+-- lab_instant_paper / lab_collect_paper / lab_collect_all_papers 세 곳에서 공통으로 쓴다.
+create or replace function public.lab_paper_score(p_degree text, p_is_rare boolean, out score int, out nobel boolean)
+language plpgsql as $$
+declare base int; bonus int := 50;
+begin
+  if p_is_rare then base := 150;
+  else
+    case p_degree
+      when 'bachelor' then base := 30;
+      when 'master' then base := 65;
+      else base := 120; -- phd
+    end case;
+  end if;
+  if random() < 0.05 then
+    score := base + bonus; nobel := true;
+  else
+    score := base; nobel := false;
+  end if;
+end; $$;
+
 -- 연구포인트로 즉시 논문 작성(150🔬, 24시간 대기 없이 바로 완성).
 create or replace function public.lab_instant_paper(p_name text, p_token text, p_idx int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; cur_rc int; cost int:=150;
-  lo int; hi int; score int; nobel boolean; new_assistants jsonb; new_data jsonb; rs int; nobel_count int; papers jsonb;
+  score int; nobel boolean; new_assistants jsonb; new_data jsonb; rs int; total_earned int; nobel_count int; papers jsonb;
   aname text; atheme text; now_ms bigint;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
@@ -987,16 +1049,14 @@ begin
 
   degree := coalesce(inst->>'degree','bachelor');
   select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
-  if is_rare then lo:=100; hi:=200;
-  else case degree when 'bachelor' then lo:=10; hi:=50; when 'master' then lo:=30; hi:=100; else lo:=60; hi:=180; end case; end if;
-  score := lo + floor(random()*(hi-lo+1))::int;
-  nobel := score > 170;
+  select ps.score, ps.nobel into score, nobel from lab_paper_score(degree, is_rare) ps;
   now_ms := (extract(epoch from now())*1000)::bigint;
 
   cur_rc := cur_rc - cost;
   inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
   new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
   rs := coalesce((gs.data->>'researchScore')::int,0) + score;
+  total_earned := coalesce((gs.data->>'totalResearchEarned')::int,0) + score;
   nobel_count := coalesce((gs.data->>'nobelCount')::int,0) + (case when nobel then 1 else 0 end);
   papers := coalesce(gs.data->'papers','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
     'title','「연구 성과 보고서」','theme', atheme, 'assistantName', aname, 'degree', degree, 'score', score, 'nobel', nobel, 'at', now_ms));
@@ -1004,6 +1064,7 @@ begin
   new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
   new_data := jsonb_set(new_data, '{assistants}', new_assistants);
   new_data := jsonb_set(new_data, '{researchScore}', to_jsonb(rs));
+  new_data := jsonb_set(new_data, '{totalResearchEarned}', to_jsonb(total_earned));
   new_data := jsonb_set(new_data, '{nobelCount}', to_jsonb(nobel_count));
   new_data := jsonb_set(new_data, '{papers}', papers);
   update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
@@ -1017,7 +1078,7 @@ create or replace function public.lab_collect_paper(p_name text, p_token text, p
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean;
-  lo int; hi int; score int; nobel boolean; new_assistants jsonb; new_data jsonb; rs int; nobel_count int; papers jsonb;
+  score int; nobel boolean; new_assistants jsonb; new_data jsonb; rs int; total_earned int; nobel_count int; papers jsonb;
   last_collected bigint; hours_elapsed numeric; aname text; atheme text; now_ms bigint;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
@@ -1034,20 +1095,19 @@ begin
 
   degree := coalesce(inst->>'degree','bachelor');
   select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
-  if is_rare then lo:=100; hi:=200;
-  else case degree when 'bachelor' then lo:=10; hi:=50; when 'master' then lo:=30; hi:=100; else lo:=60; hi:=180; end case; end if;
-  score := lo + floor(random()*(hi-lo+1))::int;
-  nobel := score > 170;
+  select ps.score, ps.nobel into score, nobel from lab_paper_score(degree, is_rare) ps;
 
   inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
   new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
   rs := coalesce((gs.data->>'researchScore')::int,0) + score;
+  total_earned := coalesce((gs.data->>'totalResearchEarned')::int,0) + score;
   nobel_count := coalesce((gs.data->>'nobelCount')::int,0) + (case when nobel then 1 else 0 end);
   papers := coalesce(gs.data->'papers','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
     'title','「연구 성과 보고서」','theme', atheme, 'assistantName', aname, 'degree', degree, 'score', score, 'nobel', nobel, 'at', now_ms));
   new_data := gs.data;
   new_data := jsonb_set(new_data, '{assistants}', new_assistants);
   new_data := jsonb_set(new_data, '{researchScore}', to_jsonb(rs));
+  new_data := jsonb_set(new_data, '{totalResearchEarned}', to_jsonb(total_earned));
   new_data := jsonb_set(new_data, '{nobelCount}', to_jsonb(nobel_count));
   new_data := jsonb_set(new_data, '{papers}', papers);
   update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
@@ -1059,8 +1119,8 @@ create or replace function public.lab_collect_all_papers(p_name text, p_token te
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   gs lab_game_state%rowtype; assistants jsonb; inst jsonb; i int; n int;
-  degree text; is_rare boolean; lo int; hi int; score int; nobel boolean;
-  rs int; nobel_count int; papers jsonb; collected jsonb := '[]'::jsonb;
+  degree text; is_rare boolean; score int; nobel boolean;
+  rs int; total_earned int; nobel_count int; papers jsonb; collected jsonb := '[]'::jsonb;
   last_collected bigint; hours_elapsed numeric; aname text; atheme text; now_ms bigint;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
@@ -1069,6 +1129,7 @@ begin
   assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
   n := jsonb_array_length(assistants);
   rs := coalesce((gs.data->>'researchScore')::int,0);
+  total_earned := coalesce((gs.data->>'totalResearchEarned')::int,0);
   nobel_count := coalesce((gs.data->>'nobelCount')::int,0);
   papers := coalesce(gs.data->'papers','[]'::jsonb);
   now_ms := (extract(epoch from now())*1000)::bigint;
@@ -1081,13 +1142,11 @@ begin
       if hours_elapsed >= 24 then
         degree := coalesce(inst->>'degree','bachelor');
         select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
-        if is_rare then lo:=100; hi:=200;
-        else case degree when 'bachelor' then lo:=10; hi:=50; when 'master' then lo:=30; hi:=100; else lo:=60; hi:=180; end case; end if;
-        score := lo + floor(random()*(hi-lo+1))::int;
-        nobel := score > 170;
+        select ps.score, ps.nobel into score, nobel from lab_paper_score(degree, is_rare) ps;
         inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
         assistants := jsonb_set(assistants, array[i::text], inst);
         rs := rs + score;
+        total_earned := total_earned + score;
         if nobel then nobel_count := nobel_count + 1; end if;
         papers := papers || jsonb_build_array(jsonb_build_object(
           'title','「연구 성과 보고서」','theme', atheme, 'assistantName', aname, 'degree', degree, 'score', score, 'nobel', nobel, 'at', now_ms));
@@ -1102,8 +1161,8 @@ begin
   end if;
 
   update lab_game_state set data=(
-    (gs.data - 'assistants' - 'researchScore' - 'nobelCount' - 'papers')
-    || jsonb_build_object('assistants', assistants, 'researchScore', rs, 'nobelCount', nobel_count, 'papers', papers)
+    (gs.data - 'assistants' - 'researchScore' - 'totalResearchEarned' - 'nobelCount' - 'papers')
+    || jsonb_build_object('assistants', assistants, 'researchScore', rs, 'totalResearchEarned', total_earned, 'nobelCount', nobel_count, 'papers', papers)
   ), updated_at=now() where name=trim(p_name);
   return jsonb_build_object('ok', true, 'collected', collected, 'researchScore', rs);
 end; $$;

@@ -1004,29 +1004,23 @@ begin
   return jsonb_build_object('ok', true, 'rc', cur_rc, 'refund', refund, 'assistantName', aname);
 end; $$;
 
--- 논문 완성 점수(연구점수) 계산 — 학위(degree)와 전설급(is_rare) 두 값만으로 결정되는
--- 고정값이다. 예전엔 학위별 범위(예: 학사 10~50) 안에서 무작위로 뽑아서 같은 학사라도
--- 조수마다/뽑을 때마다 받는 점수가 들쭉날쭉했는데, "같은 등급이면 항상 같은 점수"가 되도록
--- 완전히 통일했다. 대신 "노벨상"은 점수 자체가 아니라 5% 확률의 별도 보너스 이벤트로 분리해서,
--- 낮은 확률로 터지는 재미는 그대로 남겨뒀다.
+-- 논문 완성 점수(연구점수) 계산 — 학위(degree)별 범위 안에서 무작위로 뽑는다(원래 의도대로
+-- 유지 — 랜덤성 자체가 재미 요소). 전설급(is_rare)은 학위와 무관하게 별도 범위를 쓴다.
 -- lab_instant_paper / lab_collect_paper / lab_collect_all_papers 세 곳에서 공통으로 쓴다.
 create or replace function public.lab_paper_score(p_degree text, p_is_rare boolean, out score int, out nobel boolean)
 language plpgsql as $$
-declare base int; bonus int := 50;
+declare lo int; hi int;
 begin
-  if p_is_rare then base := 150;
+  if p_is_rare then lo:=100; hi:=200;
   else
     case p_degree
-      when 'bachelor' then base := 30;
-      when 'master' then base := 65;
-      else base := 120; -- phd
+      when 'bachelor' then lo:=10; hi:=50;
+      when 'master' then lo:=30; hi:=100;
+      else lo:=60; hi:=180; -- phd
     end case;
   end if;
-  if random() < 0.05 then
-    score := base + bonus; nobel := true;
-  else
-    score := base; nobel := false;
-  end if;
+  score := lo + floor(random()*(hi-lo+1))::int;
+  nobel := score > 170;
 end; $$;
 
 -- 연구포인트로 즉시 논문 작성(150🔬, 24시간 대기 없이 바로 완성).

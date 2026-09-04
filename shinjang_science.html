@@ -1366,7 +1366,7 @@ function missionSheet(did){
  const slotPanel = `<div class="box" style="padding:10px 12px;text-align:center">
    <div style="font-size:11px;color:var(--dim);font-weight:800">연구동 배치 슬롯 (모든 연구동 공통)</div>
    <div style="font-size:11.5px;color:var(--dim);margin:4px 0 8px">지금 ${assignedCount()}/${S.deptSlots||DEFAULT_DEPT_SLOTS}명 배치 중 · 슬롯을 늘리면 동시에 배치할 수 있는 조수가 늘어나요</div>
-   <button class="btn" style="margin-top:0;width:auto;padding:6px 14px;font-size:12px" onclick="expandDeptSlot();missionSheet('${did}')">➕ 슬롯 확장 · ${DEPT_SLOT_COST}🔬</button>
+   <button class="btn" style="margin-top:0;width:auto;padding:6px 14px;font-size:12px" onclick="expandDeptSlot('${did}')">➕ 슬롯 확장 · ${DEPT_SLOT_COST}🔬</button>
   </div>`;
  const otherDepts=DEPTS.filter(x=>x.id!==did && x.open);
  const deptSwitcher = otherDepts.length ? `<div class="box" style="padding:10px 12px">
@@ -1676,45 +1676,46 @@ function weightedStartDegree(){
  return 'bachelor';
 }
 const GACHA_COST=100;
-/* 확정권(legendTicketPull)이 없던 시절엔 gachaPull() 하나였지만, 뽑기 결과를 만드는 부분과
-   그 결과를 반영(중복 환급/영입)하는 부분을 나눠서 두 함수가 로직을 그대로 공유하게 했다. */
-function rollGachaResult(forceLegend){
- const legends=ASSISTANTS_POOL.filter(a=>a.rareDraw);
- const isLegend = forceLegend || Math.random()<LEGEND_CHANCE; // 전설급 학자(6명 중 무작위) 등장 확률
- const picked = isLegend ? legends[Math.floor(Math.random()*legends.length)]
-   : ASSISTANTS_POOL.filter(a=>!a.rareDraw)[Math.floor(Math.random()*ASSISTANTS_POOL.filter(a=>!a.rareDraw).length)];
- const startDegree = isLegend ? 'phd' : weightedStartDegree();
- const dup=S.assistants.some(a=>a.poolId===picked.id);
- return {picked, startDegree, dup};
+const LEGEND_TICKET_COST=8000;
+/* 뽑기·전설확정권·슬롯확장은 이제 클라이언트가 계산하지 않는다(개발자도구로 결과를 조작할 수
+   있었던 통로라서). 서버 함수(lab_gacha_pull 등)에 "해달라"고 요청만 보내고, 서버가 계산해서
+   돌려준 결과를 그대로 화면에 반영한다 — 서버가 이미 저장까지 마친 뒤라 클라이언트가 따로
+   할 일은 화면 갱신뿐이다. 세션 토큰이 없거나(로그인 꼬임) 네트워크 오류면 아무 것도 반영하지 않는다. */
+async function callGameAction(fnName, extraParams){
+ if(!isSupabaseConfigured()){ toast('오프라인(로컬 서버) 모드에서는 이 기능을 쓸 수 없어요','bad'); return null; }
+ if(!CURRENT_STUDENT || !CURRENT_STUDENT.sessionToken){ toast('로그인 세션이 없어요. 새로고침해주세요','bad'); return null; }
+ try{
+  const out=await supaRpc(fnName, Object.assign({p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken}, extraParams||{}));
+  if(!out.ok){ toast(out.error||'요청이 거부됐어요','bad'); return null; }
+  return out;
+ }catch(e){ toast('서버 연결 오류: '+e.message,'bad'); return null; }
 }
-function applyGachaResult({picked, startDegree, dup}, cost){
- const refund=Math.round(cost*0.3);
- if(dup){ S.rc+=refund; toast(`중복! ${picked.name} → 🔬${refund} 환급`); flyGain('rc', refund); }
- else{ S.assistants.push({poolId:picked.id, assignedDept:null, lastCollectedAt:Date.now(), degree:startDegree, lv:1});
-  toast(`🎉 ${picked.name}(${rankName(picked,startDegree)} Lv.1) 영입!`, 'gold'); }
+function applyGachaOutcome(out){
+ S.rc=out.rc;
+ const def=assistantDef(out.poolId);
+ if(out.dup){ toast(`중복! ${def.name} → 🔬${out.refund} 환급`); flyGain('rc', out.refund); }
+ else{ S.assistants.push({poolId:out.poolId, assignedDept:null, lastCollectedAt:Date.now(), degree:out.degree, lv:1});
+  toast(`🎉 ${def.name}(${rankName(def,out.degree)} Lv.1) 영입!`, 'gold'); }
  saveLabState(); render(); assistantSheet();
 }
-function gachaPull(){
- if(S.rc<GACHA_COST){ toast(`연구포인트가 부족해요 (${GACHA_COST} 필요)`,'bad'); return; }
- S.rc-=GACHA_COST;
- applyGachaResult(rollGachaResult(false), GACHA_COST);
+async function gachaPull(){
+ const out=await callGameAction('lab_gacha_pull'); if(out) applyGachaOutcome(out);
 }
-const LEGEND_TICKET_COST=8000;
-function legendTicketPull(){
- if(S.rc<LEGEND_TICKET_COST){ toast(`연구포인트가 부족해요 (${LEGEND_TICKET_COST} 필요)`,'bad'); return; }
- S.rc-=LEGEND_TICKET_COST;
- applyGachaResult(rollGachaResult(true), LEGEND_TICKET_COST);
+async function legendTicketPull(){
+ const out=await callGameAction('lab_legend_ticket'); if(out) applyGachaOutcome(out);
 }
 function assignedCount(){ return S.assistants.filter(a=>a.assignedDept).length; }
 /* 호출한 쪽(missionSheet)이 자기 화면을 다시 그려서 보여주므로, 여기서는 화면 전환 없이 상태만 바꾼다. */
-function expandDeptSlot(){
- if(S.rc<DEPT_SLOT_COST){ toast(`연구포인트가 부족해요 (${DEPT_SLOT_COST} 필요)`,'bad'); return; }
- S.rc-=DEPT_SLOT_COST; S.deptSlots=(S.deptSlots||DEFAULT_DEPT_SLOTS)+1;
+async function expandDeptSlot(did){
+ const out=await callGameAction('lab_expand_slot'); if(!out) return;
+ S.rc=out.rc; S.deptSlots=out.deptSlots;
  saveLabState(); render();
  toast(`배치 슬롯이 ${S.deptSlots}개로 늘었어요!`, 'gold');
+ if(did) missionSheet(did); // 서버 응답이 온 뒤에야 최신 슬롯 수로 다시 그림(요청 직후엔 아직 반영 전이라 여기서 갱신)
 }
 function assignAssistant(idx, deptId){
  const inst=S.assistants[idx];
+ if(!inst) return; // 강화 실패로 조수가 떠나 배열이 당겨진 직후, 화면이 아직 안 바뀐 상태에서 옛 idx로 눌린 경우 대비
  if(deptId && !inst.assignedDept && assignedCount()>=(S.deptSlots||DEFAULT_DEPT_SLOTS)){
   toast(`배치 슬롯이 가득 찼어요 (${S.deptSlots||DEFAULT_DEPT_SLOTS}개) · 슬롯을 확장해보세요`, 'bad');
   assistantSheet();
@@ -2055,7 +2056,8 @@ function generateHomePaper(idx, instant){
  const inst=S.assistants[idx];
  // instant(연구포인트로 즉시작성)가 아니면, 콘솔에서 이 함수를 직접 호출해도(collectHomeResearch를
  // 건너뛰어도) 24시간이 안 지난 조수는 절대 논문을 못 만들게 여기서 다시 한번 막는다.
- if(!instant && (!inst || inst.assignedDept || !homeReady(inst))) return null;
+ if(!inst) return null;
+ if(!instant && (inst.assignedDept || !homeReady(inst))) return null;
  const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor';
  const [lo,hi] = def.rareDraw ? LEGEND_SCORE_RANGE : (HOME_SCORE_RANGE[degKey]||HOME_SCORE_RANGE.bachelor);
  const score=lo+Math.floor(Math.random()*(hi-lo+1));

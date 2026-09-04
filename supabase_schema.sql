@@ -458,6 +458,153 @@ begin
 end; $$;
 
 -- ============================================================
+-- 서버 권위 게임 로직 (재화를 쓰는 행동은 서버가 직접 계산·저장)
+-- 예전에는 클라이언트(학생 브라우저)가 뽑기·강화 등을 스스로 계산해서 최종 상태를 통보하기만
+-- 해서, 개발자도구 콘솔로 그 결과값을 조작해도 서버가 그대로 믿고 저장했다. 이제부터는
+-- 클라이언트가 "이 행동을 해달라"고 요청만 하고, 계산은 전부 여기(서버)에서 한다.
+-- 모든 함수는 p_token(로그인 때 발급된 세션 토큰)이 그 학생의 현재 세션과 일치하는지부터 확인한다.
+-- ============================================================
+create or replace function public.lab_check_session(p_name text, p_token text) returns boolean
+language sql stable as $$
+  select exists(select 1 from lab_students where name=trim(p_name) and session_token=p_token and session_token is not null);
+$$;
+
+-- 조수(대학원생) 전체 명단 — shinjang_science.html의 ASSISTANTS_POOL과 반드시 동일하게 유지
+create table if not exists public.lab_assistants_pool (
+  id text primary key, theme text not null, set_id text not null, rare_draw boolean not null default false
+);
+truncate public.lab_assistants_pool;
+insert into public.lab_assistants_pool (id, theme, set_id, rare_draw) values
+ ('a_bio1','bio','set_bio',true),('a_bio2','bio','set_bio',false),('a_bio3','bio','set_bio',false),
+ ('a_bio4','bio','set_bio',false),('a_bio5','bio','set_bio',false),('a_bio6','bio','set_bio',false),
+ ('a_bio7','bio','set_bio',false),('a_bio8','bio','set_bio',false),('a_bio9','bio','set_bio',false),
+ ('a_bio10','bio','set_bio',false),
+ ('a_chem1','chem','set_chem',false),('a_chem2','chem','set_chem',false),('a_chem3','chem','set_chem',true),
+ ('a_chem4','chem','set_chem',false),('a_chem5','chem','set_chem',false),('a_chem6','chem','set_chem',false),
+ ('a_chem7','chem','set_chem',false),('a_chem8','chem','set_chem',false),('a_chem9','chem','set_chem',false),
+ ('a_chem10','chem','set_chem',false),
+ ('a_earth1','earth','set_earth',false),('a_earth2','earth','set_earth',false),('a_earth3','earth','set_earth',false),
+ ('a_earth4','earth','set_earth',false),('a_earth5','earth','set_earth',false),('a_earth6','earth','set_earth',true),
+ ('a_earth7','earth','set_earth',false),('a_earth8','earth','set_earth',false),('a_earth9','earth','set_earth',false),
+ ('a_earth10','earth','set_earth',false),
+ ('a_phys1','phys','set_phys',true),('a_phys2','phys','set_phys',false),('a_phys3','phys','set_phys',false),
+ ('a_phys4','phys','set_phys',false),('a_phys5','phys','set_phys',false),('a_phys6','phys','set_phys',false),
+ ('a_phys7','phys','set_phys',false),('a_phys8','phys','set_phys',false),('a_phys9','phys','set_phys',false),
+ ('a_phys10','phys','set_phys',false),
+ ('a_etc1','etc','set_etc',true),('a_etc2','etc','set_etc',false),('a_etc3','etc','set_etc',false),
+ ('a_etc4','etc','set_etc',false),('a_etc5','etc','set_etc',false),('a_etc6','etc','set_etc',false),
+ ('a_etc7','etc','set_etc',false),('a_etc8','etc','set_etc',false),('a_etc9','etc','set_etc',false),
+ ('a_etc10','etc','set_etc',false),
+ ('a_davinci','uni','set_universal',true),('a_uni1','uni','set_universal',false),
+ ('a_uni2','uni','set_universal',false),('a_uni3','uni','set_universal',false);
+alter table public.lab_assistants_pool enable row level security;
+drop policy if exists "anyone select assistants pool" on public.lab_assistants_pool;
+create policy "anyone select assistants pool" on public.lab_assistants_pool for select to anon using (true);
+
+-- 뽑기(가챠) — GACHA_COST=100. 학사65%·석사25%·박사9%(전설 1% 제외 나머지 99% 중 비율), 전설 1%.
+-- 이미 보유한 조수가 또 나오면(중복) 30% 환급, 아니면 새로 배열에 추가.
+create or replace function public.lab_gacha_pull(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; cost int:=100; cur_rc int;
+  is_legend boolean; picked record; start_degree text; roll numeric; dup boolean; refund int;
+  new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  if cur_rc < cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||cost||' 필요)'); end if;
+
+  is_legend := random() < 0.01;
+  if is_legend then
+    select id, theme into picked from lab_assistants_pool where rare_draw=true order by random() limit 1;
+    start_degree := 'phd';
+  else
+    select id, theme into picked from lab_assistants_pool where rare_draw=false order by random() limit 1;
+    roll := random()*100;
+    start_degree := case when roll<=66 then 'bachelor' when roll<=91 then 'master' else 'phd' end;
+  end if;
+
+  dup := exists(select 1 from jsonb_array_elements(coalesce(gs.data->'assistants','[]'::jsonb)) a where a->>'poolId'=picked.id);
+  cur_rc := cur_rc - cost;
+
+  if dup then
+    refund := round(cost*0.3);
+    cur_rc := cur_rc + refund;
+    new_data := jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc));
+    update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+    insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+      on conflict (name) do update set rc=excluded.rc, updated_at=now();
+    return jsonb_build_object('ok', true, 'dup', true, 'refund', refund, 'rc', cur_rc, 'poolId', picked.id);
+  else
+    new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}',
+      coalesce(gs.data->'assistants','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+        'poolId', picked.id, 'assignedDept', null, 'lastCollectedAt', (extract(epoch from now())*1000)::bigint,
+        'degree', start_degree, 'lv', 1)));
+    update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+    insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+      on conflict (name) do update set rc=excluded.rc, updated_at=now();
+    return jsonb_build_object('ok', true, 'dup', false, 'rc', cur_rc, 'poolId', picked.id, 'degree', start_degree, 'isLegend', is_legend);
+  end if;
+end; $$;
+
+-- 전설뽑기 확정권 — LEGEND_TICKET_COST=8000. gacha와 동일하되 무조건 전설급.
+create or replace function public.lab_legend_ticket(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; cost int:=8000; cur_rc int; picked record; dup boolean; refund int; new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  if cur_rc < cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||cost||' 필요)'); end if;
+
+  select id into picked from lab_assistants_pool where rare_draw=true order by random() limit 1;
+  dup := exists(select 1 from jsonb_array_elements(coalesce(gs.data->'assistants','[]'::jsonb)) a where a->>'poolId'=picked.id);
+  cur_rc := cur_rc - cost;
+
+  if dup then
+    refund := round(cost*0.3);
+    cur_rc := cur_rc + refund;
+    new_data := jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc));
+    update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+    insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+      on conflict (name) do update set rc=excluded.rc, updated_at=now();
+    return jsonb_build_object('ok', true, 'dup', true, 'refund', refund, 'rc', cur_rc, 'poolId', picked.id);
+  else
+    new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}',
+      coalesce(gs.data->'assistants','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+        'poolId', picked.id, 'assignedDept', null, 'lastCollectedAt', (extract(epoch from now())*1000)::bigint,
+        'degree', 'phd', 'lv', 1)));
+    update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+    insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+      on conflict (name) do update set rc=excluded.rc, updated_at=now();
+    return jsonb_build_object('ok', true, 'dup', false, 'rc', cur_rc, 'poolId', picked.id);
+  end if;
+end; $$;
+
+-- 연구동 배치 슬롯 확장 — DEPT_SLOT_COST=100, 한 번 호출에 정확히 +1.
+create or replace function public.lab_expand_slot(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype; cost int:=100; cur_rc int; cur_slots int; new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  if cur_rc < cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||cost||' 필요)'); end if;
+  cur_slots := coalesce((gs.data->>'deptSlots')::int, 2) + 1;
+  cur_rc := cur_rc - cost;
+  new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{deptSlots}', to_jsonb(cur_slots));
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'rc', cur_rc, 'deptSlots', cur_slots);
+end; $$;
+
+-- ============================================================
 -- anon 롤에게 위 함수들을 호출할 권한 부여(테이블 직접 권한은 안 줌 — RLS+정책만으로 제어)
 -- ============================================================
 grant execute on all functions in schema public to anon, authenticated;

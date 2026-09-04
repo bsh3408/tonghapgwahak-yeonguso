@@ -2036,8 +2036,11 @@ function tickHomeResearchUI(){
    연구포인트 즉시 작성(instantWritePaper) 양쪽이 공유한다. */
 /* 점수 산정·기록만 담당(저장/렌더/모달은 안 함) — 1편씩 수거(completeHomePaper)와
    한번에 수거(collectAllHomeResearch) 양쪽이 이 결과를 그대로 재사용한다. */
-function generateHomePaper(idx){
+function generateHomePaper(idx, instant){
  const inst=S.assistants[idx];
+ // instant(연구포인트로 즉시작성)가 아니면, 콘솔에서 이 함수를 직접 호출해도(collectHomeResearch를
+ // 건너뛰어도) 24시간이 안 지난 조수는 절대 논문을 못 만들게 여기서 다시 한번 막는다.
+ if(!instant && (!inst || inst.assignedDept || !homeReady(inst))) return null;
  const def=assistantDef(inst.poolId), degKey=inst.degree||'bachelor';
  const [lo,hi] = def.rareDraw ? LEGEND_SCORE_RANGE : (HOME_SCORE_RANGE[degKey]||HOME_SCORE_RANGE.bachelor);
  const score=lo+Math.floor(Math.random()*(hi-lo+1));
@@ -2052,7 +2055,8 @@ function generateHomePaper(idx){
  return paper;
 }
 function completeHomePaper(idx, instant){
- const paper=generateHomePaper(idx);
+ const paper=generateHomePaper(idx, instant);
+ if(!paper){ toast('아직 24시간이 안 지났어요','bad'); return; }
  saveLabState(); render(); postLabScore();
  flyGain('rs', paper.score);
  modal(`<h2>${paper.nobel?'🏅 노벨상 수상!':'📄 논문 완성'}</h2>
@@ -2075,7 +2079,7 @@ function collectAllHomeResearch(){
   const inst=S.assistants[idx]; return !inst.assignedDept && homeReady(inst);
  });
  if(!readyIdx.length){ toast('지금 수거할 수 있는 논문이 없어요','bad'); return; }
- const collected = readyIdx.map(idx=>generateHomePaper(idx));
+ const collected = readyIdx.map(idx=>generateHomePaper(idx, false)).filter(Boolean);
  saveLabState(); render(); postLabScore();
  const totalScore = collected.reduce((sum,p)=>sum+p.score,0);
  const nobelN = collected.filter(p=>p.nobel).length;

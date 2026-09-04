@@ -512,18 +512,38 @@ begin
   end loop;
 
   pass_count := nullif(cs.data->'meta'->>'passCount','')::int;
-  pass_threshold := case when total_n = 0 then 0 else coalesce(pass_count, ceil(total_n*0.75)::int) end;
-  passed := correct_n >= pass_threshold;
+  -- total_n=0("채점 대상 문제가 아예 없음")은 진짜 서술형 전용 미션(p_mode='essay')일 때만 자동 통과다.
+  -- 그 외 모드에서 total_n=0은 유효한 라운드 id를 하나도 못 찾았다는 뜻이라(가짜 id로 우회 시도 등)
+  -- 통과로 치면 안 된다.
+  if total_n = 0 then
+    pass_threshold := 0;
+    passed := (p_mode = 'essay');
+  else
+    pass_threshold := coalesce(pass_count, ceil(total_n*0.75)::int);
+    passed := correct_n >= pass_threshold;
+  end if;
   -- 서술형이 아예 없던 세션(mode=obj 등)은 "글 다 썼는지" 조건을 만점 판정에서 제외한다.
   perfect_clear := passed and (all_opinions_filled or not has_opinion_round);
 
   cur_rc := coalesce((gs.data->>'rc')::int, 0) + rc_gain;
   new_data := gs.data;
   new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+  -- jsonb_set(..., true)는 "맨 끝 키"만 없어도 만들어주고, 중간 컨테이너(everCorrect/claimed/...
+  -- 자체)가 아예 없으면 조용히 아무 일도 안 하고 끝나버린다(옛날 계정처럼 이 필드가 한 번도 저장된
+  -- 적 없는 경우). 그래서 중간 컨테이너부터 먼저 {}로 보장해준 뒤에 중첩 키를 넣는다.
+  new_data := jsonb_set(new_data, '{everCorrect}', coalesce(new_data->'everCorrect','{}'::jsonb));
   new_data := jsonb_set(new_data, array['everCorrect', chapter_key], ever_correct, true);
   new_data := jsonb_set(new_data, '{opinionAwarded}', opinion_awarded);
+  new_data := jsonb_set(new_data, '{claimed}', coalesce(new_data->'claimed','{}'::jsonb));
   new_data := jsonb_set(new_data, array['claimed', result_key], to_jsonb((extract(epoch from now())*1000)::bigint), true);
+  if passed then
+    -- "클리어" 여부(성적 표시용)는 만점이 아니어도 통과만 하면 확정한다. 한 번 통과하면 다음에
+    -- 더 낮은 점수로 다시 내도 클리어 배지가 사라지지 않게 true만 기록하고 false로는 안 되돌린다.
+    new_data := jsonb_set(new_data, '{everPassed}', coalesce(new_data->'everPassed','{}'::jsonb));
+    new_data := jsonb_set(new_data, array['everPassed', result_key], 'true'::jsonb, true);
+  end if;
   if perfect_clear then
+    new_data := jsonb_set(new_data, '{everPerfect}', coalesce(new_data->'everPerfect','{}'::jsonb));
     new_data := jsonb_set(new_data, array['everPerfect', result_key], 'true'::jsonb, true);
   end if;
 

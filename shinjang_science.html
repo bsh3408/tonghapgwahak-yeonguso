@@ -622,7 +622,7 @@ function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'gue
 const DEFAULT_DEPT_SLOTS=2, DEPT_SLOT_COST=100;
 const S={rc:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
  deptSlots:DEFAULT_DEPT_SLOTS,
- everCorrect:{}, everPerfect:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false};
+ everCorrect:{}, everPerfect:{}, everPassed:{}, opinionAwarded:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false};
 
 /* localStorage 캐시(loadLabState)와 수파베이스 원격 스냅샷(pullGameStateFromServer) 양쪽이
    같은 모양의 객체를 S에 적용하니 한 곳에 모아둔다. */
@@ -636,6 +636,8 @@ function applyStateSnapshot(s){
  S.ownedThemes=Array.isArray(s.ownedThemes)&&s.ownedThemes.length?s.ownedThemes:['bright'];
  S.everCorrect=(s.everCorrect&&typeof s.everCorrect==='object')?s.everCorrect:{};
  S.everPerfect=(s.everPerfect&&typeof s.everPerfect==='object')?s.everPerfect:{};
+ S.everPassed=(s.everPassed&&typeof s.everPassed==='object')?s.everPassed:{};
+ S.opinionAwarded=(s.opinionAwarded&&typeof s.opinionAwarded==='object')?s.opinionAwarded:{};
  S.claimed=(s.claimed&&typeof s.claimed==='object')?s.claimed:{};
  S.oxEverCorrect=(s.oxEverCorrect&&typeof s.oxEverCorrect==='object')?s.oxEverCorrect:{};
  S.lastAttendance=s.lastAttendance||null;
@@ -667,7 +669,8 @@ function saveLabState(){
    rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots,
    assistants:S.assistants, researchScore:S.researchScore, papers:S.papers, nobelCount:S.nobelCount,
    labTheme:S.labTheme, ownedThemes:S.ownedThemes,
-   everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
+   everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
+   claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
    lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded
  })); }
  catch(e){}
@@ -680,7 +683,8 @@ let _gameStateSyncTimer=null;
 function gameStateSyncPayload(){
  return {rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots, assistants:S.assistants, researchScore:S.researchScore,
   papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
-  everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
+  everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
+  claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
   lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded};
 }
 /* keepalive:true를 주면, 이 요청을 보내는 도중에 탭이 닫히거나 페이지를 떠나도 브라우저가 요청을
@@ -729,12 +733,14 @@ function syncChapterResults(){
  ALLM().forEach(g=>{
   if(g.kind!=='chapter') return;
   const rk=g.resultKey||g.chapterId;
+  // "클리어"(성적 점수에 반영되는 값)는 서버가 제출을 채점하고 확정한 S.everPassed만 믿는다 —
+  // localStorage 결과는 최고기록 표시(g.best)용 참고 자료일 뿐, 더 이상 클리어 여부를 결정하지 않는다.
+  g.cleared = !!S.everPassed[rk];
   let raw; try{ raw=localStorage.getItem(sKey('lab_result_'+rk)); }catch(e){ raw=null; }
   if(!raw) return;
   let result; try{ result=JSON.parse(raw); }catch(e){ return; }
   const scorePct=result.total? Math.round(result.score/result.total*100) : 0;
   g.best=Math.max(g.best||0, scorePct);
-  if(result.passed) g.cleared=true;
   S.lastMini=scorePct;
   // 방금(1분 이내) 막 제출하고 돌아온 경우에만 축하 토스트를 띄운다(그 전에 이미 서버가 처리해둔
   // 오래된 로컬 결과 기록을 다시 열었을 땐 매번 토스트가 또 뜨지 않도록).

@@ -11,10 +11,10 @@ const SUPA_HEADERS = { 'Content-Type':'application/json', 'apikey': SUPABASE_ANO
 
 /* Postgres 함수(RPC) 호출 — 이름 앞에 lab_이 붙은 함수들(로그인, 게시판 답변 등)을 이걸로 부른다.
    반환값은 함수가 jsonb_build_object로 만든 {ok, ...} 형태이거나, setof 함수면 행 배열이다. */
-async function supaRpc(fnName, params){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+async function supaRpc(fnName, params, opts){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, Object.assign({
     method:'POST', headers: SUPA_HEADERS, body: JSON.stringify(params||{})
-  });
+  }, opts||{}));
   if(!res.ok){ const t = await res.text().catch(()=>String(res.status)); throw new Error('supabase rpc 실패: '+t); }
   return res.json();
 }

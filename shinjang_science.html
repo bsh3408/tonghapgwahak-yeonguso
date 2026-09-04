@@ -677,19 +677,34 @@ function saveLabState(){
    교사용 페이지의 "현재 잔액" 표는 여전히 lab_points를 보고 있어서 그것도 같이 갱신해둔다.
    실패해도(오프라인 등) 학생 게임 진행에는 영향이 없어야 해서 fire-and-forget으로 던진다. */
 let _gameStateSyncTimer=null;
+function gameStateSyncPayload(){
+ return {rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots, assistants:S.assistants, researchScore:S.researchScore,
+  papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
+  everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
+  lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded};
+}
+/* keepalive:true를 주면, 이 요청을 보내는 도중에 탭이 닫히거나 페이지를 떠나도 브라우저가 요청을
+   끝까지 이어서 보내준다(sendBeacon은 커스텀 헤더를 못 넣어서 수파베이스 인증 헤더가 필요한 여기선 못 씀).
+   0.8초 디바운스가 채 지나기 전에 탭을 닫아버리면 서버에는 그 변화가 영영 반영이 안 되고, 다음 접속 때
+   "탭 닫기 전 서버의 예전 상태"로 덮어써져서 방금 뽑은 조수·쓴 포인트가 되돌아가 보이는 문제가 있었다. */
+function flushGameStateSync(useKeepalive){
+ if(!CURRENT_STUDENT || !isSupabaseConfigured()) return;
+ clearTimeout(_gameStateSyncTimer); _gameStateSyncTimer=null;
+ const data=gameStateSyncPayload();
+ const opts=useKeepalive?{keepalive:true}:undefined;
+ supaRpc('lab_state_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_data:data}, opts).catch(()=>{});
+ // lab_points 테이블은 특별연구포인트가 있던 시절 스키마라 p_src가 필수 인자라서 0을 그대로 보낸다(교사용 페이지 표시용 거울).
+ supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:0}, opts).catch(()=>{});
+}
 function syncGameStateMirror(){
  if(!CURRENT_STUDENT || !isSupabaseConfigured()) return;
  clearTimeout(_gameStateSyncTimer);
- _gameStateSyncTimer=setTimeout(()=>{
-  const data={rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots, assistants:S.assistants, researchScore:S.researchScore,
-   papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
-   everCorrect:S.everCorrect, everPerfect:S.everPerfect, claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
-   lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded};
-  supaRpc('lab_state_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_data:data}).catch(()=>{});
-  // lab_points 테이블은 특별연구포인트가 있던 시절 스키마라 p_src가 필수 인자라서 0을 그대로 보낸다(교사용 페이지 표시용 거울).
-  supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:0}).catch(()=>{});
- }, 800);
+ _gameStateSyncTimer=setTimeout(()=>flushGameStateSync(false), 800);
 }
+/* 탭을 닫거나(pagehide) 다른 앱으로 전환/화면을 끄는 순간(visibilitychange: hidden)에는
+   0.8초를 기다리지 않고 그 즉시 밀린 저장을 내보낸다. */
+window.addEventListener('pagehide', ()=>flushGameStateSync(true));
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) flushGameStateSync(true); });
 /* 로그인 직후, 선생님이 예약해둔 연구포인트 지급/차감을 가져와 반영한다.
    특별연구포인트가 폐지되기 전에 예약된 지급분(srcDelta)이 혹시 남아있으면 없애지 않고 연구포인트로 합쳐준다. */
 async function claimTeacherPointGrants(){

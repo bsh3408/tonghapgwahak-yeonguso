@@ -80,9 +80,8 @@ function showNotice(msg){
 function showResumeNotice(){ showNotice('↩️ 저장된 진행 상황을 불러왔어요. 이어서 풀 수 있어요'); }
 
 /* ---------- 🔄 재도전권: 아직 못 맞힌 문제만 문제풀의 다른 문제로 새로 뽑는다 (연구포인트 소모) ----------
-   연구포인트는 shinjang_science.html의 S.rc가 아니라, 같은 localStorage(lab_state_v1__학생이름)를
-   직접 읽고 써서 반영한다(이 페이지는 그 스크립트를 안 불러오므로). 수파베이스가 설정돼 있으면
-   lab_state_sync RPC로 같은 모양을 그대로 다시 올려서 다른 기기와도 어긋나지 않게 한다. */
+   비용 차감은 서버 함수(lab_reroll_charge)가 직접 처리한다 — localStorage를 직접 깎으면
+   개발자도구로 그 차감 자체를 안 일어난 것처럼 조작할 수 있어서, 반드시 서버를 거친다. */
 const REROLL_COST=50;
 function labStateKey(){
   const info=getStudentInfo();
@@ -91,17 +90,17 @@ function labStateKey(){
 function readLabStateRaw(){
   try{ const raw=localStorage.getItem(labStateKey()); return raw?JSON.parse(raw):null; }catch(e){ return null; }
 }
-function spendRcForReroll(){
+async function spendRcForReroll(){
+  const info=getStudentInfo();
+  const token=sessionStorage.getItem('lab_session_token');
+  if(!info || !info.name || !token) return {ok:false, rc:0};
+  if(typeof isSupabaseConfigured!=='function' || !isSupabaseConfigured()) return {ok:false, rc:0};
+  const out=await supaRpc('lab_reroll_charge', {p_name:info.name, p_token:token}).catch(()=>({ok:false}));
+  if(!out.ok) return {ok:false, rc:out.rc||0};
+  // 로컬 캐시(localStorage)도 서버가 확정한 rc로 맞춰둔다(로비로 돌아갔을 때 화면이 바로 최신으로 보이게).
   const st=readLabStateRaw();
-  const rc = st && typeof st.rc==='number' ? st.rc : 0;
-  if(!st || rc<REROLL_COST) return {ok:false, rc};
-  st.rc = rc-REROLL_COST;
-  try{ localStorage.setItem(labStateKey(), JSON.stringify(st)); }catch(e){}
-  if(typeof isSupabaseConfigured==='function' && isSupabaseConfigured()){
-    const info=getStudentInfo();
-    if(info && info.name) supaRpc('lab_state_sync', {p_name:info.name, p_class_no:info.studentId||'', p_data:st}).catch(()=>{});
-  }
-  return {ok:true, rc:st.rc};
+  if(st){ st.rc=out.rc; try{ localStorage.setItem(labStateKey(), JSON.stringify(st)); }catch(e){} }
+  return {ok:true, rc:out.rc};
 }
 function usedPoolIds(){
   return new Set(ENGINE_STATE.rounds.filter(r=>r.kind!=='opinion').map(r=>r.id));
@@ -119,12 +118,12 @@ function unusedPoolCandidates(){
 function canReroll(){
   return remainingGradableIndices().length>0 && unusedPoolCandidates().length>0;
 }
-function rerollRemaining(){
+async function rerollRemaining(){
   const remainIdx=remainingGradableIndices();
   if(!remainIdx.length){ showNotice('이미 남은 문제가 없어요.'); return; }
   const candidates=unusedPoolCandidates();
   if(!candidates.length){ showNotice('더 뽑을 수 있는 다른 문제가 없어요.'); return; }
-  const spend=spendRcForReroll();
+  const spend=await spendRcForReroll();
   if(!spend.ok){ showNotice(`연구포인트가 부족해요 (${REROLL_COST}🔬 필요 · 보유 ${spend.rc}🔬)`); return; }
   const picks=shuffleWith(Math.random, candidates).slice(0, remainIdx.length);
   const hydrated=hydrateRounds(picks, window.__CHAPTER_VARS||{}, Math.random);
@@ -615,55 +614,64 @@ function setSyncBadge(text, cls){
 async function syncToSupabase(){
   const S=ENGINE_STATE;
   const info=getStudentInfo() || {name:'미상', classNo:'미상'};
-  const gradable=S.rounds.filter(r=>r.kind!=='opinion');
-  const results=gradable.map(r=>({id:r.id, title:r.title, kind:r.kind, ok:gradeRound(r)}));
-  const correctN=results.filter(x=>x.ok).length;
-  const passThreshold=passThresholdFor(gradable);
   const opinionRounds=S.rounds.filter(r=>r.kind==='opinion');
   const opinionAnswers={};
   opinionRounds.forEach(r=>{ opinionAnswers[r.id]=(S.answers[r.id]||'').trim(); });
-  const allOpinionsFilled = opinionRounds.every(r=>(S.answers[r.id]||'').trim().length >= (r.minLen||20));
-  const passed = correctN >= passThreshold;
-  // "만점"이 아니라 "통과 + 서술답안 전부 작성"이면 +1점 보너스 대상(평가계획서 반영은 선생님이 최종 확인)
-  const perfectClear = passed && allOpinionsFilled;
-
-  const payload={
-    student_name: info.name,
-    class_no: info.classNo,
-    chapter_id: S.meta.seedKey || S.meta.title,
-    chapter_title: S.meta.title,
-    score: correctN,
-    total: gradable.length,
-    passed,
-    perfect_clear: perfectClear,
-    total_sec: S.totalSec,
-    leave_count: S.leaveCount,
-    away_ms: S.totalAwayMs,
-    round_results: results,
-    opinion_answers: opinionAnswers
-  };
-
-  const useReal = isSupabaseConfigured();
-  const endpoint = useReal ? SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/lab_submissions' : DEMO_MOCK_ENDPOINT;
-  const headers = useReal
-    ? { 'Content-Type':'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization':'Bearer '+SUPABASE_ANON_KEY, 'Prefer':'return=minimal' }
-    : { 'Content-Type':'application/json' };
+  const roundIds=S.rounds.map(r=>r.id);
+  const useReal=isSupabaseConfigured();
 
   setSyncBadge(useReal ? '☁️ 결과 저장 중...' : '🧪 (미리보기) 결과 저장 중...', '');
-  try{
-    const res=await fetch(endpoint, { method:'POST', headers, body: JSON.stringify(payload) });
-    if(res.ok) setSyncBadge(useReal ? '☁️ 결과 저장 완료' : '🧪 (미리보기) 결과 저장 완료: 제출기록_미리보기.html에서 확인', 'ok');
-    else setSyncBadge('⚠️ 저장에 실패했어요. 선생님께 화면을 보여주세요', 'err');
-  }catch(e){
-    setSyncBadge('⚠️ 저장에 실패했어요(인터넷 연결을 확인해 주세요). 선생님께 알려주세요', 'err');
+
+  if(useReal){
+    // 채점·크레딧 지급은 전부 서버(lab_submit_chapter)가 직접 다시 계산한다 — 이 페이지가
+    // "몇 점 맞았다"고 자체 보고한 값은 더 이상 그대로 안 믿는다(개발자도구로 위조 방지).
+    const token=sessionStorage.getItem('lab_session_token');
+    if(!token){ setSyncBadge('⚠️ 로그인 세션이 없어요. 새로고침 후 다시 로그인해주세요', 'err'); }
+    else{
+      try{
+        const out=await supaRpc('lab_submit_chapter', {
+          p_name: info.name, p_token: token, p_chapter_id: S.meta.seedKey || S.meta.title, p_mode: S.meta.mode || null,
+          p_round_ids: roundIds, p_answers: S.answers,
+          p_total_sec: S.totalSec, p_leave_count: S.leaveCount, p_away_ms: S.totalAwayMs
+        });
+        if(out.ok) setSyncBadge('☁️ 결과 저장 완료', 'ok');
+        else setSyncBadge('⚠️ 저장에 실패했어요: '+(out.error||'')+' 선생님께 화면을 보여주세요', 'err');
+      }catch(e){
+        setSyncBadge('⚠️ 저장에 실패했어요(인터넷 연결을 확인해 주세요). 선생님께 알려주세요', 'err');
+      }
+    }
+  } else {
+    // 로컬 서버(오프라인 테스트) 모드는 예전처럼 클라이언트가 채점해서 모의 저장 API로 보낸다.
+    const gradable=S.rounds.filter(r=>r.kind!=='opinion');
+    const results=gradable.map(r=>({id:r.id, title:r.title, kind:r.kind, ok:gradeRound(r)}));
+    const correctN=results.filter(x=>x.ok).length;
+    const passThreshold=passThresholdFor(gradable);
+    const allOpinionsFilled=opinionRounds.every(r=>(S.answers[r.id]||'').trim().length >= (r.minLen||20));
+    const passed=correctN >= passThreshold;
+    const perfectClear=passed && allOpinionsFilled;
+    const payload={
+      student_name: info.name, class_no: info.classNo,
+      chapter_id: S.meta.seedKey || S.meta.title, chapter_title: S.meta.title,
+      score: correctN, total: gradable.length, passed, perfect_clear: perfectClear,
+      total_sec: S.totalSec, leave_count: S.leaveCount, away_ms: S.totalAwayMs,
+      round_results: results, opinion_answers: opinionAnswers
+    };
+    try{
+      const res=await fetch(DEMO_MOCK_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      if(res.ok) setSyncBadge('🧪 (미리보기) 결과 저장 완료: 제출기록_미리보기.html에서 확인', 'ok');
+      else setSyncBadge('⚠️ 저장에 실패했어요. 선생님께 화면을 보여주세요', 'err');
+    }catch(e){
+      setSyncBadge('⚠️ 저장에 실패했어요(인터넷 연결을 확인해 주세요). 선생님께 알려주세요', 'err');
+    }
   }
-  syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload);
+  syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, {student_name:info.name, class_no:info.classNo, chapter_id:S.meta.seedKey||S.meta.title, chapter_title:S.meta.title});
 }
 
 // 제출 시점의 서술형 답을 "최신 답안" 저장소에도 남긴다 — 나중에 학생이 "내 생각 다시 쓰기"로 고치면
 // 여기가 계속 최신본으로 덮어써지고, 교사가 건 "다시 써주세요" 요청도 이걸 저장하는 순간 자동 해제된다.
 function syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload){
   const useReal = isSupabaseConfigured();
+  const token = sessionStorage.getItem('lab_session_token');
   opinionRounds.forEach(r=>{
     const body = {
       student_name: payload.student_name, class_no: payload.class_no,
@@ -671,8 +679,9 @@ function syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload){
       round_id: r.id, round_title: r.title, text: opinionAnswers[r.id] || ''
     };
     if(useReal){
+      if(!token) return;
       supaRpc('lab_journal_save', {
-        p_student_name: body.student_name, p_class_no: body.class_no,
+        p_student_name: body.student_name, p_token: token, p_class_no: body.class_no,
         p_chapter_id: body.chapter_id, p_chapter_title: body.chapter_title,
         p_round_id: body.round_id, p_round_title: body.round_title, p_text: body.text
       }).catch(()=>{});

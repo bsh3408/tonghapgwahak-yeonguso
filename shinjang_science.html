@@ -692,9 +692,9 @@ function flushGameStateSync(useKeepalive){
  clearTimeout(_gameStateSyncTimer); _gameStateSyncTimer=null;
  const data=gameStateSyncPayload();
  const opts=useKeepalive?{keepalive:true}:undefined;
- supaRpc('lab_state_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_data:data}, opts).catch(()=>{});
+ supaRpc('lab_state_sync', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||'', p_class_no:CURRENT_STUDENT.studentId||'', p_data:data}, opts).catch(()=>{});
  // lab_points 테이블은 특별연구포인트가 있던 시절 스키마라 p_src가 필수 인자라서 0을 그대로 보낸다(교사용 페이지 표시용 거울).
- supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:0}, opts).catch(()=>{});
+ supaRpc('lab_points_sync', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||'', p_class_no:CURRENT_STUDENT.studentId||'', p_rc:S.rc, p_src:0}, opts).catch(()=>{});
 }
 function syncGameStateMirror(){
  if(!CURRENT_STUDENT || !isSupabaseConfigured()) return;
@@ -710,7 +710,7 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden) flushGam
 async function claimTeacherPointGrants(){
  if(!isSupabaseConfigured()) return;
  try{
-  const out=await supaRpc('lab_points_claim', {p_student_name:CURRENT_STUDENT.name});
+  const out=await supaRpc('lab_points_claim', {p_student_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||''});
   if(!out.ok) return;
   const rcDelta=(out.rcDelta||0)+(out.srcDelta||0);
   if(!rcDelta) return;
@@ -720,21 +720,14 @@ async function claimTeacherPointGrants(){
  }catch(e){}
 }
 
-/* 실제 챕터 게임(roundengine.js의 saveLabProgress)이 남긴 결과를 읽어와 반영한다.
-   ① 라운드별로 "이 학생이 이 라운드를 이미 한 번이라도 맞은 적 있는지"를 추적해서, 새로 맞은 라운드마다
-      연구포인트 +35(재획득 없음). ② 통과(기준 문제 수 이상 정답) + 의견형 3개 모두 작성이면 "+1점 대상" 안내. */
-function everCorrectSet(chapterId){
- return new Set(Array.isArray(S.everCorrect[chapterId])?S.everCorrect[chapterId]:[]);
-}
-function saveEverCorrectSet(chapterId, set){
- S.everCorrect[chapterId]=[...set];
-}
+/* 라운드 정답 크레딧(+35)·의견형 크레딧(+80)·everCorrect·claimed·everPerfect는 이제 전부
+   서버(lab_submit_chapter)가 제출 시점에 직접 계산해서 이미 확정해뒀다(개발자도구로 로컬 결과를
+   조작해도 재화가 안 생기게 하려고 옮김). 여기서는 그 서버 결과가 로그인 때 이미 반영된 S를 바탕으로,
+   방금 이 단원을 막 풀고 돌아온 경우에만 "🌟 통과했어요" 같은 축하 토스트와 로비 화면의
+   최고기록(g.best)·클리어 배지(g.cleared) 표시만 갱신한다 — 재화 지급은 여기서 하지 않는다. */
 function syncChapterResults(){
- let changed=false;
  ALLM().forEach(g=>{
   if(g.kind!=='chapter') return;
-  // resultKey는 chapterId에 미션(mode) 접미사가 붙은 값 — 객관식/서술형 미션의 "클리어" 기록이
-  // 서로 안 덮어써지게 분리해준다. 라운드 크레딧(evercorrect)은 그대로 chapterId를 공유해서 쓴다.
   const rk=g.resultKey||g.chapterId;
   let raw; try{ raw=localStorage.getItem(sKey('lab_result_'+rk)); }catch(e){ raw=null; }
   if(!raw) return;
@@ -742,58 +735,24 @@ function syncChapterResults(){
   const scorePct=result.total? Math.round(result.score/result.total*100) : 0;
   g.best=Math.max(g.best||0, scorePct);
   if(result.passed) g.cleared=true;
-  const claimedAt=S.claimed[rk]||0;
-  if(!result.at || result.at<=claimedAt) return; // 이미 반영한 결과 — 표시만 갱신하고 지급은 건너뜀
-  const everSet=everCorrectSet(g.chapterId);
-  let roundGain=0;
-  (result.roundResults||[]).forEach(rr=>{
-   if(rr.ok && !everSet.has(rr.id)){ everSet.add(rr.id); roundGain+=35; }
-  });
-  if(roundGain>0){
-   S.rc+=roundGain; changed=true;
-   saveEverCorrectSet(g.chapterId, everSet);
-   toast(`「${g.t}」 정답 반영 +${roundGain}🔬`, 'gold');
-   flyGain('rc', roundGain);
-  }
   S.lastMini=scorePct;
-  S.claimed[rk]=result.at;
-  if(result.perfectClear){
-   if(!S.everPerfect[rk]){
-    S.everPerfect[rk]=true;
-    const doneMsg = g.mode==='essay'
-     ? `🌟 「${g.baseTitle||g.t}」 서술답안을 모두 완성했어요`
-     : `🌟 「${g.baseTitle||g.t}」 통과했어요`;
-    toast(doneMsg, 'gold');
-   }
+  // 방금(1분 이내) 막 제출하고 돌아온 경우에만 축하 토스트를 띄운다(그 전에 이미 서버가 처리해둔
+  // 오래된 로컬 결과 기록을 다시 열었을 땐 매번 토스트가 또 뜨지 않도록).
+  const justSubmitted = result.at && (Date.now()-result.at < 60000);
+  if(justSubmitted && result.perfectClear){
+   const doneMsg = g.mode==='essay'
+    ? `🌟 「${g.baseTitle||g.t}」 서술답안을 모두 완성했어요`
+    : `🌟 「${g.baseTitle||g.t}」 통과했어요`;
+   toast(doneMsg, 'gold');
   }
-  changed=true;
  });
- if(changed) saveLabState();
 }
 
 /* 의견형(의견·논술형·심화읽기) 답안은 roundengine.js가 opinion_+챕터ID+_+라운드ID__학생이름 키에
-   저장해둔다(과제 진행 중이든, journalSheet에서 나중에 고쳐 쓰든 같은 키를 공유). 처음으로 글자수
-   조건을 채워서 저장된 순간에만 연구포인트 +50을 지급한다. */
+   저장해둔다(과제 진행 중이든, journalSheet에서 나중에 고쳐 쓰든 같은 키를 공유해서 초안이 이어짐).
+   "처음 글자수를 채운 순간 +80 지급"은 이제 서버(lab_award_opinion/lab_submit_chapter)가 판단하므로
+   여기서는 로컬에 초안을 보여주는 용도로만 쓴다. */
 function opinionKey(chapterId, roundId){ return sKey('opinion_'+chapterId+'_'+roundId); }
-function opinionAwardedKey(chapterId, roundId){ return sKey('opinion_awarded_'+chapterId+'_'+roundId); }
-function syncOpinionPoints(){
- let changed=false;
- ALLM().forEach(g=>{
-  if(g.kind!=='chapter' || !g.opinionRounds) return;
-  g.opinionRounds.forEach(orId=>{
-   const minLen=(g.opinionMinLens&&g.opinionMinLens[orId])||20;
-   let text=''; try{ text=localStorage.getItem(opinionKey(g.chapterId,orId))||''; }catch(e){}
-   const awardedKey=opinionAwardedKey(g.chapterId,orId);
-   if(text.trim().length>=minLen && !localStorage.getItem(awardedKey)){
-    S.rc+=80; changed=true;
-    try{ localStorage.setItem(awardedKey,'1'); }catch(e){}
-    toast(`「${g.t}」 의견 작성 +80🔬`, 'gold');
-    flyGain('rc', 80);
-   }
-  });
- });
- if(changed) saveLabState();
-}
 
 /* 문제 문구·통과 기준이 교사용 관리 페이지에서 바뀌어도 로비가 항상 최신 내용을 보여주도록,
    각 챕터의 data/chN.json에서 제목·통과 기준·의견형 라운드 정보를 직접 읽어온다. */
@@ -1602,17 +1561,24 @@ async function journalSheet(chNum){
  });
 }
 function jsAttrEsc(s){ return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-function saveJournal(chapterId, roundId, minLen, chapterTitle, roundTitle){
+async function saveJournal(chapterId, roundId, minLen, chapterTitle, roundTitle){
  const ta=document.getElementById('j_'+roundId); if(!ta) return;
  const text=ta.value;
  try{ localStorage.setItem(opinionKey(chapterId,roundId), text); }catch(e){}
- const awardedKey=opinionAwardedKey(chapterId,roundId);
  const meetsMin=text.trim().length>=minLen;
- if(meetsMin && !localStorage.getItem(awardedKey)){
-  S.rc+=80; saveLabState(); render();
-  try{ localStorage.setItem(awardedKey,'1'); }catch(e){}
-  toast('저장 완료 +80🔬', 'gold');
-  flyGain('rc', 80);
+ // 처음 글자수를 채운 순간에만 +80 지급하는지는 서버(lab_award_opinion)가 판단한다 — 여기서든
+ // 챕터 세션 안에서든 먼저 채운 쪽 한 번만 지급되고, 로컬 저장은 이제 지급 여부에 영향을 안 준다.
+ if(meetsMin && CURRENT_STUDENT && isSupabaseConfigured()){
+  const out=await callGameAction('lab_award_opinion', {p_chapter_id:chapterId, p_round_id:roundId, p_text:text});
+  if(out && out.awarded){
+   S.rc=out.rc; saveLabState(); render();
+   toast('저장 완료 +80🔬', 'gold');
+   flyGain('rc', 80);
+  } else if(out){
+   toast('저장했어요');
+  } else {
+   toast('저장했어요(포인트 지급 확인 실패, 나중에 다시 시도해보세요)');
+  }
  } else {
   toast('저장했어요');
  }
@@ -1620,7 +1586,7 @@ function saveJournal(chapterId, roundId, minLen, chapterTitle, roundTitle){
  if(CURRENT_STUDENT && meetsMin){
   if(isSupabaseConfigured()){
    supaRpc('lab_journal_save', {
-    p_student_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'',
+    p_student_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||'', p_class_no:CURRENT_STUDENT.studentId||'',
     p_chapter_id:chapterId, p_chapter_title:chapterTitle, p_round_id:roundId, p_round_title:roundTitle, p_text:text
    }).catch(()=>{});
   } else {
@@ -1670,11 +1636,6 @@ function collectableAmount(inst){
  const {rate,cap}=assistantEffectiveRateCap(inst);
  const hours=Math.max(0,(Date.now()-inst.lastCollectedAt)/3600000);
  return Math.min(Math.round(hours*rate), Math.round(cap));
-}
-function weightedStartDegree(){
- const roll=Math.random()*100; let acc=0;
- for(const k of DEGREE_ORDER){ acc+=START_DEGREE_WEIGHTS[k]; if(roll<=acc) return k; }
- return 'bachelor';
 }
 const GACHA_COST=100;
 const LEGEND_TICKET_COST=8000;
@@ -1953,7 +1914,7 @@ async function postLabScore(){
  if(!CURRENT_STUDENT) return;
  try{
   if(isSupabaseConfigured()){
-   await supaRpc('lab_score_upsert', {p_name:CURRENT_STUDENT.name, p_class_no:CURRENT_STUDENT.studentId||'', p_research_score:S.researchScore});
+   await supaRpc('lab_score_upsert', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||'', p_class_no:CURRENT_STUDENT.studentId||'', p_research_score:S.researchScore});
   } else {
    await fetch('/api/labscore', {method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({name:CURRENT_STUDENT.name, classNo:CURRENT_STUDENT.studentId||'', researchScore:S.researchScore})});
@@ -2189,7 +2150,7 @@ async function finishLogin(){
  checkDailyAttendance();
  checkRedoRequests();
  render();
- loadChapterMetas().then(()=>{ syncOpinionPoints(); render(); });
+ loadChapterMetas().then(()=>{ render(); });
  loadDeptConfig().then(()=>{
   render();
   /* 챕터 게임에서 "연구동으로 돌아가기"로 왔으면 그 연구동을 바로 열어준다 */

@@ -301,10 +301,11 @@ alter table public.lab_journal_answers enable row level security;
 drop policy if exists "anyone select journal" on public.lab_journal_answers;
 create policy "anyone select journal" on public.lab_journal_answers for select to anon using (true);
 
-create or replace function public.lab_journal_save(p_student_name text, p_class_no text, p_chapter_id text,
+create or replace function public.lab_journal_save(p_student_name text, p_token text, p_class_no text, p_chapter_id text,
   p_chapter_title text, p_round_id text, p_round_title text, p_text text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 begin
+  if not lab_check_session(p_student_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   insert into lab_journal_answers(id, student_name, class_no, chapter_id, chapter_title, round_id, round_title, text, updated_at)
     values ('jrn-' || substr(md5(random()::text || clock_timestamp()::text), 1, 16),
       p_student_name, p_class_no, p_chapter_id, p_chapter_title, p_round_id, p_round_title, p_text, now())
@@ -327,9 +328,10 @@ alter table public.lab_scores enable row level security;
 drop policy if exists "anyone select scores" on public.lab_scores;
 create policy "anyone select scores" on public.lab_scores for select to anon using (true);
 
-create or replace function public.lab_score_upsert(p_name text, p_class_no text, p_research_score int)
+create or replace function public.lab_score_upsert(p_name text, p_token text, p_class_no text, p_research_score int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   insert into lab_scores(name, class_no, research_score, updated_at)
     values (p_name, p_class_no, greatest(0, p_research_score), now())
   on conflict (name) do update set class_no = excluded.class_no, research_score = excluded.research_score, updated_at = now();
@@ -357,7 +359,12 @@ begin
 end; $$;
 
 -- ============================================================
--- 8) 단원(챕터) 문제 데이터 — 전체 공개 조회(학생이 문제를 받아야 하니까), 저장은 교사만
+-- 8) 단원(챕터) 문제 데이터(정답 포함) — 학생 브라우저에 절대 그대로 내려주면 안 되는 비공개 원본.
+--    예전엔 "학생이 문제를 받아야 하니까"라는 이유로 전체 공개 조회였는데, 그러면 정답까지 그대로
+--    노출되는 셈이라(개발자도구는커녕 이 테이블 자체를 그냥 읽으면 정답이 다 보임) 완전히 막는다.
+--    실제 문제 UI는 지금처럼 정적 파일(data/chN.json, 이것도 정답이 들어있어 근본 해결은 아니지만
+--    최소한 서버 채점 결과가 진실이 되게 아래 lab_submit_chapter로 검증한다)로 계속 그리고,
+--    "제출된 답이 진짜 맞았는지"만 이 비공개 사본을 기준으로 서버가 다시 채점한다.
 -- ============================================================
 create table if not exists public.lab_chapters (
   id text primary key,  -- 'ch10' 형태
@@ -365,8 +372,7 @@ create table if not exists public.lab_chapters (
   updated_at timestamptz not null default now()
 );
 alter table public.lab_chapters enable row level security;
-drop policy if exists "anyone select chapters" on public.lab_chapters;
-create policy "anyone select chapters" on public.lab_chapters for select to anon using (true);
+drop policy if exists "anyone select chapters" on public.lab_chapters; -- 예전 공개 정책 제거(비공개로 전환)
 
 create or replace function public.lab_chapter_save(p_teacher_password text, p_id text, p_data jsonb)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
@@ -375,6 +381,204 @@ begin
   insert into lab_chapters(id, data, updated_at) values (p_id, p_data, now())
     on conflict (id) do update set data = excluded.data, updated_at = now();
   return jsonb_build_object('ok', true);
+end; $$;
+
+-- 라운드 하나(r)에 학생이 낸 답(ans)이 맞는지 채점한다. shinjang_science.html의 gradeRound()를
+-- 그대로 옮긴 것 — 정답 필드(correct/correctIndex 등)는 이 함수 안에서만 다뤄지고 클라이언트로
+-- 절대 돌아가지 않는다(맞았는지 아닌지 boolean만 돌려줌).
+create or replace function public.lab_grade_round(r jsonb, ans jsonb) returns boolean
+language plpgsql immutable as $$
+declare
+  kind text; items jsonb; li jsonb; i int; total_n int; correct_n int; ratio numeric;
+  left_arr jsonb; correct_map jsonb; placed jsonb; prev_rank numeric; cur_rank numeric;
+begin
+  kind := r->>'kind';
+  if kind = 'opinion' then return null; end if;
+  if ans is null or jsonb_typeof(ans) = 'null' then return false; end if;
+
+  if kind = 'classify' then
+    items := r->'items';
+    total_n := jsonb_array_length(items);
+    if total_n = 0 then return false; end if;
+    correct_n := 0;
+    for i in 0..total_n-1 loop
+      li := items->i;
+      if (ans->>(li->>'id')) is not distinct from (li->>'correct') and (ans->>(li->>'id')) is not null then
+        correct_n := correct_n + 1;
+      end if;
+    end loop;
+    ratio := coalesce((r->>'passRatio')::numeric, 0.8);
+    return (correct_n::numeric / total_n) >= ratio;
+
+  elsif kind = 'matchpairs' then
+    left_arr := r->'left';
+    correct_map := r->'correct';
+    total_n := jsonb_array_length(left_arr);
+    if total_n = 0 then return false; end if;
+    correct_n := 0;
+    for i in 0..total_n-1 loop
+      li := left_arr->i;
+      if (ans->'pairs'->>(li->>'id')) is not distinct from (correct_map->>(li->>'id')) and (ans->'pairs'->>(li->>'id')) is not null then
+        correct_n := correct_n + 1;
+      end if;
+    end loop;
+    return correct_n = total_n;
+
+  elsif kind = 'ordering' then
+    placed := ans->'placed';
+    if placed is null or jsonb_typeof(placed) <> 'array' then return false; end if;
+    total_n := jsonb_array_length(placed);
+    if total_n = 0 or total_n <> jsonb_array_length(r->'items') then return false; end if;
+    prev_rank := null;
+    for i in 0..total_n-1 loop
+      select (it->>'rank')::numeric into cur_rank from jsonb_array_elements(r->'items') it where it->>'id' = (placed->>i);
+      if cur_rank is null then return false; end if;
+      if prev_rank is not null and cur_rank < prev_rank then return false; end if;
+      prev_rank := cur_rank;
+    end loop;
+    return true;
+
+  elsif kind = 'quiz' or kind = 'graphread' then
+    return (ans::text)::int = (r->>'correctIndex')::int;
+
+  elsif kind = 'combo' then
+    return (ans::text)::int = (r->>'correctComboIndex')::int;
+
+  else
+    return false;
+  end if;
+exception when others then
+  return false;
+end; $$;
+
+-- 챕터 제출 채점 + 크레딧 지급을 서버가 직접 한다(클라이언트가 "몇 점 맞았다"를 자체 보고하는 걸
+-- 더 이상 신뢰하지 않음). p_round_ids는 이번 세션에 실제로 보여준 라운드 id 목록,
+-- p_answers는 {라운드id: 그 라운드에 낸 답} 형태 — roundengine.js의 S.answers를 그대로 보낸다.
+create or replace function public.lab_submit_chapter(p_name text, p_token text, p_chapter_id text, p_mode text,
+  p_round_ids jsonb, p_answers jsonb, p_total_sec int, p_leave_count int, p_away_ms int)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  cs lab_chapters%rowtype; gs lab_game_state%rowtype;
+  all_rounds jsonb; round_def jsonb; rid text; i int; n int; kind text;
+  correct_n int := 0; total_n int := 0; round_results jsonb := '[]'::jsonb;
+  pass_count int; pass_threshold int; passed boolean;
+  ever_correct jsonb; chapter_key text; result_key text; title text; opinion_awarded jsonb;
+  rc_gain int := 0; opinion_min_len int; opinion_text text; all_opinions_filled boolean := true;
+  has_opinion_round boolean := false;
+  perfect_clear boolean; cur_rc int; new_data jsonb; is_correct boolean;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  -- 클라이언트는 seedKey('ch10_seed_v1')를 보내지만 lab_chapters.id는 짧은 형태('ch10')라 둘 다 받아준다.
+  select * into cs from lab_chapters where id = p_chapter_id or data->>'seedKey' = p_chapter_id limit 1;
+  if not found then return jsonb_build_object('ok', false, 'error', '알 수 없는 단원입니다.'); end if;
+  select * into gs from lab_game_state where name = trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+
+  all_rounds := coalesce(cs.data->'rounds','[]'::jsonb) || coalesce(cs.data->'gradablePool','[]'::jsonb);
+  chapter_key := coalesce(cs.data->>'seedKey', p_chapter_id);
+  result_key := chapter_key || (case when p_mode is not null and p_mode <> '' then '__'||p_mode else '' end);
+  title := coalesce(cs.data->'meta'->>'title', p_chapter_id);
+
+  ever_correct := coalesce(gs.data->'everCorrect'->chapter_key, '[]'::jsonb);
+  opinion_awarded := coalesce(gs.data->'opinionAwarded', '{}'::jsonb);
+
+  n := coalesce(jsonb_array_length(p_round_ids), 0);
+  for i in 0..n-1 loop
+    rid := p_round_ids->>i;
+    round_def := null;
+    select r into round_def from jsonb_array_elements(all_rounds) r where r->>'id' = rid limit 1;
+    if round_def is null then continue; end if;
+    kind := round_def->>'kind';
+
+    if kind = 'opinion' then
+      has_opinion_round := true;
+      opinion_min_len := coalesce((round_def->>'minLen')::int, 20);
+      opinion_text := coalesce(p_answers->>rid, '');
+      if length(trim(opinion_text)) < opinion_min_len then all_opinions_filled := false; end if;
+      if length(trim(opinion_text)) >= opinion_min_len and not (opinion_awarded ? (chapter_key||'_'||rid)) then
+        rc_gain := rc_gain + 80;
+        opinion_awarded := opinion_awarded || jsonb_build_object(chapter_key||'_'||rid, true);
+      end if;
+    else
+      total_n := total_n + 1;
+      is_correct := coalesce(lab_grade_round(round_def, p_answers->rid), false);
+      if is_correct then correct_n := correct_n + 1; end if;
+      round_results := round_results || jsonb_build_array(jsonb_build_object('id', rid, 'ok', is_correct));
+      if is_correct and not (ever_correct ? rid) then
+        rc_gain := rc_gain + 35;
+        ever_correct := ever_correct || to_jsonb(rid);
+      end if;
+    end if;
+  end loop;
+
+  pass_count := nullif(cs.data->'meta'->>'passCount','')::int;
+  pass_threshold := case when total_n = 0 then 0 else coalesce(pass_count, ceil(total_n*0.75)::int) end;
+  passed := correct_n >= pass_threshold;
+  -- 서술형이 아예 없던 세션(mode=obj 등)은 "글 다 썼는지" 조건을 만점 판정에서 제외한다.
+  perfect_clear := passed and (all_opinions_filled or not has_opinion_round);
+
+  cur_rc := coalesce((gs.data->>'rc')::int, 0) + rc_gain;
+  new_data := gs.data;
+  new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+  new_data := jsonb_set(new_data, array['everCorrect', chapter_key], ever_correct, true);
+  new_data := jsonb_set(new_data, '{opinionAwarded}', opinion_awarded);
+  new_data := jsonb_set(new_data, array['claimed', result_key], to_jsonb((extract(epoch from now())*1000)::bigint), true);
+  if perfect_clear then
+    new_data := jsonb_set(new_data, array['everPerfect', result_key], 'true'::jsonb, true);
+  end if;
+
+  update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc = excluded.rc, updated_at = now();
+
+  insert into lab_submissions(student_name, class_no, chapter_id, chapter_title, score, total, passed,
+    total_sec, leave_count, away_ms, round_results, opinion_answers, perfect_clear)
+  values (trim(p_name), gs.class_no, chapter_key, title, correct_n, total_n, passed,
+    p_total_sec, p_leave_count, p_away_ms, round_results, '{}'::jsonb, perfect_clear);
+
+  return jsonb_build_object('ok', true, 'score', correct_n, 'total', total_n, 'passed', passed,
+    'perfectClear', perfect_clear, 'rc', cur_rc, 'rcGain', rc_gain);
+end; $$;
+
+-- "내 생각 다시 쓰기"(journalSheet)에서 챕터 세션 밖에서 서술답안을 저장할 때도 같은 규칙(처음
+-- 글자수를 채운 순간에만 +80)으로 지급한다. lab_submit_chapter와 같은 opinionAwarded 맵을 공유해서
+-- 어느 쪽으로 먼저 채우든 중복 지급되지 않는다.
+create or replace function public.lab_award_opinion(p_name text, p_token text, p_chapter_id text, p_round_id text, p_text text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; cs lab_chapters%rowtype; round_def jsonb; min_len int := 20;
+  opinion_awarded jsonb; award_key text; cur_rc int; new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name = trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+
+  select * into cs from lab_chapters where id = p_chapter_id or data->>'seedKey' = p_chapter_id limit 1;
+  if found then
+    select r into round_def from jsonb_array_elements(coalesce(cs.data->'rounds','[]'::jsonb)) r where r->>'id' = p_round_id limit 1;
+    if round_def is not null then min_len := coalesce((round_def->>'minLen')::int, 20); end if;
+  end if;
+
+  if length(trim(coalesce(p_text,''))) < min_len then
+    return jsonb_build_object('ok', true, 'awarded', false, 'rc', cur_rc);
+  end if;
+
+  opinion_awarded := coalesce(gs.data->'opinionAwarded', '{}'::jsonb);
+  award_key := coalesce(cs.data->>'seedKey', p_chapter_id) || '_' || p_round_id;
+  if opinion_awarded ? award_key then
+    return jsonb_build_object('ok', true, 'awarded', false, 'rc', cur_rc);
+  end if;
+
+  cur_rc := cur_rc + 80;
+  opinion_awarded := opinion_awarded || jsonb_build_object(award_key, true);
+  new_data := gs.data;
+  new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+  new_data := jsonb_set(new_data, '{opinionAwarded}', opinion_awarded);
+  update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc = excluded.rc, updated_at = now();
+  return jsonb_build_object('ok', true, 'awarded', true, 'rc', cur_rc);
 end; $$;
 
 -- ============================================================
@@ -394,9 +598,10 @@ alter table public.lab_points enable row level security;
 drop policy if exists "anyone select points" on public.lab_points;
 create policy "anyone select points" on public.lab_points for select to anon using (true);
 
-create or replace function public.lab_points_sync(p_name text, p_class_no text, p_rc int, p_src int)
+create or replace function public.lab_points_sync(p_name text, p_token text, p_class_no text, p_rc int, p_src int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   insert into lab_points(name, class_no, rc, src, updated_at)
     values (p_name, p_class_no, greatest(0, p_rc), greatest(0, p_src), now())
   on conflict (name) do update
@@ -429,10 +634,11 @@ end; $$;
 -- 학생이 로그인 직후 자기 이름으로 부르는 함수(비밀번호 불필요 — lab_journal_save와 같은 신뢰 수준).
 -- 미청구 지급분을 전부 모아서 lab_points 거울에도 즉시 반영해주고, 델타 합계를 돌려줘서
 -- 학생 화면(로컬 S.rc/S.src)에 그대로 더하게 한다.
-create or replace function public.lab_points_claim(p_student_name text)
+create or replace function public.lab_points_claim(p_student_name text, p_token text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare total_rc int; total_src int; notes text[];
 begin
+  if not lab_check_session(p_student_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select coalesce(sum(rc_delta),0), coalesce(sum(src_delta),0), coalesce(array_agg(note) filter (where note is not null and note <> ''), '{}')
     into total_rc, total_src, notes
     from lab_points_grants where student_name = p_student_name and claimed = false;
@@ -460,9 +666,10 @@ alter table public.lab_game_state enable row level security;
 drop policy if exists "anyone select game state" on public.lab_game_state;
 create policy "anyone select game state" on public.lab_game_state for select to anon using (true);
 
-create or replace function public.lab_state_sync(p_name text, p_class_no text, p_data jsonb)
+create or replace function public.lab_state_sync(p_name text, p_token text, p_class_no text, p_data jsonb)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   insert into lab_game_state(name, class_no, data, updated_at)
     values (p_name, p_class_no, p_data, now())
   on conflict (name) do update
@@ -632,6 +839,25 @@ begin
   insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
     on conflict (name) do update set rc=excluded.rc, updated_at=now();
   return jsonb_build_object('ok', true, 'rc', cur_rc, 'deptSlots', cur_slots);
+end; $$;
+
+-- 재도전권(문제 리롤) — REROLL_COST=50. 어떤 문제로 바뀌는지는 클라이언트가 정하고(무작위라 조작해도
+-- 이득이 없음), 여기서는 정말로 50점이 깎이는지만 서버가 보장한다.
+create or replace function public.lab_reroll_charge(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype; cost int:=50; cur_rc int; new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  if cur_rc < cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||cost||' 필요)'); end if;
+  cur_rc := cur_rc - cost;
+  new_data := jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc));
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'rc', cur_rc);
 end; $$;
 
 -- 강화(레벨업) — 비용은 학위 기본값×(1+(lv-1)*0.6). 실패 시 대부분 그대로, 10% 확률로 조수가 떠남.

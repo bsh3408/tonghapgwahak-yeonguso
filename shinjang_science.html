@@ -1767,16 +1767,27 @@ function forceReturnAssistant(idx){
  announceReturn(def.name, hours, amt);
 }
 /* 조수 해고 — 되돌릴 수 없어서 반드시 확인창을 거친다. 환급액은 학위(degree)별로 다르고 서버가 최종 지급한다. */
-async function dismissAssistant(idx){
+/* 해고는 되돌릴 수 없어서, 브라우저 기본 confirm() 대신 게임 다른 화면들과 똑같은 스타일의
+   확인창(modal)을 한 번 더 거치게 한다. */
+function dismissConfirmModal(idx){
  const inst=S.assistants[idx]; if(!inst) return;
  const def=assistantDef(inst.poolId), deg=DEGREE[inst.degree||'bachelor'];
  const refund=DISMISS_REFUND[inst.degree||'bachelor'];
- if(!confirm(`${def.name}(${deg.n})을(를) 정말 해고할까요?\n연구포인트 ${refund}🔬을 돌려받고, 이 조수는 되돌릴 수 없이 떠나요.`)) return;
+ modal(`<h2>🚪 조수 해고</h2>
+  <div class="box" style="text-align:center">
+   <div style="font-size:14px;font-weight:800">${def.name}(${deg.n})을(를) 정말 해고할까요?</div>
+   <div style="font-size:12.5px;color:var(--dim);margin-top:8px">연구포인트 ${refund}🔬을 돌려받고,<br>이 조수는 되돌릴 수 없이 떠나요.</div>
+  </div>
+  <button class="btn" style="background:var(--red);box-shadow:0 3px 0 #c1544c" onclick="dismissAssistant(${idx})">해고하기</button>
+  <button class="btn" style="background:#fff;color:var(--txt);border:2px solid var(--line);margin-top:8px" onclick="closeModal();assistantSheet()">취소</button>`);
+}
+async function dismissAssistant(idx){
+ const inst=S.assistants[idx]; if(!inst) return;
  const out=await callGameAction('lab_dismiss', {p_idx: idx});
  if(!out) return;
  S.rc=out.rc;
  S.assistants.splice(idx,1);
- saveLabState(); render(); assistantSheet();
+ saveLabState(); render(); closeModal(); assistantSheet();
  toast(`${out.assistantName}을(를) 해고하고 연구포인트 +${out.refund}🔬 돌려받았어요`, 'gold');
 }
 /* 연구동에 배치된 조수의 남은 연구 시간을 문구로 만든다 */
@@ -1934,7 +1945,7 @@ function assistantSheet(){
        :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
         onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
       <button class="collectbtn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)"
-       onclick="dismissAssistant(${idx})">🚪 해고 (🔬+${DISMISS_REFUND[inst.degree||'bachelor']})</button>
+       onclick="dismissConfirmModal(${idx})">🚪 해고 (🔬+${DISMISS_REFUND[inst.degree||'bachelor']})</button>
      </div>
     </div>`;}).join('')}
   <div class="box" style="font-size:11.5px;color:var(--dim);line-height:1.8">

@@ -665,7 +665,7 @@ end; $$;
 -- 학생 화면(로컬 S.rc/S.src)에 그대로 더하게 한다.
 create or replace function public.lab_points_claim(p_student_name text, p_token text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
-declare total_rc int; total_src int; notes text[];
+declare total_rc int; total_src int; notes text[]; gs lab_game_state%rowtype; new_rc int;
 begin
   if not lab_check_session(p_student_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select coalesce(sum(rc_delta),0), coalesce(sum(src_delta),0), coalesce(array_agg(note) filter (where note is not null and note <> ''), '{}')
@@ -677,6 +677,14 @@ begin
   update lab_points_grants set claimed = true where student_name = p_student_name and claimed = false;
   update lab_points set rc = greatest(0, rc + total_rc), src = greatest(0, src + total_src), updated_at = now()
     where name = p_student_name;
+  -- ⚠️ lab_state_sync가 rc를 클라이언트 말을 더 이상 안 믿게 되면서, 진짜 저장소인
+  -- lab_game_state.data.rc도 여기서 직접 갱신해야 선생님이 지급한 포인트가 실제로 반영된다.
+  select * into gs from lab_game_state where name=trim(p_student_name);
+  if found then
+    new_rc := greatest(0, coalesce((gs.data->>'rc')::int,0) + total_rc + total_src);
+    update lab_game_state set data = jsonb_set(gs.data, '{rc}', to_jsonb(new_rc)), updated_at = now()
+      where name = trim(p_student_name);
+  end if;
   return jsonb_build_object('ok', true, 'rcDelta', total_rc, 'srcDelta', total_src, 'notes', to_jsonb(notes));
 end; $$;
 

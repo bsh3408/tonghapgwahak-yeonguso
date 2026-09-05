@@ -133,6 +133,7 @@ button,.mrow,.splitcard,.pabtn,.clk,.opt{
 .shead h2{margin:0;font-size:16px;font-weight:900}.shead .cap{font-size:11.5px;color:var(--dim);font-weight:600}
 .back{background:#fff;border:1.5px solid var(--line);border-radius:11px;width:33px;height:33px;font-size:16px;font-weight:900}
 .scont{padding:13px 15px 40px;max-width:780px;margin:0 auto}
+@media (min-width:860px){ .scont{max-width:1180px} }
 .box{background:#fff;border:2px solid var(--line);border-radius:16px;padding:13px;margin-bottom:10px}
 .box h3{margin:0 0 8px;font-size:12.5px;color:var(--dim);font-weight:800}
 .banner{border-radius:14px;padding:10px 13px;font-size:12px;font-weight:700;margin-bottom:11px;text-align:center}
@@ -217,7 +218,7 @@ textarea:focus{border-color:var(--mint)}
 .assistcard .aname{font-weight:900;font-size:14px;flex:1}
 .assistcard .astat{font-size:12.5px;color:var(--dim);line-height:1.7}
 .assistcard select{width:100%;margin-top:7px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;font-size:12.5px}
-.collectbar{display:flex;align-items:center;gap:8px;margin-top:8px}
+.collectbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
 .collectbtn{flex:none;padding:8px 13px;background:var(--mint2);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:12.5px}
 .collectbtn:disabled{background:#d5cec3}
 .oxrow{display:flex;gap:8px;margin-top:12px}
@@ -645,7 +646,7 @@ function sKey(base){ return base+'__'+(CURRENT_STUDENT?CURRENT_STUDENT.name:'gue
 // assistants: [{poolId, assignedDept(부서id|null), lastCollectedAt(ms)}]
 // 처음 로그인하는 학생의 초기값: 연구포인트 200 (사용자 지정, 2026-08-27)
 const DEFAULT_DEPT_SLOTS=2, DEPT_SLOT_COST=100;
-const S={rc:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,totalResearchEarned:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
+const S={rc:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,totalResearchEarned:0,totalRcEarned:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
  deptSlots:DEFAULT_DEPT_SLOTS,
  everCorrect:{}, everPerfect:{}, everPassed:{}, opinionAwarded:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false};
 
@@ -657,6 +658,7 @@ function applyStateSnapshot(s){
  S.deptSlots=s.deptSlots||DEFAULT_DEPT_SLOTS;
  S.assistants=Array.isArray(s.assistants)?s.assistants:[]; S.researchScore=s.researchScore||0;
  S.totalResearchEarned=s.totalResearchEarned||S.researchScore||0;
+ S.totalRcEarned=s.totalRcEarned||0;
  S.papers=Array.isArray(s.papers)?s.papers:[]; S.nobelCount=s.nobelCount||0;
  S.labTheme=s.labTheme||'bright';
  S.ownedThemes=Array.isArray(s.ownedThemes)&&s.ownedThemes.length?s.ownedThemes:['bright'];
@@ -693,7 +695,7 @@ async function pullGameStateFromServer(){
 function saveLabState(){
  try{ localStorage.setItem(sKey('lab_state_v1'), JSON.stringify({
    rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots,
-   assistants:S.assistants, researchScore:S.researchScore, totalResearchEarned:S.totalResearchEarned, papers:S.papers, nobelCount:S.nobelCount,
+   assistants:S.assistants, researchScore:S.researchScore, totalResearchEarned:S.totalResearchEarned, totalRcEarned:S.totalRcEarned, papers:S.papers, nobelCount:S.nobelCount,
    labTheme:S.labTheme, ownedThemes:S.ownedThemes,
    everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
    claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
@@ -708,7 +710,7 @@ function saveLabState(){
 let _gameStateSyncTimer=null;
 function gameStateSyncPayload(){
  return {rc:S.rc, lv:S.lv, fail:S.fail, deptSlots:S.deptSlots, assistants:S.assistants, researchScore:S.researchScore,
-  totalResearchEarned:S.totalResearchEarned,
+  totalResearchEarned:S.totalResearchEarned, totalRcEarned:S.totalRcEarned,
   papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
   everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
   claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
@@ -745,7 +747,7 @@ async function claimTeacherPointGrants(){
   if(!out.ok) return;
   const rcDelta=(out.rcDelta||0)+(out.srcDelta||0);
   if(!rcDelta) return;
-  S.rc=Math.max(0,S.rc+rcDelta); saveLabState();
+  S.rc=Math.max(0,S.rc+rcDelta); if(rcDelta>0) S.totalRcEarned=(S.totalRcEarned||0)+rcDelta; saveLabState();
   toast(`👩‍🏫 선생님이 연구포인트 ${rcDelta>0?'+':''}${rcDelta}🔬 반영했어요`, 'gold');
   render();
  }catch(e){}
@@ -1548,7 +1550,7 @@ async function answerOx(picked){
   const everSet=oxEverCorrectSet(q.chNum);
   everSet.add(q.stmt);
   S.oxEverCorrect[q.chNum]=[...everSet];
-  S.rc=out.rc; saveLabState();
+  S.rc=out.rc; S.totalRcEarned=(S.totalRcEarned||0)+10; saveLabState();
   toast('정답! +10🔬', 'gold');
   flyGain('rc', 10);
  } else {
@@ -1790,7 +1792,7 @@ async function checkAutoReturns(){
   const out=await callGameAction('lab_collect_dept_production', {p_idx: idx});
   _collectingDept=false;
   if(!out) return;
-  S.rc=out.rc; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
+  S.rc=out.rc; S.totalRcEarned=(S.totalRcEarned||0)+out.amt; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
   saveLabState(); render();
   flyGain('rc', out.amt);
   announceReturn(def.name, hours, out.amt);
@@ -1804,7 +1806,7 @@ async function forceReturnAssistant(idx, afterFn){
  const hours=Math.max(0,(Date.now()-inst.lastCollectedAt)/3600000);
  const out=await callGameAction('lab_collect_dept_production', {p_idx: idx});
  if(!out) return;
- S.rc=out.rc; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
+ S.rc=out.rc; S.totalRcEarned=(S.totalRcEarned||0)+out.amt; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
  saveLabState(); render();
  if(out.amt>0) flyGain('rc', out.amt);
  announceReturn(def.name, hours, out.amt);
@@ -1829,7 +1831,7 @@ async function dismissAssistant(idx){
  const inst=S.assistants[idx]; if(!inst) return;
  const out=await callGameAction('lab_dismiss', {p_idx: idx});
  if(!out) return;
- S.rc=out.rc;
+ S.rc=out.rc; S.totalRcEarned=(S.totalRcEarned||0)+out.refund;
  S.assistants.splice(idx,1);
  saveLabState(); render(); closeModal(); assistantSheet();
  toast(`${out.assistantName}을(를) 해고하고 연구포인트 +${out.refund}🔬 돌려받았어요`, 'gold');
@@ -2025,7 +2027,7 @@ async function fetchLabScores(){
   let list;
   if(isSupabaseConfigured()){
    const rows = await supaSelect('lab_scores', 'order=research_score.desc');
-   list = rows.map(r=>({name:r.name, classNo:r.class_no, researchScore:r.research_score, totalResearchEarned:r.total_research_earned}));
+   list = rows.map(r=>({name:r.name, classNo:r.class_no, researchScore:r.research_score, totalResearchEarned:r.total_research_earned, totalRcEarned:r.total_rc_earned}));
   } else {
    const res=await fetch('/api/labscore',{cache:'no-store'});
    list = await res.json();
@@ -2193,7 +2195,7 @@ async function rankSheet(){
   return;
  }
  const top10 = myRank>=0 && myRank<10;
- const byTotal=[...list].sort((a,b)=>(b.totalResearchEarned??b.researchScore)-(a.totalResearchEarned??a.researchScore));
+ const byTotal=[...list].sort((a,b)=>(b.totalRcEarned??0)-(a.totalRcEarned??0));
  const myTotalRank=byTotal.findIndex(s=>s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name));
  box.outerHTML=`
   ${top10?`<div class="banner gold">🎉 전체 top10! 선생님께 확인하면 수행평가 +1점 대상일 수 있어요.</div>`:''}
@@ -2206,13 +2208,13 @@ async function rankSheet(){
    <div style="font-size:11.5px;color:var(--dim2);margin-top:9px;border-top:1.5px solid var(--line);padding-top:9px">
     전체 학생 중 연구점수 1~10등은 선생님께 확인 후 수행평가 +1점 대상이 됩니다.</div></div>
   <div class="box"><h3>누적 연구포인트 랭킹</h3>
-   <div style="font-size:11px;color:var(--dim2);margin-bottom:6px">지금까지 논문으로 실제로 받은 점수 합계예요(써도 줄지 않아요) — 혹시나 위 연구점수를
+   <div style="font-size:11px;color:var(--dim2);margin-bottom:6px">지금까지 벌어들인 🔬연구포인트를 전부 더한 값이에요(써도 줄지 않아요) — 혹시나 잔액(🔬)을
     조작하는 학생이 있으면 여기와 비교해서 잡을 수 있어요.</div>
    ${byTotal.slice(0,10).map((s,i)=>`<div class="rk ${s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name)?'me':''}">
     <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}연구소${s.classNo?'('+s.classNo+')':''}
-    <span class="v">${(s.totalResearchEarned??s.researchScore).toLocaleString()}🏆</span></div>`).join('')}
+    <span class="v">${(s.totalRcEarned??0).toLocaleString()}🔬</span></div>`).join('')}
    ${myTotalRank>=10?`<div class="rk me"><span class="rn">${myTotalRank+1}</span>${CURRENT_STUDENT?CURRENT_STUDENT.name:'나'}연구소
-    <span class="v">${(S.totalResearchEarned||S.researchScore).toLocaleString()}🏆</span></div>`:''}
+    <span class="v">${(S.totalRcEarned||0).toLocaleString()}🔬</span></div>`:''}
   </div>`;
 }
 
@@ -2328,7 +2330,7 @@ async function checkDailyAttendance(){
  if(S.lastAttendance===today) return;
  const out=await callGameAction('lab_attendance_claim');
  if(!out) return; // 서버 기준 이미 오늘 받았거나 실패한 경우 조용히 무시
- S.lastAttendance=today; S.rc=out.rc; saveLabState(); render();
+ S.lastAttendance=today; S.rc=out.rc; S.totalRcEarned=(S.totalRcEarned||0)+30; saveLabState(); render();
  toast('🌞 오늘의 출석 보너스 +30🔬', 'gold');
  flyGain('rc', 30);
 }

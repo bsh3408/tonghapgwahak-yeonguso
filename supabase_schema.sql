@@ -325,6 +325,7 @@ create table if not exists public.lab_scores (
   updated_at timestamptz not null default now()
 );
 alter table public.lab_scores add column if not exists total_research_earned int not null default 0;
+alter table public.lab_scores add column if not exists total_rc_earned int not null default 0;
 alter table public.lab_scores enable row level security;
 drop policy if exists "anyone select scores" on public.lab_scores;
 create policy "anyone select scores" on public.lab_scores for select to anon using (true);
@@ -334,17 +335,18 @@ create policy "anyone select scores" on public.lab_scores for select to anon usi
 -- 직결됨)을 조작할 수 있었다. 이제 서버가 갖고 있는 lab_game_state.data를 유일한 진실로 삼는다.
 create or replace function public.lab_score_upsert(p_name text, p_token text, p_class_no text, p_research_score int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
-declare gs lab_game_state%rowtype; real_score int; real_total int;
+declare gs lab_game_state%rowtype; real_score int; real_total int; real_rc_total int;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select * into gs from lab_game_state where name=trim(p_name);
   real_score := coalesce((gs.data->>'researchScore')::int, 0);
   real_total := coalesce((gs.data->>'totalResearchEarned')::int, real_score);
-  insert into lab_scores(name, class_no, research_score, total_research_earned, updated_at)
-    values (p_name, p_class_no, real_score, real_total, now())
+  real_rc_total := coalesce((gs.data->>'totalRcEarned')::int, 0);
+  insert into lab_scores(name, class_no, research_score, total_research_earned, total_rc_earned, updated_at)
+    values (p_name, p_class_no, real_score, real_total, real_rc_total, now())
   on conflict (name) do update set class_no = excluded.class_no, research_score = excluded.research_score,
-    total_research_earned = excluded.total_research_earned, updated_at = now();
-  return jsonb_build_object('ok', true, 'researchScore', real_score, 'totalResearchEarned', real_total);
+    total_research_earned = excluded.total_research_earned, total_rc_earned = excluded.total_rc_earned, updated_at = now();
+  return jsonb_build_object('ok', true, 'researchScore', real_score, 'totalResearchEarned', real_total, 'totalRcEarned', real_rc_total);
 end; $$;
 
 -- ============================================================
@@ -682,7 +684,11 @@ begin
   select * into gs from lab_game_state where name=trim(p_student_name);
   if found then
     new_rc := greatest(0, coalesce((gs.data->>'rc')::int,0) + total_rc + total_src);
-    update lab_game_state set data = jsonb_set(gs.data, '{rc}', to_jsonb(new_rc)), updated_at = now()
+    update lab_game_state set data = jsonb_set(
+      gs.data, '{rc}', to_jsonb(new_rc)
+    ) || case when total_rc+total_src>0 then
+      jsonb_build_object('totalRcEarned', coalesce((gs.data->>'totalRcEarned')::int,0) + total_rc + total_src)
+    else '{}'::jsonb end, updated_at = now()
       where name = trim(p_student_name);
   end if;
   return jsonb_build_object('ok', true, 'rcDelta', total_rc, 'srcDelta', total_src, 'notes', to_jsonb(notes));
@@ -714,7 +720,7 @@ create or replace function public.lab_state_sync(p_name text, p_token text, p_cl
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   cur jsonb; merged jsonb; k text;
-  protected_keys text[] := array['rc','researchScore','totalResearchEarned','assistants','nobelCount','papers',
+  protected_keys text[] := array['rc','researchScore','totalResearchEarned','totalRcEarned','assistants','nobelCount','papers',
     'everPassed','everPerfect','everCorrect','opinionAwarded','claimed','deptSlots','ownedThemes','labTheme',
     'oxEverCorrect','lastAttendance'];
 begin
@@ -922,7 +928,7 @@ end; $$;
 -- 이 보상도 서버 함수가 직접 줘야 실제로 적립된다. 날짜는 한국 시간(Asia/Seoul) 기준.
 create or replace function public.lab_attendance_claim(p_name text, p_token text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
-declare gs lab_game_state%rowtype; cur_rc int; today text; new_data jsonb;
+declare gs lab_game_state%rowtype; cur_rc int; total_rc int; today text; new_data jsonb;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select * into gs from lab_game_state where name=trim(p_name);
@@ -932,7 +938,8 @@ begin
     return jsonb_build_object('ok', false, 'error', '오늘은 이미 받았어요');
   end if;
   cur_rc := coalesce((gs.data->>'rc')::int, 0) + 30;
-  new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{lastAttendance}', to_jsonb(today));
+  total_rc := coalesce((gs.data->>'totalRcEarned')::int, 0) + 30;
+  new_data := jsonb_set(jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{lastAttendance}', to_jsonb(today)), '{totalRcEarned}', to_jsonb(total_rc));
   update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
   insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
     on conflict (name) do update set rc=excluded.rc, updated_at=now();
@@ -967,7 +974,7 @@ create or replace function public.lab_ox_answer(p_name text, p_token text, p_ch_
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   gs lab_game_state%rowtype; bank jsonb; item jsonb; correct_answer boolean; explain_text text;
-  ever jsonb; ever_set jsonb; cur_rc int; new_data jsonb; already boolean := false; i int;
+  ever jsonb; ever_set jsonb; cur_rc int; total_rc int; new_data jsonb; already boolean := false; i int;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select data into bank from lab_ox_bank where ch_num=p_ch_num;
@@ -992,8 +999,10 @@ begin
     ever_set := ever_set || to_jsonb(p_stmt);
     ever := jsonb_set(ever, array[p_ch_num], ever_set, true);
     cur_rc := coalesce((gs.data->>'rc')::int, 0) + 10;
+    total_rc := coalesce((gs.data->>'totalRcEarned')::int, 0) + 10;
     new_data := jsonb_set(new_data, '{oxEverCorrect}', ever);
     new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+    new_data := jsonb_set(new_data, '{totalRcEarned}', to_jsonb(total_rc));
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
       on conflict (name) do update set rc=excluded.rc, updated_at=now();
@@ -1100,7 +1109,7 @@ declare
   gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; theme text;
   dept_id text; lv int; base_rate numeric; lv_mult numeric; legend_mult numeric;
   dept_mult numeric := 1; legend_buff_mult numeric := 1; theme_mult numeric; owned_count int;
-  now_ms bigint; last_ms bigint; hours numeric; rate numeric; cap numeric; amt int; cur_rc int;
+  now_ms bigint; last_ms bigint; hours numeric; rate numeric; cap numeric; amt int; cur_rc int; total_rc int;
   new_assistants jsonb; new_data jsonb; j int; other jsonb; other_rare boolean; other_theme text;
   dept_majors jsonb := '{"d1":["earth","bio"],"d2":["chem"],"d3":["bio","earth"],"d4":["phys"],"d5":["etc"],"d6":["etc"]}'::jsonb;
 begin
@@ -1146,10 +1155,11 @@ begin
   amt := least(round(hours*rate)::int, round(cap)::int);
 
   cur_rc := coalesce((gs.data->>'rc')::int, 0) + amt;
+  total_rc := coalesce((gs.data->>'totalRcEarned')::int, 0) + amt;
   inst := jsonb_set(inst, '{assignedDept}', 'null'::jsonb);
   inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
   new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
-  new_data := jsonb_set(jsonb_set(gs.data, '{assistants}', new_assistants), '{rc}', to_jsonb(cur_rc));
+  new_data := jsonb_set(jsonb_set(jsonb_set(gs.data, '{assistants}', new_assistants), '{rc}', to_jsonb(cur_rc)), '{totalRcEarned}', to_jsonb(total_rc));
   update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
   insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
     on conflict (name) do update set rc=excluded.rc, updated_at=now();
@@ -1161,7 +1171,7 @@ end; $$;
 create or replace function public.lab_dismiss(p_name text, p_token text, p_idx int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
-  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; refund int; cur_rc int; new_assistants jsonb; aname text;
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; refund int; cur_rc int; total_rc int; new_assistants jsonb; aname text;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select * into gs from lab_game_state where name=trim(p_name);
@@ -1177,8 +1187,9 @@ begin
     else refund := 250; -- phd(전설급 포함)
   end case;
   cur_rc := coalesce((gs.data->>'rc')::int, 0) + refund;
+  total_rc := coalesce((gs.data->>'totalRcEarned')::int, 0) + refund;
   new_assistants := assistants - p_idx;
-  update lab_game_state set data = jsonb_set(jsonb_set(gs.data,'{assistants}',new_assistants),'{rc}',to_jsonb(cur_rc)), updated_at=now() where name=trim(p_name);
+  update lab_game_state set data = jsonb_set(jsonb_set(jsonb_set(gs.data,'{assistants}',new_assistants),'{rc}',to_jsonb(cur_rc)),'{totalRcEarned}',to_jsonb(total_rc)), updated_at=now() where name=trim(p_name);
   insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
     on conflict (name) do update set rc=excluded.rc, updated_at=now();
   return jsonb_build_object('ok', true, 'rc', cur_rc, 'refund', refund, 'assistantName', aname);

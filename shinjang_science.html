@@ -2399,7 +2399,9 @@ async function checkDailyAttendance(){
    일정 주기로 "아직 쓰고 있다"는 하트비트를 보낸다. 다른 기기가 새로 로그인하면 서버 쪽
    토큰이 그 기기 것으로 바뀌므로, 하트비트 응답에서 kicked:true가 오면 이 기기를 강제 로그아웃한다. */
 let _sessionHeartbeatTimer=null;
-const SESSION_HEARTBEAT_MS=90000;
+// 서버 잠금 시간(lab_session_timeout_minutes)을 1분으로 줄였으니, 하트비트도 그보다 훨씬 촘촘하게
+// 보내야 실제로 켜둔 탭이 네트워크 지연 한 번에 "끊긴 세션"으로 오판되지 않는다(1/3 이하 권장).
+const SESSION_HEARTBEAT_MS=20000;
 function stopSessionHeartbeat(){ clearInterval(_sessionHeartbeatTimer); _sessionHeartbeatTimer=null; }
 function startSessionHeartbeat(){
  stopSessionHeartbeat();

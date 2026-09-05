@@ -72,7 +72,10 @@ alter table public.lab_students enable row level security;
 -- anon에게 테이블 직접 접근 정책 없음 → 아래 함수로만.
 
 -- 이 시간(분) 동안 lab_session_heartbeat가 안 오면 그 기기의 세션은 끊긴 것으로 보고 풀어준다.
-create or replace function public.lab_session_timeout_minutes() returns int language sql immutable as $$ select 5 $$;
+-- 원래 5분이었는데 "그렇게까지 길 필요 있나" 피드백으로 1분으로 줄였다. 하트비트 주기(클라이언트
+-- SESSION_HEARTBEAT_MS)를 이 값보다 훨씬 촘촘하게(3배 이상 여유) 유지해야, 실제로 계속 켜둔 탭이
+-- 네트워크 지연 한 번에 "끊긴 세션"으로 오판되지 않는다.
+create or replace function public.lab_session_timeout_minutes() returns int language sql immutable as $$ select 1 $$;
 
 create or replace function public.lab_login(p_name text, p_password text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$

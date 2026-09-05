@@ -695,12 +695,32 @@ alter table public.lab_game_state enable row level security;
 drop policy if exists "anyone select game state" on public.lab_game_state;
 create policy "anyone select game state" on public.lab_game_state for select to anon using (true);
 
+-- ⚠️ 핵심 보안 수정: 예전엔 이 함수가 클라이언트가 보낸 p_data를 통째로 그대로 믿고 저장했다.
+-- 즉 학생이 개발자도구 콘솔에서 `S.rc=999999; saveLabState()` 한 줄만 쳐도 서버에 그대로 박혔다
+-- (뽑기·강화 등 "행동"은 서버가 계산하도록 이미 옮겨놨지만, 그 결과가 쌓이는 저장소 자체는 여전히
+-- 클라이언트가 통째로 덮어쓸 수 있는 구멍이었다 — 심지어 everPassed 같은 채점 결과까지도 이 경로로
+-- 조작 가능했다). 이제 재화·채점 결과처럼 민감한 필드는, 클라이언트가 뭘 보내든 무시하고 서버에
+-- 이미 저장돼 있는 값을 그대로 유지한다. 계정을 막 만들어서 아직 그 필드가 서버에 없을 때(최초 1회
+-- 저장)만 클라이언트가 보낸 초기값(rc:200 등 기본값)이 그대로 들어간다.
 create or replace function public.lab_state_sync(p_name text, p_token text, p_class_no text, p_data jsonb)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  cur jsonb; merged jsonb; k text;
+  protected_keys text[] := array['rc','researchScore','totalResearchEarned','assistants','nobelCount','papers',
+    'everPassed','everPerfect','everCorrect','opinionAwarded','claimed','deptSlots','ownedThemes','labTheme',
+    'oxEverCorrect','lastAttendance'];
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select data into cur from lab_game_state where name=trim(p_name);
+  cur := coalesce(cur, '{}'::jsonb);
+  merged := coalesce(p_data, '{}'::jsonb);
+  foreach k in array protected_keys loop
+    if cur ? k then
+      merged := jsonb_set(merged, array[k], cur->k, true);
+    end if;
+  end loop;
   insert into lab_game_state(name, class_no, data, updated_at)
-    values (p_name, p_class_no, p_data, now())
+    values (p_name, p_class_no, merged, now())
   on conflict (name) do update
     set class_no = excluded.class_no, data = excluded.data, updated_at = now();
   return jsonb_build_object('ok', true);
@@ -889,6 +909,92 @@ begin
   return jsonb_build_object('ok', true, 'rc', cur_rc);
 end; $$;
 
+-- 출석 보너스(하루 1회 +30🔬) — 예전엔 클라이언트가 오늘 날짜인지만 스스로 확인하고 S.rc+=30을
+-- 직접 했는데, lab_state_sync가 rc/lastAttendance를 더 이상 클라이언트 말을 안 믿게 되면서
+-- 이 보상도 서버 함수가 직접 줘야 실제로 적립된다. 날짜는 한국 시간(Asia/Seoul) 기준.
+create or replace function public.lab_attendance_claim(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype; cur_rc int; today text; new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  today := to_char(now() at time zone 'Asia/Seoul', 'YYYY-MM-DD');
+  if coalesce(gs.data->>'lastAttendance','') = today then
+    return jsonb_build_object('ok', false, 'error', '오늘은 이미 받았어요');
+  end if;
+  cur_rc := coalesce((gs.data->>'rc')::int, 0) + 30;
+  new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{lastAttendance}', to_jsonb(today));
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'rc', cur_rc);
+end; $$;
+
+-- ============================================================
+-- OX 퀴즈 — 정답(answer)이 담긴 원본 data/ox_questions.json이 공개 정적 파일이라
+-- 개발자도구 네트워크 탭에서 그대로 보였다. 이제 문장(stmt)만 공개 파일에 남기고,
+-- 정답·해설은 이 비공개 테이블에서 서버가 직접 채점할 때만 확인한다.
+-- ============================================================
+create table if not exists public.lab_ox_bank (
+  ch_num text primary key,
+  data jsonb not null default '[]'::jsonb -- [{stmt, answer(bool), explain}, ...]
+);
+alter table public.lab_ox_bank enable row level security;
+drop policy if exists "anyone select ox bank" on public.lab_ox_bank;
+-- 정답이 들어있으므로 공개 조회는 허용하지 않는다(교사 저장 + 서버 채점 함수만 접근).
+
+create or replace function public.lab_ox_bank_save(p_teacher_password text, p_ch_num text, p_data jsonb)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 올바르지 않습니다.'); end if;
+  insert into lab_ox_bank(ch_num, data) values (p_ch_num, p_data)
+    on conflict (ch_num) do update set data = excluded.data;
+  return jsonb_build_object('ok', true);
+end; $$;
+
+-- 학생이 고른 답(p_picked)을 서버가 가진 정답과 대조해서만 채점한다. 같은 문장은 하루가 아니라
+-- 영구적으로 1회만 보상(everSet 방식, 기존 클라이언트 로직과 동일한 중복방지 키를 그대로 씀).
+create or replace function public.lab_ox_answer(p_name text, p_token text, p_ch_num text, p_stmt text, p_picked boolean)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; bank jsonb; item jsonb; correct_answer boolean; explain_text text;
+  ever jsonb; ever_set jsonb; cur_rc int; new_data jsonb; already boolean := false; i int;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select data into bank from lab_ox_bank where ch_num=p_ch_num;
+  if bank is null then return jsonb_build_object('ok', false, 'error', '문제 데이터를 찾을 수 없습니다.'); end if;
+  for i in 0..jsonb_array_length(bank)-1 loop
+    item := bank->i;
+    if item->>'stmt' = p_stmt then
+      correct_answer := (item->>'answer')::boolean;
+      explain_text := item->>'explain';
+    end if;
+  end loop;
+  if correct_answer is null then return jsonb_build_object('ok', false, 'error', '존재하지 않는 문제입니다.'); end if;
+
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  ever := coalesce(gs.data->'oxEverCorrect', '{}'::jsonb);
+  ever_set := coalesce(ever->p_ch_num, '[]'::jsonb);
+  if ever_set ? p_stmt then already := true; end if;
+
+  new_data := gs.data;
+  if p_picked = correct_answer and not already then
+    ever_set := ever_set || to_jsonb(p_stmt);
+    ever := jsonb_set(ever, array[p_ch_num], ever_set, true);
+    cur_rc := coalesce((gs.data->>'rc')::int, 0) + 10;
+    new_data := jsonb_set(new_data, '{oxEverCorrect}', ever);
+    new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+    update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+    insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+      on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  else
+    cur_rc := coalesce((gs.data->>'rc')::int, 0);
+  end if;
+  return jsonb_build_object('ok', true, 'correct', p_picked=correct_answer, 'explain', explain_text, 'rc', cur_rc, 'alreadyCredited', already);
+end; $$;
+
 -- 강화(레벨업) — 비용은 학위 기본값×(1+(lv-1)*0.6). 실패 시 대부분 그대로, 10% 확률로 조수가 떠남.
 -- Lv.5에서 성공하면 다음 학위로 승급(박사는 승급 없이 레벨만 계속 오름).
 create or replace function public.lab_enhance(p_name text, p_token text, p_idx int)
@@ -974,6 +1080,72 @@ begin
   new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
   update lab_game_state set data=jsonb_set(gs.data,'{assistants}',new_assistants), updated_at=now() where name=trim(p_name);
   return jsonb_build_object('ok', true, 'assignedDept', p_dept_id);
+end; $$;
+
+-- 연구동에 배치된 조수의 생산량 수거 — "자동 복귀"(최대치 채움)와 "로비로 돌아오게 하기"(강제 수거)
+-- 둘 다 이 함수 하나로 처리한다. 예전엔 클라이언트가 rate·cap(레벨/전공배치/세트효과/전설버프
+-- 배율까지 전부)을 스스로 계산해서 그 결과(amt)만 서버에 통보했는데, 개발자도구로 그 계산 결과를
+-- 얼마든지 부풀릴 수 있었다. 이제 레벨·배치·세트·전설버프 배율을 전부 서버가 직접 다시 계산한다.
+create or replace function public.lab_collect_dept_production(p_name text, p_token text, p_idx int)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; theme text;
+  dept_id text; lv int; base_rate numeric; lv_mult numeric; legend_mult numeric;
+  dept_mult numeric := 1; legend_buff_mult numeric := 1; theme_mult numeric; owned_count int;
+  now_ms bigint; last_ms bigint; hours numeric; rate numeric; cap numeric; amt int; cur_rc int;
+  new_assistants jsonb; new_data jsonb; j int; other jsonb; other_rare boolean; other_theme text;
+  dept_majors jsonb := '{"d1":["earth","bio"],"d2":["chem"],"d3":["bio","earth"],"d4":["phys"],"d5":["etc"],"d6":["etc"]}'::jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name=trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
+  if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
+  inst := assistants->p_idx;
+  dept_id := inst->>'assignedDept';
+  if dept_id is null then return jsonb_build_object('ok', false, 'error', '연구동에 배치되지 않았어요.'); end if;
+  degree := coalesce(inst->>'degree','bachelor');
+  lv := coalesce((inst->>'lv')::int, 1);
+  select rare_draw, theme into is_rare, theme from lab_assistants_pool where id=inst->>'poolId';
+
+  case degree when 'bachelor' then base_rate:=20; when 'master' then base_rate:=35; else base_rate:=60; end case;
+  lv_mult := 1+(lv-1)*0.15;
+  legend_mult := case when is_rare then 2.2 else 1 end;
+  if theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? theme) then dept_mult := 1.2; end if;
+
+  for j in 0..jsonb_array_length(assistants)-1 loop
+    if j<>p_idx then
+      other := assistants->j;
+      if other->>'assignedDept' = dept_id then
+        select rare_draw, theme into other_rare, other_theme from lab_assistants_pool where id=other->>'poolId';
+        if other_rare and other_theme<>'uni' and dept_majors ? dept_id and dept_majors->dept_id ? other_theme then
+          legend_buff_mult := 1.5;
+        end if;
+      end if;
+    end if;
+  end loop;
+
+  select count(*) into owned_count from jsonb_array_elements(assistants) a
+    join lab_assistants_pool p on p.id = a->>'poolId' where p.theme = theme;
+  theme_mult := power(1.2::numeric, greatest(0, owned_count-1));
+
+  rate := base_rate * lv_mult * legend_mult * dept_mult * legend_buff_mult * theme_mult;
+  cap := rate; -- 코드 규칙상 cap은 rate와 항상 같은 배율(1시간이면 최대치)
+
+  now_ms := (extract(epoch from now())*1000)::bigint;
+  last_ms := coalesce((inst->>'lastCollectedAt')::bigint, 0);
+  hours := greatest(0, (now_ms-last_ms)/3600000.0);
+  amt := least(round(hours*rate)::int, round(cap)::int);
+
+  cur_rc := coalesce((gs.data->>'rc')::int, 0) + amt;
+  inst := jsonb_set(inst, '{assignedDept}', 'null'::jsonb);
+  inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
+  new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
+  new_data := jsonb_set(jsonb_set(gs.data, '{assistants}', new_assistants), '{rc}', to_jsonb(cur_rc));
+  update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
+  insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
+    on conflict (name) do update set rc=excluded.rc, updated_at=now();
+  return jsonb_build_object('ok', true, 'rc', cur_rc, 'amt', amt);
 end; $$;
 
 -- 조수 해고 — 배치 여부와 상관없이 목록에서 제거하고, 학위(degree)별로 정해진 만큼 연구포인트(rc)를

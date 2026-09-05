@@ -1345,7 +1345,7 @@ function missionSheet(did){
      <span style="font-weight:800;font-size:12.5px">${def.name}</span>
      <span style="margin-left:auto;font-size:10.5px;color:var(--mint2);font-weight:800">${remainingTimeLabel(inst)}</span>
      <button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line);flex:none;width:100%;margin-top:4px"
-       onclick="forceReturnAssistant(${idx});missionSheet('${did}')">🏠 로비로 돌아오게 하기</button>
+       onclick="forceReturnAssistant(${idx}, ()=>missionSheet('${did}'))">🏠 로비로 돌아오게 하기</button>
     </div>`;}).join('')}
    <div style="font-size:11px;color:var(--dim);margin-top:6px">연구를 마치면 자동으로 로비로 돌아와서 알려드려요. 급하면 지금까지 모은 만큼만 받고 바로 불러올 수도 있어요.</div>
   </div>` : '';
@@ -1502,19 +1502,22 @@ function renderOx(){
   </div>`,
  `missionSheet('${st.did}')`);
 }
-function answerOx(picked){
+/* 정답은 클라이언트에 없다(공개 파일엔 문장만 있음) — 서버(lab_ox_answer)가 비공개 정답표와
+   대조해서 채점하고, 맞았을 때만 연구포인트를 직접 지급한다. */
+async function answerOx(picked){
  const st=OX_STATE, q=st.items[st.idx];
- const ok=picked===q.answer;
- if(ok){
+ const out=await callGameAction('lab_ox_answer', {p_ch_num:q.chNum, p_stmt:q.stmt, p_picked:picked});
+ if(!out) return;
+ if(out.correct){
   st.correct++;
   const everSet=oxEverCorrectSet(q.chNum);
   everSet.add(q.stmt);
   S.oxEverCorrect[q.chNum]=[...everSet];
-  S.rc+=10; saveLabState();
+  S.rc=out.rc; saveLabState();
   toast('정답! +10🔬', 'gold');
   flyGain('rc', 10);
  } else {
-  toast(`오답이에요. ${q.explain||''}`, 'bad');
+  toast(`오답이에요. ${out.explain||''}`, 'bad');
  }
  st.idx++;
  render();
@@ -1740,31 +1743,41 @@ function announceReturn(name, hours, amt){
   </div>
   <button class="btn" onclick="closeModal()">확인</button>`);
 }
-function checkAutoReturns(){
- for(const inst of S.assistants){
+/* rate/cap/amt는 화면에 미리 보여주는 용도로만 클라이언트가 계산한다(개발자도구로 부풀려봤자
+   실제 지급액은 서버(lab_collect_dept_production)가 처음부터 다시 계산해서 무시된다). */
+let _collectingDept=false;
+async function checkAutoReturns(){
+ if(_collectingDept) return;
+ for(let idx=0; idx<S.assistants.length; idx++){
+  const inst=S.assistants[idx];
   if(!inst.assignedDept) continue;
-  const {rate,cap}=assistantEffectiveRateCap(inst);
-  const amt=collectableAmount(inst);
-  if(amt<Math.round(cap)) continue;
+  const {cap}=assistantEffectiveRateCap(inst);
+  if(collectableAmount(inst)<Math.round(cap)) continue;
   const def=assistantDef(inst.poolId);
   const hours=Math.max(0,(Date.now()-inst.lastCollectedAt)/3600000);
-  S.rc+=amt; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
+  _collectingDept=true;
+  const out=await callGameAction('lab_collect_dept_production', {p_idx: idx});
+  _collectingDept=false;
+  if(!out) return;
+  S.rc=out.rc; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
   saveLabState(); render();
-  flyGain('rc', amt);
-  announceReturn(def.name, hours, amt);
+  flyGain('rc', out.amt);
+  announceReturn(def.name, hours, out.amt);
   break; // 한 번에 하나씩만 알려준다(여러 명이 동시에 끝나도 팝업이 겹치지 않게)
  }
 }
 /* "로비로 돌아오게 하기" — 아직 다 채우지 못했어도 즉시 불러들이고, 지금까지 모인 만큼만 지급한다 */
-function forceReturnAssistant(idx){
+async function forceReturnAssistant(idx, afterFn){
  const inst=S.assistants[idx]; if(!inst||!inst.assignedDept) return;
  const def=assistantDef(inst.poolId);
- const amt=collectableAmount(inst);
  const hours=Math.max(0,(Date.now()-inst.lastCollectedAt)/3600000);
- S.rc+=amt; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
+ const out=await callGameAction('lab_collect_dept_production', {p_idx: idx});
+ if(!out) return;
+ S.rc=out.rc; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
  saveLabState(); render();
- if(amt>0) flyGain('rc', amt);
- announceReturn(def.name, hours, amt);
+ if(out.amt>0) flyGain('rc', out.amt);
+ announceReturn(def.name, hours, out.amt);
+ if(afterFn) afterFn();
 }
 /* 조수 해고 — 되돌릴 수 없어서 반드시 확인창을 거친다. 환급액은 학위(degree)별로 다르고 서버가 최종 지급한다. */
 /* 해고는 되돌릴 수 없어서, 브라우저 기본 confirm() 대신 게임 다른 화면들과 똑같은 스타일의
@@ -1940,7 +1953,7 @@ function assistantSheet(){
      </select>
      <div class="collectbar">
       ${assigned?`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
-        onclick="forceReturnAssistant(${idx});assistantSheet()">🏠 로비로 돌아오게 하기 (🔬${amt})</button>`:''}
+        onclick="forceReturnAssistant(${idx}, assistantSheet)">🏠 로비로 돌아오게 하기 (🔬${amt})</button>`:''}
       ${maxed?`<span style="font-size:11px;color:var(--gold);font-weight:800;align-self:center">🏆 최고 레벨(박사 Lv.5)</span>`
        :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
         onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
@@ -2259,11 +2272,12 @@ function seedTeacherTestPoints(){
 
 /* 하루 1회 로그인 출석 보너스 */
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
-function checkDailyAttendance(){
+async function checkDailyAttendance(){
  const today=todayStr();
  if(S.lastAttendance===today) return;
- S.lastAttendance=today;
- S.rc+=30; saveLabState(); render();
+ const out=await callGameAction('lab_attendance_claim');
+ if(!out) return; // 서버 기준 이미 오늘 받았거나 실패한 경우 조용히 무시
+ S.lastAttendance=today; S.rc=out.rc; saveLabState(); render();
  toast('🌞 오늘의 출석 보너스 +30🔬', 'gold');
  flyGain('rc', 30);
 }

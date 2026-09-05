@@ -228,6 +228,67 @@ textarea:focus{border-color:var(--mint)}
 .journalitem .jq{font-size:12.5px;font-weight:700;margin-bottom:8px;line-height:1.6}
 .journalitem textarea{min-height:90px;font-size:12.5px}
 .journalitem .jstat{font-size:11px;color:var(--dim2);margin-top:6px;display:flex;justify-content:space-between;align-items:center}
+
+/* UI polish 2026-09-05: presentation only. Keep gameplay timing and DOM intact. */
+:root{--dim:#75695e;--dim2:#887b6b}
+.split{margin-top:8px;gap:10px}
+.splitcard{padding:9px 13px}
+.splitcard .big{font-size:22px}
+.splitcard .sm{font-size:13px;line-height:1.5}
+.heroRs{margin-top:5px;padding-top:2px}
+.heroRsNum{font-size:38px}
+.nav button{min-height:46px;border-radius:14px;transition:background-color .15s,border-color .15s}
+.nav button:hover{border-color:var(--mint2)}
+.nav button:active{transform:translateY(2px)}
+.nav .ic{font-size:22px}
+.shead .cap{font-size:13px;line-height:1.5}
+.shead{flex-wrap:wrap;row-gap:5px}
+.box h3,.box,.assistColLabel{line-height:1.65}
+.box h3,.assistColLabel{font-size:13px}
+.banner,.mt small,.note{font-size:13px;line-height:1.65}
+.assistcard{padding:14px;margin-bottom:12px;border-radius:16px}
+.assistcard .ahead{flex-wrap:wrap;gap:8px}
+/* Override only portrait dimensions provided by the existing template. */
+.assistcard .ahead>img{width:44px!important;height:44px!important}
+.assistcard .aname{font-size:15px;min-width:100px;overflow-wrap:anywhere}
+.assistcard .astat{font-size:13px;line-height:1.7}
+.assistcard select{min-height:40px;font-size:13px}
+.collectbar{gap:8px}
+.collectbtn,.buy{min-height:38px;font-size:13px}
+.collectbtn{white-space:normal}
+.back,.x{min-width:40px;min-height:40px}
+.rk{padding:12px;font-size:14px}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--mint2);outline-offset:3px}
+/* :has identifies the theme grid by its existing assets, without JS edits.
+   Browsers without :has retain the original two-column theme layout. */
+.scont>div:has(>.box>img[src^="assets/lab/concepts/"]){align-items:start}
+@media(min-width:860px){
+ .labRow{margin-top:6px}
+ .labRow .nav button{padding:12px}
+ .assistSplit{grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
+ .assistCol{min-width:0}
+ .scont>div:has(>.box>img[src^="assets/lab/concepts/"]){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(min-width:1100px){
+ .scont>div:has(>.box>img[src^="assets/lab/concepts/"]){grid-template-columns:repeat(4,minmax(0,1fr))!important}
+}
+@media(max-width:520px){
+ .heroRsNum{font-size:34px}
+ .assistcard{padding:12px}
+ .collectbar>*{max-width:100%}
+ .logininput{font-size:16px}
+}
+/* Keep original durations: JS removes reward elements after a fixed timeout.
+   Tone down perpetual decoration without changing success/failure feedback. */
+.legendGlow{animation-name:uiLegendSoft}
+.legendCard{animation-name:uiLegendCardSoft}
+@keyframes uiLegendSoft{0%,100%{filter:drop-shadow(0 0 2px #f5d060)}50%{filter:drop-shadow(0 0 5px #f5d060)}}
+@keyframes uiLegendCardSoft{0%,100%{box-shadow:0 0 0 1px #f5d060,0 0 5px rgba(245,208,96,.2)}50%{box-shadow:0 0 0 2px #f5d060,0 0 9px rgba(245,208,96,.3)}}
+@media(prefers-reduced-motion:reduce){
+ .npc,.walk,.blink,.pop,.legendGlow,.legendBadgeGlow,.legendCard,.heroRsNum.bump,.pill.bump,.enhSuccess,.enhFail,.sbody,.assistInfoPanel{animation:none!important}
+ .flygain,.nav button{transition:none!important}
+}
+
 </style>
 </head>
 <body>

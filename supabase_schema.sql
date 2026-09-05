@@ -1106,7 +1106,7 @@ end; $$;
 create or replace function public.lab_collect_dept_production(p_name text, p_token text, p_idx int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
-  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; theme text;
+  gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; a_theme text;
   dept_id text; lv int; base_rate numeric; lv_mult numeric; legend_mult numeric;
   dept_mult numeric := 1; legend_buff_mult numeric := 1; theme_mult numeric; owned_count int;
   now_ms bigint; last_ms bigint; hours numeric; rate numeric; cap numeric; amt int; cur_rc int; total_rc int;
@@ -1123,12 +1123,12 @@ begin
   if dept_id is null then return jsonb_build_object('ok', false, 'error', '연구동에 배치되지 않았어요.'); end if;
   degree := coalesce(inst->>'degree','bachelor');
   lv := coalesce((inst->>'lv')::int, 1);
-  select rare_draw, theme into is_rare, theme from lab_assistants_pool where id=inst->>'poolId';
+  select rare_draw, theme into is_rare, a_theme from lab_assistants_pool where id=inst->>'poolId';
 
   case degree when 'bachelor' then base_rate:=20; when 'master' then base_rate:=35; else base_rate:=60; end case;
   lv_mult := 1+(lv-1)*0.15;
   legend_mult := case when is_rare then 2.2 else 1 end;
-  if theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? theme) then dept_mult := 1.2; end if;
+  if a_theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? a_theme) then dept_mult := 1.2; end if;
 
   for j in 0..jsonb_array_length(assistants)-1 loop
     if j<>p_idx then
@@ -1143,7 +1143,7 @@ begin
   end loop;
 
   select count(*) into owned_count from jsonb_array_elements(assistants) a
-    join lab_assistants_pool p on p.id = a->>'poolId' where p.theme = theme;
+    join lab_assistants_pool p on p.id = a->>'poolId' where p.theme = a_theme;
   theme_mult := power(1.2::numeric, greatest(0, owned_count-1));
 
   rate := base_rate * lv_mult * legend_mult * dept_mult * legend_buff_mult * theme_mult;

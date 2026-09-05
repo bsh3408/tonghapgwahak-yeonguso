@@ -1027,6 +1027,7 @@ begin
   assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
   if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
   inst := assistants->p_idx;
+  if inst->>'assignedDept' is not null then return jsonb_build_object('ok', false, 'error', '연구동에 배치된 조수는 강화할 수 없어요. 먼저 로비로 불러오세요.'); end if;
   degree := coalesce(inst->>'degree','bachelor');
   lv := coalesce((inst->>'lv')::int, 1);
   select name into aname from lab_assistants_pool where id=inst->>'poolId';
@@ -1179,6 +1180,7 @@ begin
   assistants := coalesce(gs.data->'assistants', '[]'::jsonb);
   if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
   inst := assistants->p_idx;
+  if inst->>'assignedDept' is not null then return jsonb_build_object('ok', false, 'error', '연구동에 배치된 조수는 해고할 수 없어요. 먼저 로비로 불러오세요.'); end if;
   degree := coalesce(inst->>'degree','bachelor');
   select name into aname from lab_assistants_pool where id=inst->>'poolId';
   case degree

@@ -2039,14 +2039,16 @@ function renderAssistCard({inst,idx}){
     const assigned=!!inst.assignedDept;
     const cost=enhanceCostFor(inst), successPct=Math.round(successRateFor(lv)*100);
     const isLegend=!!def.rareDraw, isPhd=inst.degree==='phd';
-    return `<div class="assistcard ${isLegend?'legendCard':(isPhd?'phdCard':'')}" style="${assigned?'background:#eef7f4;border-color:#bce3d8':''}">
+    const mj=MJ[def.theme]||{n:def.theme, c:'#8d8175', bg:'#f3ece0', ic:'🔬'};
+    return `<div class="assistcard ${isLegend?'legendCard':(isPhd?'phdCard':'')}" style="background:${mj.bg};${assigned?'border-color:#5fc9b0':`border-color:${mj.c}55`}">
      <div class="ahead" style="align-items:center">
       <img src="assets/assistants/${inst.poolId}.png" class="${isLegend?'legendGlow':(isPhd?'phdRing':'')}" style="flex:none;width:34px;height:34px;border-radius:50%;
         object-fit:cover;border:2.5px solid ${isLegend?'#f5d060':deg.color}"/>
       ${rarityBadgeHtml(def,inst.degree,lv)}
       <span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span><span style="font-size:11px;color:${isLegend?'var(--gold)':'var(--dim)'};font-weight:${isLegend?800:400}">${SET_NAMES[def.setId]}</span></div>
      <div class="astat">${assistantLocationLabel(inst)}${assigned?` · ${remainingTimeLabel(inst)}`:''}</div>
-     <div class="astat">분당 ${(rate/60).toFixed(1)}🔬(1시간이면 최대치) · 최대 저장 ${Math.round(cap)}🔬 · 전공 ${MJ[def.theme]?MJ[def.theme].n:def.theme}</div>
+     <div class="astat">분당 ${(rate/60).toFixed(1)}🔬(1시간이면 최대치) · 최대 저장 ${Math.round(cap)}🔬 ·
+      <span style="background:${mj.c};color:#fff;font-weight:800;font-size:10px;padding:1px 7px;border-radius:8px;white-space:nowrap">${mj.ic} ${mj.n}</span></div>
      ${(()=>{const chips=assistantBonusChips(inst); return chips.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 4px">
        ${chips.map(c=>`<span style="font-size:10px;font-weight:800;color:var(--mint2);background:#eef7f4;border:1px solid #bce3d8;border-radius:9px;padding:2px 7px">${c}</span>`).join('')}
       </div>`:`<div style="font-size:10px;color:var(--dim2);margin:2px 0 4px">지금 붙은 보너스 없음(기본 배율)</div>`;})()}
@@ -2056,12 +2058,13 @@ function renderAssistCard({inst,idx}){
      </select>
      <div class="collectbar">
       ${assigned?`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
-        onclick="forceReturnAssistant(${idx}, assistantSheet)">🏠 로비로 돌아오게 하기 (🔬${amt})</button>`:''}
-      ${maxed?`<span style="font-size:11px;color:var(--gold);font-weight:800;align-self:center">🏆 최고 레벨(박사 Lv.5)</span>`
-       :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
-        onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
-      <button class="collectbtn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)"
-       onclick="dismissConfirmModal(${idx})">🚪 해고 (🔬+${DISMISS_REFUND[inst.degree||'bachelor']})</button>
+        onclick="forceReturnAssistant(${idx}, assistantSheet)">🏠 로비로 돌아오게 하기 (🔬${amt})</button>
+       <span style="font-size:10.5px;color:var(--dim2)">배치 중엔 강화·해고를 할 수 없어요 — 먼저 로비로 불러오세요</span>`
+       :`${maxed?`<span style="font-size:11px;color:var(--gold);font-weight:800;align-self:center">🏆 최고 레벨(박사 Lv.5)</span>`
+         :`<button class="collectbtn" style="background:#fff;color:var(--txt);border:1.5px solid var(--line)"
+          onclick="enhanceAssistant(${idx})">💪 강화 (🔬${cost} · 성공 ${successPct}%)</button>`}
+       <button class="collectbtn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)"
+        onclick="dismissConfirmModal(${idx})">🚪 해고 (🔬+${DISMISS_REFUND[inst.degree||'bachelor']})</button>`}
      </div>
     </div>`;
 }

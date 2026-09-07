@@ -220,10 +220,13 @@ TEACHER_PW=<선생님께 받은 값> node 검증스크립트_공격시나리오.
 node 검증스크립트_정상플레이.js
 ```
 
-주의: 공격 스크립트는 검증 동안 로그인 권한을 잠시 열었다가 **끝나면 다시 닫습니다.**
-중간에 멈추면 학생들이 로그인을 못 하니, 반드시 아래를 실행해서 열어두세요.
+두 스크립트 모두 로그인 권한과 다른 학생의 세션은 건드리지 않습니다.
+**직접 SQL을 쓸 때는 `update lab_students set session_token=null` 같은 문장에 `where` 조건을 반드시 넣으세요.**
+조건 없이 실행하면 그 순간 접속해 있는 학생 전원이 튕겨서 풀던 문제를 잃습니다. 수업 시간에는 수십 명이 동시에 접속해 있습니다.
+
+지금 몇 명이 접속해 있는지는 이걸로 볼 수 있습니다. 파괴적인 작업 전에 먼저 확인하세요.
 ```sql
-grant execute on function public.lab_login(text,text) to anon, authenticated, public;
+select count(*) from lab_students where session_token is not null;
 ```
 
 ### 점검 모드
@@ -239,6 +242,7 @@ roundengine.js        : const MAINTENANCE_MODE = true;
 ## 7. 지켜야 할 것
 
 1. **실제 학생 계정의 데이터를 바꾸거나 지우지 마세요.** 조회는 괜찮습니다. 테스트는 `zz_`로 시작하는 계정만 쓰세요.
+   `update`와 `delete`에는 예외 없이 `where` 조건을 넣으세요. **수업 시간에는 학생 수십 명이 실제로 접속해 문제를 풀고 있습니다.**
 2. **서술형 답안은 절대 지우지 마세요.** 성적 산출의 근거 자료이고, 초기화할 때도 이것만은 남겼습니다.
 3. **`teacher.html`을 git에 올리지 마세요.** `.gitignore`에 있고, `git add -f`로 강제 추가하면 안 됩니다.
 4. **비밀 값(PAT, 교사 비밀번호)을 파일·커밋·화면에 남기지 마세요.**

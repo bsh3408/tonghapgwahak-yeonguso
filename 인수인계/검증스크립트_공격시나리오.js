@@ -27,7 +27,11 @@ const check = (name, pass, detail) => { results.push({ name, pass, detail }); co
 
 (async () => {
   // 점검 모드라 로그인이 막혀 있으니, 검증 동안만 임시로 열고 끝나면 다시 닫는다.
-  await sql('grant execute on function public.lab_login(text,text) to anon, public;');
+  // 이 스크립트는 로그인 권한을 건드리지 않는다. 예전에는 점검 모드(로그인 차단) 중에 돌리려고
+  // 잠시 열었다가 끝에 다시 닫았는데, 서비스가 열려 있는 지금 그렇게 하면 스크립트가 중간에
+  // 멈추는 순간 학생 전원이 로그인을 못 하게 된다.
+  // 점검 모드에서 돌려야 한다면 아래를 손으로 한 번 실행하고, 끝난 뒤 원래대로 되돌린다.
+  //   grant execute on function public.lab_login(text,text) to anon, authenticated, public;
   await sql("update lab_students set session_token=null, session_at=null where name='zz_공격테스트';");
   const login = JSON.parse((await rpc('lab_login', { p_name: 'zz_공격테스트', p_password: '8888' })).body);
   if (!login.ok) { console.log('로그인 실패, 검증 중단:', JSON.stringify(login)); return; }
@@ -93,8 +97,9 @@ const check = (name, pass, detail) => { results.push({ name, pass, detail }); co
 
   // 뒷정리: 테스트 계정 상태 원복 + 점검 모드로 다시 닫기
   await sql(`delete from lab_game_state where name='${N}'; delete from lab_scores where name='${N}'; delete from lab_points where name='${N}'; delete from lab_submissions where student_name in ('${N}','위조학생');`);
-  await sql("update lab_students set session_token=null, session_at=null;");
-  await sql('revoke execute on function public.lab_login(text,text) from anon, public;');
+  // ⚠️ 반드시 테스트 계정만 지운다. 조건 없이 실행하면 그 순간 접속해 있는 학생 전원이
+  //    한꺼번에 튕겨서, 풀던 문제를 잃는다.
+  await sql(`update lab_students set session_token=null, session_at=null where name='${N}';`);
 
   const failed = results.filter(r => !r.pass);
   console.log('\n=== 결과: ' + (results.length - failed.length) + '/' + results.length + ' 통과 ===');

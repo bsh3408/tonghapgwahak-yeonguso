@@ -304,6 +304,12 @@ alter table public.lab_journal_answers enable row level security;
 drop policy if exists "anyone select journal" on public.lab_journal_answers;
 create policy "anyone select journal" on public.lab_journal_answers for select to anon using (true);
 
+-- ⚠️ Postgres에서는 파라미터 개수가 다르면 create or replace가 "교체"가 아니라 "새 버전 추가"가
+-- 된다. 예전에 p_token 없이 만들었던 버전이 이 drop 없이는 계속 조용히 같이 남아있고, 그중 어느
+-- 쪽이 불릴지는 PostgREST가 정한다 — 실제로 이것 때문에 세션 검증 없는 예전 버전이 몰래 호출되며
+-- 학생 데이터가 초기화 후에도 되살아나는 사고가 있었다. p_token을 나중에 추가한 함수는 전부
+-- 예전 시그니처를 명시적으로 지워야 한다.
+drop function if exists public.lab_journal_save(text, text, text, text, text, text, text);
 create or replace function public.lab_journal_save(p_student_name text, p_token text, p_class_no text, p_chapter_id text,
   p_chapter_title text, p_round_id text, p_round_title text, p_text text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
@@ -336,6 +342,7 @@ create policy "anyone select scores" on public.lab_scores for select to anon usi
 -- p_research_score는 더 이상 신뢰하지 않는다 — 예전엔 클라이언트가 계산한 S.researchScore를
 -- 그대로 덮어썼는데, 그러면 학생이 이 함수를 직접 호출해서 랭킹(수행평가 top10 +1점 보너스와
 -- 직결됨)을 조작할 수 있었다. 이제 서버가 갖고 있는 lab_game_state.data를 유일한 진실로 삼는다.
+drop function if exists public.lab_score_upsert(text, text, int);
 create or replace function public.lab_score_upsert(p_name text, p_token text, p_class_no text, p_research_score int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare gs lab_game_state%rowtype; real_score int; real_total int; real_rc_total int;
@@ -632,6 +639,7 @@ alter table public.lab_points enable row level security;
 drop policy if exists "anyone select points" on public.lab_points;
 create policy "anyone select points" on public.lab_points for select to anon using (true);
 
+drop function if exists public.lab_points_sync(text, text, int, int);
 create or replace function public.lab_points_sync(p_name text, p_token text, p_class_no text, p_rc int, p_src int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 begin
@@ -668,6 +676,7 @@ end; $$;
 -- 학생이 로그인 직후 자기 이름으로 부르는 함수(비밀번호 불필요 — lab_journal_save와 같은 신뢰 수준).
 -- 미청구 지급분을 전부 모아서 lab_points 거울에도 즉시 반영해주고, 델타 합계를 돌려줘서
 -- 학생 화면(로컬 S.rc/S.src)에 그대로 더하게 한다.
+drop function if exists public.lab_points_claim(text);
 create or replace function public.lab_points_claim(p_student_name text, p_token text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare total_rc int; total_src int; notes text[]; gs lab_game_state%rowtype; new_rc int;
@@ -722,6 +731,7 @@ create policy "anyone select game state" on public.lab_game_state for select to 
 -- 빈 값으로 되돌린 학생들에게 이 조건이 그대로 다시 적용되면서, 초기화 전 낡은 로컬 캐시(조수·
 -- 연구포인트 등)가 그대로 되살아나는 사고가 실제로 있었다. 이제는 "필드가 없으면 안전한 기본값"으로
 -- 항상 서버 쪽 값을 강제하고, 클라이언트가 보낸 값은 이 필드들에 한해 아예 참고하지 않는다.
+drop function if exists public.lab_state_sync(text, text, jsonb);
 create or replace function public.lab_state_sync(p_name text, p_token text, p_class_no text, p_data jsonb)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare

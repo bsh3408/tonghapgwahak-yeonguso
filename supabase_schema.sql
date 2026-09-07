@@ -726,8 +726,10 @@ create or replace function public.lab_state_sync(p_name text, p_token text, p_cl
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   cur jsonb; merged jsonb; k text;
+  -- rc 기본값 200은 클라이언트가 뭘 보내든 상관없이 여기서 정한 "신규 계정 초기 지급"이다
+  -- (사용자 지정, 2026-08-27) — cur->'rc'가 없을 때(그 학생의 첫 저장)만 쓰인다.
   protected_defaults jsonb := jsonb_build_object(
-    'rc', 0, 'researchScore', 0, 'totalResearchEarned', 0, 'totalRcEarned', 0,
+    'rc', 200, 'researchScore', 0, 'totalResearchEarned', 0, 'totalRcEarned', 0,
     'assistants', '[]'::jsonb, 'nobelCount', 0, 'papers', '[]'::jsonb,
     'everPassed', '{}'::jsonb, 'everPerfect', '{}'::jsonb, 'everCorrect', '{}'::jsonb,
     'opinionAwarded', '{}'::jsonb, 'claimed', '{}'::jsonb, 'deptSlots', 2,

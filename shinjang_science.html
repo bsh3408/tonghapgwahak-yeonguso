@@ -2351,7 +2351,11 @@ async function finishLogin(){
  document.getElementById('whoami').textContent='👤 '+CURRENT_STUDENT.name;
  loadLabState(); // 우선 로컬 캐시로 빠르게 화면부터 그리고
  render();
- await pullGameStateFromServer(); // 다른 기기에서 마지막으로 저장한 최신 상태로 덮어씀
+ const pulled = await pullGameStateFromServer(); // 다른 기기에서 마지막으로 저장한 최신 상태로 덮어씀
+ // 서버에 이 학생의 게임 상태 행이 아예 없으면(첫 로그인이거나, 데이터 초기화로 행 자체가
+ // 지워진 경우) 여기서 한 번 밀어 넣어 행을 만들어둔다 — 안 그러면 가챠·강화 같은 서버
+ // 함수들이 전부 "게임 상태를 찾을 수 없습니다"로 실패한다(그 함수들은 행이 있어야만 동작).
+ if(!pulled) saveLabState();
  seedTeacherTestPoints();
  claimTeacherPointGrants();
  syncChapterResults();

@@ -1243,7 +1243,8 @@ function render(){
    if(_lastRsRendered!==null && newRs>_lastRsRendered) bumpEl(rsHeroEl);
   }
   _lastRsRendered=newRs;
-  const pa=paTotal(); const paShown=pa.appSum+_cachedBonusTotal; paS.textContent=paShown; paS2.textContent=paShown;
+  // 보너스까지 더하면 40점을 넘길 수 있는데, 실제 성적은 40점이 상한이라 표시도 40점에서 멈춘다.
+  const pa=paTotal(); const paShown=Math.min(pa.grandTotal, pa.appSum+_cachedBonusTotal); paS.textContent=paShown; paS2.textContent=paShown;
   scene();
   saveLabState();
 }
@@ -1433,7 +1434,7 @@ async function paSheet(){
    ${!bonus.total?`<div style="font-size:11px;color:var(--dim)">아직 추가된 점수가 없어요. 단원을 통과하고 서술답안을 다 쓰거나 랭킹 top10에 들면 여기 표시돼요.</div>`:''}
   </div>`;
  const gt=document.getElementById('grandTotalBox');
- if(gt) gt.querySelector('div:last-child').innerHTML = `${pa.appSum+bonus.total}<span style="font-size:15px">/40점</span>`;
+ if(gt) gt.querySelector('div:last-child').innerHTML = `${Math.min(pa.grandTotal, pa.appSum+bonus.total)}<span style="font-size:15px">/40점</span>`;
  render(); // 상단·상세 카드의 N/40 표시에도 보너스를 반영
 }
 function deptSheet(){
@@ -1552,15 +1553,20 @@ function shopSheet(){
   </div>`);}
 async function buyLabTheme(key){
  const t=labThemeDef(key);
- if(S.ownedThemes.includes(key)){ selectLabTheme(key); return; }
+ if(S.ownedThemes.includes(key)){ await selectLabTheme(key); return; }
  const out=await callGameAction('lab_buy_theme', {p_key: key});
  if(!out) return;
  S.rc=out.rc; S.ownedThemes.push(key); S.labTheme=key;
  saveLabState(); render(); toast(t.n+' 테마 구매 완료'); scene(); shopSheet();
 }
-function selectLabTheme(key){
+/* labTheme은 서버가 지키는 항목이라 클라이언트가 저장해봤자 다음 접속 때 되돌아온다.
+   이미 산 테마로 갈아입는 경우에도 lab_buy_theme을 호출해서 서버에 기록을 남긴다
+   (서버는 이미 보유한 테마면 포인트를 다시 깎지 않고 labTheme만 바꿔 준다). */
+async function selectLabTheme(key){
  if(!S.ownedThemes.includes(key)) return;
- S.labTheme=key; saveLabState(); scene(); shopSheet();
+ const out=await callGameAction('lab_buy_theme', {p_key: key});
+ if(!out) return;
+ S.labTheme=key; scene(); shopSheet();
 }
 
 /* ================= 🔘 연구동별 OX 퀴즈 ================= */
@@ -1859,8 +1865,12 @@ function announceReturn(name, hours, amt){
 /* rate/cap/amt는 화면에 미리 보여주는 용도로만 클라이언트가 계산한다(개발자도구로 부풀려봤자
    실제 지급액은 서버(lab_collect_dept_production)가 처음부터 다시 계산해서 무시된다). */
 let _collectingDept=false;
+/* moveTick()이 90밀리초마다 이 함수를 부르기 때문에, 서버 호출이 한 번 실패하면 초당 열 번 넘게
+   같은 요청을 다시 던지게 된다. 실패한 뒤에는 대기 시간을 두 배씩 늘려 가며 재시도한다. */
+let _collectRetryAt=0, _collectBackoff=2000;
 async function checkAutoReturns(){
  if(_collectingDept) return;
+ if(Date.now()<_collectRetryAt) return;
  for(let idx=0; idx<S.assistants.length; idx++){
   const inst=S.assistants[idx];
   if(!inst.assignedDept) continue;
@@ -1871,7 +1881,8 @@ async function checkAutoReturns(){
   _collectingDept=true;
   const out=await callGameAction('lab_collect_dept_production', {p_idx: idx});
   _collectingDept=false;
-  if(!out) return;
+  if(!out){ _collectRetryAt=Date.now()+_collectBackoff; _collectBackoff=Math.min(_collectBackoff*2, 60000); return; }
+  _collectBackoff=2000;
   S.rc=out.rc; S.totalRcEarned=(S.totalRcEarned||0)+out.amt; inst.assignedDept=null; inst.lastCollectedAt=Date.now();
   saveLabState(); render();
   flyGain('rc', out.amt);
@@ -2284,9 +2295,9 @@ async function rankSheet(){
   ${top10?`<div class="banner gold">🎉 전체 top10! 선생님께 확인하면 수행평가 +1점 대상일 수 있어요.</div>`:''}
   <div class="box"><h3>연구점수 전체 랭킹</h3>
    ${list.slice(0,10).map((s,i)=>`<div class="rk ${s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name)?'me':''}">
-    <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}연구소${s.classNo?'('+s.classNo+')':''}
+    <span class="rn ${i<3?'g':''}">${i+1}</span>${escHtml(s.name)}연구소${s.classNo?'('+escHtml(s.classNo)+')':''}
     <span class="v">${s.researchScore.toLocaleString()}🏆</span></div>`).join('')}
-   ${myRank>=10?`<div class="rk me"><span class="rn">${myRank+1}</span>${CURRENT_STUDENT?CURRENT_STUDENT.name:'나'}연구소
+   ${myRank>=10?`<div class="rk me"><span class="rn">${myRank+1}</span>${escHtml(CURRENT_STUDENT?CURRENT_STUDENT.name:'나')}연구소
     <span class="v">${S.researchScore.toLocaleString()}🏆</span></div>`:''}
    <div style="font-size:11.5px;color:var(--dim2);margin-top:9px;border-top:1.5px solid var(--line);padding-top:9px">
     전체 학생 중 연구점수 1~10등은 선생님께 확인 후 수행평가 +1점 대상이 됩니다.</div></div>
@@ -2294,9 +2305,9 @@ async function rankSheet(){
    <div style="font-size:11px;color:var(--dim2);margin-bottom:6px">지금까지 벌어들인 🔬연구포인트를 전부 더한 값이에요(써도 줄지 않아요) — 혹시나 잔액(🔬)을
     조작하는 학생이 있으면 여기와 비교해서 잡을 수 있어요.</div>
    ${byTotal.slice(0,10).map((s,i)=>`<div class="rk ${s.name===(CURRENT_STUDENT&&CURRENT_STUDENT.name)?'me':''}">
-    <span class="rn ${i<3?'g':''}">${i+1}</span>${s.name}연구소${s.classNo?'('+s.classNo+')':''}
+    <span class="rn ${i<3?'g':''}">${i+1}</span>${escHtml(s.name)}연구소${s.classNo?'('+escHtml(s.classNo)+')':''}
     <span class="v">${(s.totalRcEarned??0).toLocaleString()}🔬</span></div>`).join('')}
-   ${myTotalRank>=10?`<div class="rk me"><span class="rn">${myTotalRank+1}</span>${CURRENT_STUDENT?CURRENT_STUDENT.name:'나'}연구소
+   ${myTotalRank>=10?`<div class="rk me"><span class="rn">${myTotalRank+1}</span>${escHtml(CURRENT_STUDENT?CURRENT_STUDENT.name:'나')}연구소
     <span class="v">${(S.totalRcEarned||0).toLocaleString()}🔬</span></div>`:''}
   </div>`;
 }
@@ -2379,10 +2390,11 @@ async function finishLogin(){
  // 지워진 경우) 여기서 한 번 밀어 넣어 행을 만들어둔다 — 안 그러면 가챠·강화 같은 서버
  // 함수들이 전부 "게임 상태를 찾을 수 없습니다"로 실패한다(그 함수들은 행이 있어야만 동작).
  if(!pulled) saveLabState();
- seedTeacherTestPoints();
- claimTeacherPointGrants();
+ // ⚠️ 이 둘은 서버에서 "rc를 읽고 → 더하고 → 다시 쓰는" 함수라, 동시에 던지면 나중에 끝난 쪽이
+ // 앞의 지급분을 덮어써서 선생님이 준 포인트가 사라질 수 있다. 반드시 순서대로 기다린다.
+ await claimTeacherPointGrants();
  syncChapterResults();
- checkDailyAttendance();
+ await checkDailyAttendance();
  checkRedoRequests();
  render();
  loadChapterMetas().then(()=>{ render(); });
@@ -2397,18 +2409,12 @@ async function finishLogin(){
  });
 }
 
-/* 교사 테스트 계정(변석환)은 이 브라우저에서 처음 로그인할 때 넉넉한 테스트용 포인트를 채워준다 */
+/* 교사 테스트 계정 — 지금은 랭킹에서 제외하는 용도로만 쓴다.
+   예전에는 여기서 테스트용 포인트를 자동으로 채워줬지만, 연구포인트를 서버가 전부 관리하게 되면서
+   클라이언트가 S.rc를 직접 올리는 방식은 서버에 반영되지도 않고 혼란만 주어서 제거했다. */
 const TEACHER_TEST_ACCOUNTS=['변석환'];
 /* 실제 학생이 아니라서 전체 랭킹에서 빼야 하는 이름들 — 교사 테스트 계정 외에, 학생이 아닌 다른 계정도 여기 추가한다 */
 const RANK_EXCLUDE_ACCOUNTS=[...TEACHER_TEST_ACCOUNTS, '이지숙'];
-function seedTeacherTestPoints(){
- if(!TEACHER_TEST_ACCOUNTS.includes(CURRENT_STUDENT.name)) return;
- if(S.teacherSeeded) return;
- S.rc+=7000;
- S.teacherSeeded=true;
- saveLabState();
- toast('🧪 테스트 계정이라 연구포인트를 넉넉히 채워드렸어요', 'gold');
-}
 
 /* 하루 1회 로그인 출석 보너스 */
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }

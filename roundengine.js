@@ -70,7 +70,10 @@ function saveProgress(){
   const S=ENGINE_STATE; if(!S || S.submitted) return;
   try{
     localStorage.setItem(progressKey(), JSON.stringify({
-      cur:S.cur, answers:S.answers, leaveCount:S.leaveCount, totalAwayMs:S.totalAwayMs, startTime:S.startTime
+      cur:S.cur, answers:S.answers, leaveCount:S.leaveCount, totalAwayMs:S.totalAwayMs, startTime:S.startTime,
+      // 연구포인트를 내고 다시 뽑은 문제는 시드만으로는 복원되지 않는다. 새로고침해도 돈을 낸
+      // 그 문제들이 그대로 나오도록 라운드 구성 자체를 함께 저장한다.
+      rounds:S.rounds
     }));
   }catch(e){}
 }
@@ -85,6 +88,8 @@ function restoreProgressIfAny(){
   if(!raw) return;
   let saved; try{ saved=JSON.parse(raw); }catch(e){ return; }
   if(!saved || (!saved.cur && !Object.keys(saved.answers||{}).length)) return; // 저장된 진행이 없으면 그냥 무시
+  // 저장된 라운드 구성이 있고 개수가 맞으면 그대로 복원한다(다시 뽑기로 바뀐 문제를 지키기 위해서다).
+  if(Array.isArray(saved.rounds) && saved.rounds.length===S.rounds.length) S.rounds = saved.rounds;
   S.cur = Math.min(saved.cur||0, S.rounds.length-1);
   S.answers = saved.answers||{};
   S.leaveCount = saved.leaveCount||0;
@@ -246,6 +251,24 @@ document.addEventListener('keydown', e=>{
   e.preventDefault();
   btn.click();
 });
+/* ---------- 로그인 세션 유지 ----------
+   세션은 마지막 활동에서 1분이 지나면 다른 기기가 가져갈 수 있게 풀린다. 그런데 챕터 페이지는
+   문제를 20분 동안 푸는 내내 서버를 한 번도 부르지 않아서, 제출 직전에 세션이 이미 만료돼 있고
+   답안이 통째로 거부되는 일이 생겼다. 로비와 똑같은 주기로 하트비트를 보내 세션을 살려둔다. */
+const ENGINE_HEARTBEAT_MS=20000;
+function startEngineHeartbeat(){
+  if(typeof isSupabaseConfigured!=='function' || !isSupabaseConfigured()) return;
+  const info=(typeof getStudentInfo==='function') ? getStudentInfo() : null;
+  if(!info || !info.name) return;
+  setInterval(()=>{
+    const token=sessionStorage.getItem('lab_session_token');
+    if(!token) return;
+    supaRpc('lab_session_heartbeat', {p_name:info.name, p_token:token})
+      .catch(()=>{ /* 한 번 실패한 정도로는 문제 풀이를 끊지 않는다 */ });
+  }, ENGINE_HEARTBEAT_MS);
+}
+document.addEventListener('DOMContentLoaded', startEngineHeartbeat);
+
 const LEAVE_AUTO_RETURN_LIMIT=5;
 function engineRegisterLeave(){
   const S=ENGINE_STATE; if(!S||S.submitted) return;
@@ -579,17 +602,43 @@ function gradeRound(r){
   return false;
 }
 
-function submitSession(){
+async function submitSession(){
   const S=ENGINE_STATE;
   engineRegisterReturn();
   S.submitted=true;
-  clearProgress(); // 제출 완료 — 이어풀기 기록·시드를 지워서 다음 도전은 새 무작위 조합으로 시작
   S.totalSec=Math.round((Date.now()-S.startTime)/1000);
   renderSteps();
   renderResult();
   window.scrollTo(0,0);
-  syncToSupabase();
-  saveLabProgress();
+  // 서버 저장이 끝나기 전에 이어풀기 기록을 지워버리면, 인터넷이 끊긴 순간 20분 동안 쓴 답안이
+  // 통째로 사라진다. 반드시 저장 성공을 확인한 뒤에만 지운다.
+  const out=await syncToSupabase();
+  if(out && out.ok) clearProgress();
+  saveLabProgress(out);
+  applyServerResult(out);
+}
+/* 최종 점수·합격 여부는 서버(lab_submit_chapter)가 정한다. 화면에 먼저 그려둔 예상 결과와
+   서버 판정이 다르면, 서버가 돌려준 값으로 결과 화면 머리말을 다시 그린다. */
+function applyServerResult(out){
+  if(!out || !out.ok || typeof out.total!=='number') return;
+  const S=ENGINE_STATE;
+  const head=document.querySelector('.resulthead');
+  if(head){
+    const icon=head.querySelector('div'), big=head.querySelector('.big'), sc=head.querySelector('.score');
+    if(icon) icon.textContent = out.passed?'🎉':'🪨';
+    if(big) big.textContent = out.passed? '목표 달성' : '아쉬워요, 다시 도전할 수 있어요';
+    if(sc) sc.textContent = out.score+' / '+out.total;
+  }
+  if(Array.isArray(out.roundResults)){
+    const okById={};
+    out.roundResults.forEach(x=>{ okById[x.id]=!!x.ok; });
+    document.querySelectorAll('.resultrow[data-rid]').forEach(row=>{
+      const ok=okById[row.dataset.rid];
+      if(ok===undefined) return;
+      row.className='resultrow '+(ok?'ok':'bad');
+      row.firstElementChild.textContent = ok?'✅':'❌';
+    });
+  }
 }
 
 /* ---------- 통합과학연구소 로비(shinjang_science.html)로 결과 전달 ----------
@@ -603,15 +652,20 @@ function passThresholdFor(gradable){
   const S=ENGINE_STATE;
   return S.meta.passCount || Math.ceil(gradable.length*0.75);
 }
-function saveLabProgress(){
+/* serverOut이 있으면 서버가 확정한 점수를 그대로 쓴다. 로비 화면이 읽어가는 기록이라,
+   여기에 클라이언트 자체 채점 결과가 남으면 서버 판정과 어긋난 점수가 로비에 표시된다. */
+function saveLabProgress(serverOut){
   const S=ENGINE_STATE;
   const gradable=S.rounds.filter(r=>r.kind!=='opinion');
-  const roundResults=gradable.map(r=>({id:r.id, ok:gradeRound(r)}));
-  const correctN=roundResults.filter(x=>x.ok).length;
+  const useServer = !!(serverOut && serverOut.ok && typeof serverOut.total==='number');
+  const roundResults = (useServer && Array.isArray(serverOut.roundResults))
+    ? serverOut.roundResults
+    : gradable.map(r=>({id:r.id, ok:gradeRound(r)}));
   const passThreshold=passThresholdFor(gradable);
   const opinionRounds=S.rounds.filter(r=>r.kind==='opinion');
   const allOpinionsFilled = opinionRounds.every(r=>(S.answers[r.id]||'').trim().length >= (r.minLen||20));
-  const passed = correctN >= passThreshold;
+  const correctN = useServer ? serverOut.score : roundResults.filter(x=>x.ok).length;
+  const passed = useServer ? !!serverOut.passed : (correctN >= passThreshold);
   const perfectClear = passed && allOpinionsFilled;
   // resultKey는 chapterId에 ?mode 접미사가 붙은 값(sessionKey) — 객관식/서술형 미션이 서로의
   // "클리어" 기록을 덮어쓰지 않게 분리해준다. 라운드 크레딧·서술답안 저장은 그대로 chapterId(seedKey)를 쓴다.
@@ -622,7 +676,7 @@ function saveLabProgress(){
   opinionRounds.forEach(r=>savePersistedOpinion(r, S.answers[r.id]||''));
   try{
     localStorage.setItem('lab_result_'+resultKey+'__'+studentName, JSON.stringify({
-      score: correctN, total: gradable.length,
+      score: correctN, total: useServer ? serverOut.total : gradable.length,
       passed,
       roundResults, perfectClear,
       at: Date.now()
@@ -645,6 +699,7 @@ async function syncToSupabase(){
   const useReal=isSupabaseConfigured();
 
   setSyncBadge(useReal ? '☁️ 결과 저장 중...' : '🧪 (미리보기) 결과 저장 중...', '');
+  let serverOut=null; // 서버가 확정한 점수·합격 여부. 호출한 쪽이 이걸 보고 결과 화면을 고쳐 그린다.
 
   if(useReal){
     // 채점·크레딧 지급은 전부 서버(lab_submit_chapter)가 직접 다시 계산한다 — 이 페이지가
@@ -658,6 +713,7 @@ async function syncToSupabase(){
           p_round_ids: roundIds, p_answers: S.answers,
           p_total_sec: S.totalSec, p_leave_count: S.leaveCount, p_away_ms: S.totalAwayMs
         });
+        serverOut=out;
         if(out.ok) setSyncBadge('☁️ 결과 저장 완료', 'ok');
         else setSyncBadge('⚠️ 저장에 실패했어요: '+(out.error||'')+' 선생님께 화면을 보여주세요', 'err');
       }catch(e){
@@ -682,20 +738,24 @@ async function syncToSupabase(){
     };
     try{
       const res=await fetch(DEMO_MOCK_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      if(res.ok){ serverOut={ok:true, score:correctN, total:gradable.length, passed, roundResults:results.map(x=>({id:x.id, ok:x.ok}))}; }
       if(res.ok) setSyncBadge('🧪 (미리보기) 결과 저장 완료: 제출기록_미리보기.html에서 확인', 'ok');
       else setSyncBadge('⚠️ 저장에 실패했어요. 선생님께 화면을 보여주세요', 'err');
     }catch(e){
       setSyncBadge('⚠️ 저장에 실패했어요(인터넷 연결을 확인해 주세요). 선생님께 알려주세요', 'err');
     }
   }
-  syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, {student_name:info.name, class_no:info.classNo, chapter_id:S.meta.seedKey||S.meta.title, chapter_title:S.meta.title});
+  await syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, {student_name:info.name, class_no:info.classNo, chapter_id:S.meta.seedKey||S.meta.title, chapter_title:S.meta.title});
+  return serverOut;
 }
 
 // 제출 시점의 서술형 답을 "최신 답안" 저장소에도 남긴다 — 나중에 학생이 "내 생각 다시 쓰기"로 고치면
 // 여기가 계속 최신본으로 덮어써지고, 교사가 건 "다시 써주세요" 요청도 이걸 저장하는 순간 자동 해제된다.
-function syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload){
+async function syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload){
   const useReal = isSupabaseConfigured();
   const token = sessionStorage.getItem('lab_session_token');
+  const jobs=[];
+  let failed=0;
   opinionRounds.forEach(r=>{
     const body = {
       student_name: payload.student_name, class_no: payload.class_no,
@@ -703,16 +763,19 @@ function syncOpinionAnswersToJournal(opinionRounds, opinionAnswers, payload){
       round_id: r.id, round_title: r.title, text: opinionAnswers[r.id] || ''
     };
     if(useReal){
-      if(!token) return;
-      supaRpc('lab_journal_save', {
+      if(!token){ failed++; return; }
+      jobs.push(supaRpc('lab_journal_save', {
         p_student_name: body.student_name, p_token: token, p_class_no: body.class_no,
         p_chapter_id: body.chapter_id, p_chapter_title: body.chapter_title,
         p_round_id: body.round_id, p_round_title: body.round_title, p_text: body.text
-      }).catch(()=>{});
+      }).then(out=>{ if(!out || !out.ok) failed++; }).catch(()=>{ failed++; }));
     } else {
-      fetch('/api/journal-answers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).catch(()=>{});
+      jobs.push(fetch('/api/journal-answers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).catch(()=>{ failed++; }));
     }
   });
+  await Promise.all(jobs);
+  // 서술형 답안은 성적에 직접 반영되는 자료라, 저장이 실패했다면 학생이 반드시 알아야 한다.
+  if(failed>0) setSyncBadge('⚠️ 서술형 답안 '+failed+'개가 저장되지 않았어요. 답을 복사해 두고 선생님께 알려주세요', 'err');
 }
 
 function renderResult(){
@@ -739,7 +802,7 @@ function renderResult(){
       <div class="metric"><div class="k">창 이탈 누적시간</div><div class="v ${S.totalAwayMs>15000?'warn':''}">${Math.round(S.totalAwayMs/1000)}초</div></div>
     </div>
     <div class="card"><h3>라운드별 결과</h3>
-      ${results.map(x=>`<div class="resultrow ${x.ok?'ok':'bad'}"><span>${x.ok?'✅':'❌'}</span><span class="lbl">${x.round.title}</span></div>`).join('')}
+      ${results.map(x=>`<div class="resultrow ${x.ok?'ok':'bad'}" data-rid="${x.round.id}"><span>${x.ok?'✅':'❌'}</span><span class="lbl">${x.round.title}</span></div>`).join('')}
     </div>
     ${opinionRounds.map(r=>`<div class="answerblock"><h4>${r.title}</h4><p>${(S.answers[r.id]||'').trim()}</p></div>`).join('')}
     <div class="finalnotice">${S.meta.scoreNotice || '이 화면의 정답률·소요시간·창 이탈 지표는 채점을 돕는 참고 자료일 뿐입니다. 실제 수행평가 점수는 선생님이 최종 확정합니다.'}</div>

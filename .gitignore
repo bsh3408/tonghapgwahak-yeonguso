@@ -32,3 +32,10 @@ aWDEBBuo2xhn5Q3OTrECs5oVGRqDWORSTUyRBjwzmPLZz4GwmE-idAxlJzKM3QncvM8DtS2DLwtiMZMk
 Thumbs.db
 desktop.ini
 .DS_Store
+backups/
+
+# 점검용 백업본과 원고 원문(배포 대상 아님)
+shinjang_science.pre-ui-polish-*.html.bak
+지도서.txt
+통합총론.txt
+.claude/

@@ -13,7 +13,8 @@
 </div>
 <script src="supabase-config.js"></script>
 <script src="roundengine.js"></script>
-<script type="application/json" id="embeddedChapterData">{
+<script type="application/json" id="embeddedChapterData">
+{
   "seedKey": "ch17_seed_v1",
   "vars": {
     "supplyE": {
@@ -147,15 +148,15 @@
       "id": "r3",
       "kind": "quiz",
       "title": "에너지 효율 계산",
-      "prompt": "▶ 어떤 전기 기구에 공급된 에너지는 {{supplyE}}J이고, 이 중 실제로 유용하게 쓰인 에너지는 {{usefulE}}J이다.",
+      "prompt": "▶ 어떤 전기 기구에 공급된 에너지는 120J이고, 이 중 실제로 유용하게 쓰인 에너지는 42J이다.",
       "question": "이 기구의 에너지 효율(%)에 가장 가까운 것은? (효율 = 유용한 에너지 ÷ 공급 에너지 × 100)",
       "options": [
-        "{{efficiency}}%",
-        "{{effOpt2}}%",
-        "{{effOpt3}}%",
+        "35%",
+        "55%",
+        "20%",
         "100%"
       ],
-      "correctValue": "{{efficiency}}%"
+      "correctIndex": 0
     },
     {
       "id": "r4",
@@ -858,7 +859,8 @@
     }
   ],
   "gradablePoolCount": 6
-}</script>
+}
+</script>
 <script src="chapterdata.js"></script>
 <script>
 loadChapterData('data/ch17.json').then(({ROUNDS, META}) => startSession(ROUNDS, META));

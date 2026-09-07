@@ -13,7 +13,8 @@
 </div>
 <script src="supabase-config.js"></script>
 <script src="roundengine.js"></script>
-<script type="application/json" id="embeddedChapterData">{
+<script type="application/json" id="embeddedChapterData">
+{
   "seedKey": "ch12_seed_v1",
   "vars": {
     "SC": {
@@ -112,13 +113,34 @@
       "id": "r1",
       "kind": "classify",
       "title": "산화·환원 물질 분류",
-      "prompt": "▶ {{SC.name}} 자료(변화 정도 약 {{massChange}}g 상당)에서 각 물질이 전자(또는 산소)를 잃는지 얻는지 판단하시오.",
-      "itemsVar": "SC.items",
+      "prompt": "▶ 철못이 녹스는 과정에서 각 물질이 전자(또는 산소)를 잃는지 얻는지 판단하시오.",
       "categories": [
         "잃음(산화)",
         "얻음(환원)"
       ],
-      "passRatio": 1
+      "passRatio": 1,
+      "items": [
+        {
+          "id": "m1",
+          "content": "철못 표면(Fe)",
+          "correct": "잃음(산화)"
+        },
+        {
+          "id": "m2",
+          "content": "주변의 산소(O₂)",
+          "correct": "얻음(환원)"
+        },
+        {
+          "id": "m3",
+          "content": "공기 중 산소와 결합해 생긴 녹(Fe₂O₃) 속 철",
+          "correct": "잃음(산화)"
+        },
+        {
+          "id": "m4",
+          "content": "물속에 녹아든 산소",
+          "correct": "얻음(환원)"
+        }
+      ]
     },
     {
       "id": "r2",
@@ -861,7 +883,8 @@
     }
   ],
   "gradablePoolCount": 6
-}</script>
+}
+</script>
 <script src="chapterdata.js"></script>
 <script>
 loadChapterData('data/ch12.json').then(({ROUNDS, META}) => startSession(ROUNDS, META));

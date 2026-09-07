@@ -367,6 +367,29 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 
 <script src="supabase-config.js"></script>
 <script>
+/* ================= 🔧 점검 모드 =================
+   true로 두면 로그인 화면 대신 점검 안내만 보이고, 아래 게임 코드는 아예 실행되지 않는다.
+   점검이 끝나면 이 값을 false로 되돌려 배포하고, 서버 쪽 lab_login 실행 권한도 함께 복구할 것. */
+const MAINTENANCE_MODE = true;
+if(MAINTENANCE_MODE){
+  document.body.innerHTML = `
+   <div class="loginwrap">
+    <div class="logincard" style="text-align:center">
+     <div class="loginEnglish">Shinjang High School</div>
+     <div class="loginTitle">신장고 통합과학<span>연구소</span></div>
+     <div style="font-size:40px;margin:18px 0 10px">🔧</div>
+     <div style="font-size:15px;font-weight:900;margin-bottom:10px">지금은 점검 중입니다</div>
+     <div class="loginSub" style="line-height:1.8">
+      더 정확한 채점과 안전한 저장을 위해 잠시 손보는 중이에요.<br>
+      점검이 끝나면 바로 다시 열립니다. 조금만 기다려주세요.<br>
+      <span style="font-size:11px;color:var(--dim2)">※ 지금까지 제출한 서술형 답안은 그대로 보관돼 있어요.</span>
+     </div>
+     <div class="loginCredit">made by BYUN</div>
+    </div>
+   </div>`;
+  throw new Error('maintenance mode: 게임 스크립트 실행 중단');
+}
+
 /* ================= 과제 데이터 (성적에 반영되는 부분) =================
    kind: 'gauge'(정밀 게이지·기본) | 'quiz'(객관식) | 'short'(서답형) | 'ask'(질문/궁금증 제출형)
    네 형식 모두 최종적으로 score(0~100)를 만들어 동일한 채점 파이프라인(finishGame)으로 들어간다. */

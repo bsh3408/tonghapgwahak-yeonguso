@@ -12,6 +12,30 @@
 */
 const DEMO_MOCK_ENDPOINT = '/api/mock-submissions'; // 로컬 서버(serve.js)가 제공하는 모의 저장 API
 
+/* 🔧 점검 모드 — shinjang_science.html의 MAINTENANCE_MODE와 같이 켜고 끈다.
+   챕터 주소를 즐겨찾기해둔 학생이 곧바로 들어와도 문제를 풀다 저장에 실패하는 일이 없도록,
+   여기서도 아예 시작 자체를 막고 안내만 보여준다. */
+const MAINTENANCE_MODE = true;
+if(MAINTENANCE_MODE){
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.body.innerHTML = `
+     <div style="max-width:420px;margin:60px auto;padding:28px 26px;background:var(--paper,#fffdf8);
+       border:2px solid var(--line,#e6dac6);border-radius:20px;text-align:center;
+       box-shadow:0 16px 40px rgba(80,60,40,.15)">
+      <div style="font-size:40px;margin-bottom:10px">🔧</div>
+      <div style="font-size:16px;font-weight:900;margin-bottom:10px">지금은 점검 중입니다</div>
+      <div style="font-size:13px;color:var(--dim,#75695e);line-height:1.8">
+       더 정확한 채점과 안전한 저장을 위해 잠시 손보는 중이에요.<br>
+       점검이 끝나면 바로 다시 열립니다.<br>
+       <span style="font-size:11px;color:var(--dim2,#887b6b)">※ 지금까지 제출한 서술형 답안은 그대로 보관돼 있어요.</span>
+      </div>
+      <a href="shinjang_science.html" style="display:inline-block;margin-top:16px;font-size:12.5px;
+        color:var(--mint2,#3fae95);font-weight:800;text-decoration:none">🔙 연구소로 돌아가기</a>
+     </div>`;
+  });
+  throw new Error('maintenance mode: 라운드 엔진 실행 중단');
+}
+
 function getStudentInfo(){
   const raw = sessionStorage.getItem('studentInfo');
   try{ return raw ? JSON.parse(raw) : null; }catch(e){ return null; }

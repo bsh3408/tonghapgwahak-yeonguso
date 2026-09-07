@@ -717,24 +717,30 @@ create policy "anyone select game state" on public.lab_game_state for select to 
 -- (뽑기·강화 등 "행동"은 서버가 계산하도록 이미 옮겨놨지만, 그 결과가 쌓이는 저장소 자체는 여전히
 -- 클라이언트가 통째로 덮어쓸 수 있는 구멍이었다 — 심지어 everPassed 같은 채점 결과까지도 이 경로로
 -- 조작 가능했다). 이제 재화·채점 결과처럼 민감한 필드는, 클라이언트가 뭘 보내든 무시하고 서버에
--- 이미 저장돼 있는 값을 그대로 유지한다. 계정을 막 만들어서 아직 그 필드가 서버에 없을 때(최초 1회
--- 저장)만 클라이언트가 보낸 초기값(rc:200 등 기본값)이 그대로 들어간다.
+-- 이미 저장돼 있는 값을 그대로 유지한다.
+-- ⚠️ 예전엔 "서버에 그 필드가 아직 없을 때만" 클라이언트 값을 믿었는데, 데이터 초기화로 계정을
+-- 빈 값으로 되돌린 학생들에게 이 조건이 그대로 다시 적용되면서, 초기화 전 낡은 로컬 캐시(조수·
+-- 연구포인트 등)가 그대로 되살아나는 사고가 실제로 있었다. 이제는 "필드가 없으면 안전한 기본값"으로
+-- 항상 서버 쪽 값을 강제하고, 클라이언트가 보낸 값은 이 필드들에 한해 아예 참고하지 않는다.
 create or replace function public.lab_state_sync(p_name text, p_token text, p_class_no text, p_data jsonb)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
   cur jsonb; merged jsonb; k text;
-  protected_keys text[] := array['rc','researchScore','totalResearchEarned','totalRcEarned','assistants','nobelCount','papers',
-    'everPassed','everPerfect','everCorrect','opinionAwarded','claimed','deptSlots','ownedThemes','labTheme',
-    'oxEverCorrect','lastAttendance'];
+  protected_defaults jsonb := jsonb_build_object(
+    'rc', 0, 'researchScore', 0, 'totalResearchEarned', 0, 'totalRcEarned', 0,
+    'assistants', '[]'::jsonb, 'nobelCount', 0, 'papers', '[]'::jsonb,
+    'everPassed', '{}'::jsonb, 'everPerfect', '{}'::jsonb, 'everCorrect', '{}'::jsonb,
+    'opinionAwarded', '{}'::jsonb, 'claimed', '{}'::jsonb, 'deptSlots', 2,
+    'ownedThemes', '["bright"]'::jsonb, 'labTheme', '"bright"'::jsonb,
+    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', 'null'::jsonb
+  );
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select data into cur from lab_game_state where name=trim(p_name);
   cur := coalesce(cur, '{}'::jsonb);
   merged := coalesce(p_data, '{}'::jsonb);
-  foreach k in array protected_keys loop
-    if cur ? k then
-      merged := jsonb_set(merged, array[k], cur->k, true);
-    end if;
+  for k in select jsonb_object_keys(protected_defaults) loop
+    merged := jsonb_set(merged, array[k], coalesce(cur->k, protected_defaults->k), true);
   end loop;
   insert into lab_game_state(name, class_no, data, updated_at)
     values (p_name, p_class_no, merged, now())

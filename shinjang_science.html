@@ -370,7 +370,7 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 /* ================= 🔧 점검 모드 =================
    true로 두면 로그인 화면 대신 점검 안내만 보이고, 아래 게임 코드는 아예 실행되지 않는다.
    점검이 끝나면 이 값을 false로 되돌려 배포하고, 서버 쪽 lab_login 실행 권한도 함께 복구할 것. */
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false;
 if(MAINTENANCE_MODE){
   document.body.innerHTML = `
    <div class="loginwrap">

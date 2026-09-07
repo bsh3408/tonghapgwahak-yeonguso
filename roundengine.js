@@ -15,7 +15,7 @@ const DEMO_MOCK_ENDPOINT = '/api/mock-submissions'; // 로컬 서버(serve.js)�
 /* 🔧 점검 모드 — shinjang_science.html의 MAINTENANCE_MODE와 같이 켜고 끈다.
    챕터 주소를 즐겨찾기해둔 학생이 곧바로 들어와도 문제를 풀다 저장에 실패하는 일이 없도록,
    여기서도 아예 시작 자체를 막고 안내만 보여준다. */
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false;
 if(MAINTENANCE_MODE){
   document.addEventListener('DOMContentLoaded', ()=>{
     document.body.innerHTML = `

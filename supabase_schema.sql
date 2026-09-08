@@ -1239,7 +1239,7 @@ returns jsonb language plpgsql security definer set search_path = public, extens
 declare
   gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; a_theme text;
   dept_id text; lv int; base_rate numeric; lv_mult numeric; legend_mult numeric;
-  dept_mult numeric := 1; legend_buff_mult numeric := 1; theme_mult numeric; owned_count int;
+  dept_mult numeric := 0; legend_buff_mult numeric := 0; theme_mult numeric; owned_count int;
   now_ms bigint; last_ms bigint; hours numeric; rate numeric; cap numeric; amt int; cur_rc int; total_rc int;
   new_assistants jsonb; new_data jsonb; j int; other jsonb; other_rare boolean; other_theme text;
   dept_majors jsonb := '{"d1":["earth","bio"],"d2":["chem"],"d3":["bio","earth"],"d4":["phys"],"d5":["etc"],"d6":["etc"]}'::jsonb;
@@ -1256,10 +1256,13 @@ begin
   lv := coalesce((inst->>'lv')::int, 1);
   select rare_draw, theme into is_rare, a_theme from lab_assistants_pool where id=inst->>'poolId';
 
+  -- 보너스는 서로 곱하지 않고 더한다. 예전에는 전부 곱했는데, 특히 같은 전공을 모을 때 붙는
+  -- 보너스가 1.2의 거듭제곱이라 10명이면 5.2배가 됐고, 여기에 전설(2.2배)과 레벨까지 곱해져
+  -- 조수 한 명이 시간당 1,700점을 넘겼다. 이제 각 보너스는 "기본값의 몇 %"로 더해진다.
   case degree when 'bachelor' then base_rate:=20; when 'master' then base_rate:=35; else base_rate:=60; end case;
-  lv_mult := 1+(lv-1)*0.15;
-  legend_mult := case when is_rare then 2.2 else 1 end;
-  if a_theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? a_theme) then dept_mult := 1.2; end if;
+  lv_mult := (lv-1)*0.15;
+  legend_mult := case when is_rare then 1.2 else 0 end;
+  if a_theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? a_theme) then dept_mult := 0.2; end if;
 
   for j in 0..jsonb_array_length(assistants)-1 loop
     if j<>p_idx then
@@ -1267,7 +1270,7 @@ begin
       if other->>'assignedDept' = dept_id then
         select rare_draw, theme into other_rare, other_theme from lab_assistants_pool where id=other->>'poolId';
         if other_rare and other_theme<>'uni' and dept_majors ? dept_id and dept_majors->dept_id ? other_theme then
-          legend_buff_mult := 1.5;
+          legend_buff_mult := 0.5;
         end if;
       end if;
     end if;
@@ -1275,9 +1278,9 @@ begin
 
   select count(*) into owned_count from jsonb_array_elements(assistants) a
     join lab_assistants_pool p on p.id = a->>'poolId' where p.theme = a_theme;
-  theme_mult := power(1.2::numeric, greatest(0, owned_count-1));
+  theme_mult := greatest(0, owned_count-1) * 0.2;
 
-  rate := base_rate * lv_mult * legend_mult * dept_mult * legend_buff_mult * theme_mult;
+  rate := base_rate * (1 + lv_mult + legend_mult + dept_mult + legend_buff_mult + theme_mult);
   cap := rate; -- 코드 규칙상 cap은 rate와 항상 같은 배율(1시간이면 최대치)
 
   now_ms := (extract(epoch from now())*1000)::bigint;
@@ -1352,7 +1355,7 @@ returns jsonb language plpgsql security definer set search_path = public, extens
 declare
   gs lab_game_state%rowtype; assistants jsonb; inst jsonb; degree text; is_rare boolean; cur_rc int; cost int:=150;
   score int; nobel boolean; new_assistants jsonb; new_data jsonb; rs int; total_earned int; nobel_count int; papers jsonb;
-  aname text; atheme text; now_ms bigint;
+  aname text; atheme text; now_ms bigint; last_collected bigint; hours_elapsed numeric;
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select * into gs from lab_game_state where name=trim(p_name) for update;
@@ -1361,13 +1364,21 @@ begin
   if p_idx is null or p_idx<0 or p_idx>=jsonb_array_length(assistants) then return jsonb_build_object('ok', false, 'error', '존재하지 않는 조수입니다.'); end if;
   inst := assistants->p_idx;
   if inst->>'assignedDept' is not null then return jsonb_build_object('ok', false, 'error', '연구동에 배치된 조수예요.'); end if;
+  -- 논문은 조수 한 명당 하루 한 편이다. 예전에는 즉시 작성에만 이 제한이 빠져 있어서,
+  -- 가장 좋은 조수 한 명으로 버튼을 연타하면 12초 만에 열 편이 나왔다(실제로 일어났다).
+  now_ms := (extract(epoch from now())*1000)::bigint;
+  last_collected := coalesce((inst->>'lastCollectedAt')::bigint, 0);
+  hours_elapsed := (now_ms - last_collected) / 3600000.0;
+  if hours_elapsed < 24 then
+    return jsonb_build_object('ok', false, 'error',
+      '이 조수는 아직 논문을 쓸 수 없어요. '||ceil(24-hours_elapsed)::text||'시간 뒤에 다시 오세요 (조수 한 명당 하루 한 편)');
+  end if;
   cur_rc := coalesce((gs.data->>'rc')::int, 0);
   if cur_rc < cost then return jsonb_build_object('ok', false, 'error', '연구포인트가 부족해요 ('||cost||' 필요)'); end if;
 
   degree := coalesce(inst->>'degree','bachelor');
   select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
   select ps.score, ps.nobel into score, nobel from lab_paper_score(degree, is_rare) ps;
-  now_ms := (extract(epoch from now())*1000)::bigint;
 
   cur_rc := cur_rc - cost;
   inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));

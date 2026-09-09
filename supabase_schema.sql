@@ -527,7 +527,7 @@ returns jsonb language plpgsql security definer set search_path = public, extens
 declare
   cs lab_chapters%rowtype; gs lab_game_state%rowtype;
   all_rounds jsonb; round_def jsonb; rid text; i int; n int; kind text;
-  correct_n int := 0; total_n int := 0; round_results jsonb := '[]'::jsonb;
+  correct_n int := 0; total_n int := 0; round_results jsonb := '[]'::jsonb; new_best jsonb := null;
   pass_count int; pass_threshold int; passed boolean;
   ever_correct jsonb; chapter_key text; result_key text; title text; opinion_awarded jsonb;
   rc_gain int := 0; opinion_min_len int; opinion_text text; all_opinions_filled boolean := true;
@@ -620,9 +620,16 @@ begin
   -- 서술형이 아예 없던 세션(mode=obj 등)은 "글 다 썼는지" 조건을 만점 판정에서 제외한다.
   perfect_clear := passed and (all_opinions_filled or not has_opinion_round);
 
+  -- 이번 도전에서 맞힌 개수가 지금까지의 최고 기록보다 높으면 갱신한다.
+  -- 재도전은 얼마든지 할 수 있고, 점수는 항상 가장 잘한 회차로 남는다.
+  if p_mode <> 'essay' and correct_n > coalesce((gs.data->'bestCorrect'->>chapter_key)::int, -1) then
+    new_best := jsonb_set(coalesce(gs.data->'bestCorrect','{}'::jsonb), array[chapter_key], to_jsonb(correct_n), true);
+  end if;
+
   cur_rc := coalesce((gs.data->>'rc')::int, 0) + rc_gain;
   new_data := gs.data;
   new_data := jsonb_set(new_data, '{rc}', to_jsonb(cur_rc));
+  if new_best is not null then new_data := jsonb_set(new_data, '{bestCorrect}', new_best, true); end if;
   -- 누적 획득 연구포인트(치트 대조용)도 같이 올린다 — 예전엔 문제 풀이·서술형 지급분이 빠져서
   -- 열심히 푼 학생일수록 누계가 덜 잡히는 바람에 대조 근거로 못 썼다.
   if rc_gain > 0 then
@@ -663,6 +670,7 @@ begin
     perfect_clear);
 
   return jsonb_build_object('ok', true, 'score', correct_n, 'total', report_total, 'passed', passed,
+    'bestCorrect', coalesce((coalesce(new_best, gs.data->'bestCorrect','{}'::jsonb)->>chapter_key)::int, correct_n),
     'perfectClear', perfect_clear, 'rc', cur_rc, 'rcGain', rc_gain, 'roundResults', round_results);
 end; $$;
 
@@ -853,7 +861,9 @@ declare
     'everPassed', '{}'::jsonb, 'everPerfect', '{}'::jsonb, 'everCorrect', '{}'::jsonb,
     'opinionAwarded', '{}'::jsonb, 'claimed', '{}'::jsonb, 'deptSlots', 2,
     'ownedThemes', '["bright"]'::jsonb, 'labTheme', '"bright"'::jsonb,
-    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', 'null'::jsonb
+    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', 'null'::jsonb,
+    -- 한 번의 도전에서 맞힌 최고 개수(단원별). 기출문제처럼 맞힌 개수로 점수를 나누는 과제에 쓴다.
+    'bestCorrect', '{}'::jsonb
   );
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;

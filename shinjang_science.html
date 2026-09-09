@@ -70,7 +70,15 @@ button,.mrow,.splitcard,.pabtn,.clk,.opt{
  .labRow .nav{flex:none;width:190px;display:flex;flex-direction:column;max-width:none;margin:0}
  .labRow .nav button{flex-direction:row;justify-content:flex-start;padding:11px 12px}
  /* 조수 연구실: 왼쪽엔 배치 안 된 조수, 오른쪽엔 배치된 조수 — 넓은 화면(크롬북 등)에서만 2열 */
- .assistSplit{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+ /* 조수 전공 보기 단추 — 가로로 넘치면 옆으로 스크롤되게 해서 좁은 화면에서도 줄이 안 무너지게 한다 */
+.assistFilterBar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-bottom:2px;-webkit-overflow-scrolling:touch}
+.assistFilterBar::-webkit-scrollbar{height:4px}
+.assistFilterBar::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+.assistFilterBtn{flex:none;font:inherit;font-size:11.5px;font-weight:800;padding:5px 11px;border-radius:999px;
+  border:1.5px solid;background:var(--paper);cursor:pointer;white-space:nowrap;transition:.15s}
+.assistFilterBtn:hover{filter:brightness(.97)}
+.assistFilterBtn.on{box-shadow:0 2px 6px rgba(90,70,50,.18)}
+.assistSplit{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
  /* 연구 활동: 왼쪽엔 논문 기록, 오른쪽엔 논문 쓰는 조수 목록 */
  .researchSplit{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
 }
@@ -1775,7 +1783,7 @@ function deptHasLegendBuff(deptId, excludePoolId){
    보너스가 1.2의 거듭제곱이라 10명만 모아도 5.2배가 됐다. 여기에 전설(2.2배)과 레벨까지
    곱해지면 한 명이 시간당 1,700점 넘게 벌어서, 조수를 일찍 많이 모은 학생과 그렇지 않은
    학생의 격차가 걷잡을 수 없이 벌어졌다. 이제 각 보너스는 "기본값의 몇 %"로 더해진다. */
-const BONUS={legend:1.2, dept:0.2, legendBuff:0.5, lvPer:0.15, themePer:0.2};
+const BONUS={legend:2.0, dept:0.2, legendBuff:0.5, lvPer:0.15, themePer:0.2};
 function assistantRateBreakdown(inst){
  const def=assistantDef(inst.poolId); const deg=DEGREE[inst.degree||'bachelor'];
  const lv=inst.lv||1;
@@ -2038,6 +2046,35 @@ function assistantLocationLabel(inst){
  const d=DEPTS.find(x=>x.id===inst.assignedDept);
  return d?`🏢 ${d.n}에서 활동 중`:'🏠 연구소(로비)에서 대기 중';
 }
+/* 조수 목록 정렬·전공 보기 --------------------------------------------------
+   뽑은 순서대로 늘어놓으면 조수가 많아질수록 원하는 조수를 찾기 어려워서,
+   등급이 높은 순(전설 → 박사 → 석사 → 학사, 같으면 레벨 높은 순)으로 보여준다.
+   전공 단추를 누르면 그 전공 조수만 볼 수 있다. */
+const degreeRank=d=>DEGREE_ORDER.indexOf(d||'bachelor');
+function assistantSortCmp(a,b){
+ const da=assistantDef(a.inst.poolId), db=assistantDef(b.inst.poolId);
+ if(!!db.rareDraw !== !!da.rareDraw) return db.rareDraw?1:-1;
+ const degCmp=degreeRank(b.inst.degree)-degreeRank(a.inst.degree);
+ if(degCmp) return degCmp;
+ const lvCmp=(b.inst.lv||1)-(a.inst.lv||1);
+ if(lvCmp) return lvCmp;
+ return da.name.localeCompare(db.name,'ko');
+}
+let ASSIST_FILTER='all';
+function setAssistFilter(k){ ASSIST_FILTER=k; assistantSheet(); }
+function assistFilterBar(){
+ const counts={all:S.assistants.length};
+ S.assistants.forEach(a=>{ const t=assistantDef(a.poolId).theme; counts[t]=(counts[t]||0)+1; });
+ const keys=['all'].concat(Object.keys(MJ).filter(k=>counts[k]));
+ return `<div class="assistFilterBar">${keys.map(k=>{
+   const on=ASSIST_FILTER===k;
+   const label = k==='all' ? ('전체 '+counts.all) : (MJ[k].ic+' '+MJ[k].n+' '+counts[k]);
+   const col = k==='all' ? '#8d8175' : MJ[k].c;
+   const style = on ? ('background:'+col+';border-color:'+col+';color:#fff')
+                    : ('border-color:'+col+'55;color:'+col);
+   return `<button class="assistFilterBtn${on?' on':''}" style="${style}" onclick="setAssistFilter('${k}')">${label}</button>`;
+ }).join('')}</div>`;
+}
 function assistantSheet(){
  const openDepts=DEPTS.filter(d=>d.open);
  sheet('🎓 조수 연구실','조수 얼굴과 지금 어디서 활동 중인지 한눈에 볼 수 있어요',`
@@ -2052,9 +2089,14 @@ function assistantSheet(){
    하기"로 지금까지 모은 만큼만 미리 받을 수도 있어요. 한 번 클릭하면 그 조수가 하는 말을 들을 수 있어요.
    강화에 성공하면 Lv.5에서 다음 학위로 승급해요. 실패해도 대부분은 레벨만 그대로지만, <b>낮은 확률로 조수가
    대학원을 그만두고 떠날 수 있어요</b>.</div>
+  ${S.assistants.length>1?assistFilterBar():''}
   ${S.assistants.length===0?`<div class="box" style="text-align:center;color:var(--dim);font-size:12.5px">아직 뽑은 조수가 없어요</div>`
    :(()=>{
-    const withIdx=S.assistants.map((inst,idx)=>({inst,idx}));
+    // idx는 반드시 원래 배열 순번이어야 한다 — 서버는 조수를 이 순번으로 지목하므로,
+    // 화면 정렬 때문에 순번이 바뀌면 엉뚱한 조수가 강화·해고된다.
+    let withIdx=S.assistants.map((inst,idx)=>({inst,idx}));
+    if(ASSIST_FILTER!=='all') withIdx=withIdx.filter(x=>assistantDef(x.inst.poolId).theme===ASSIST_FILTER);
+    withIdx.sort(assistantSortCmp);
     const unassigned=withIdx.filter(x=>!x.inst.assignedDept);
     const assigned=withIdx.filter(x=>x.inst.assignedDept);
     const col=(list,emptyMsg)=>list.length?list.map(renderAssistCard).join(''):
@@ -2385,6 +2427,7 @@ async function finishLogin(){
  sessionStorage.setItem('lab_logged_in', CURRENT_STUDENT.name);
  if(CURRENT_STUDENT.sessionToken) sessionStorage.setItem('lab_session_token', CURRENT_STUDENT.sessionToken);
  startSessionHeartbeat();
+ startServiceHourWatch(); // 오후 5시가 되면 스스로 정리하고 안내한다
  startAutoLogoutWatch();
  document.getElementById('loginScreen').classList.add('hide');
  document.getElementById('labApp').classList.remove('hide');
@@ -2541,11 +2584,26 @@ function isWithinServiceHours(){
  const minutes=hour*60+minute;
  return minutes>=8*60 && minutes<17*60;
 }
-/* 세션 안에서 이미 로그인했다면(예: 실제 과제 게임에서 로비로 돌아온 경우) 이용 시간과 무관하게
-   다시 묻지 않는다 — 이용 시간이 끊기는 건 "새 로그인"만 막는 것이지, 이미 하던 걸 끊는 게 아니다. */
+/* 이용 시간이 끝나면 스스로 로그아웃한다.
+   예전에는 로그인할 때 딱 한 번만 검사해서, 4시 59분에 들어와 창을 켜 두면 밤새 게임이 됐다.
+   서버(lab_check_session)도 5시가 지나면 모든 요청을 거절하지만, 그것만으로는 학생 화면에
+   "세션이 유효하지 않습니다"라는 알 수 없는 오류만 뜨므로 여기서 이유를 알려주고 정리한다. */
+let _serviceHourTimer=null;
+function startServiceHourWatch(){
+ clearInterval(_serviceHourTimer);
+ _serviceHourTimer=setInterval(()=>{
+  if(isWithinServiceHours()) return;
+  clearInterval(_serviceHourTimer);
+  clearSessionAndReload('🕐 오후 5시가 되어 연구소 문을 닫습니다. 오늘 진행한 내용은 모두 저장됐어요. 내일 오전 8시에 다시 만나요!');
+ }, 30000);
+}
+
+/* 세션 안에서 이미 로그인했다면(예: 실제 과제 게임에서 로비로 돌아온 경우) 새로 묻지는 않지만,
+   그 사이에 이용 시간이 지났다면 자동 로그인도 시키지 않는다. */
 function tryAutoLogin(){
  const loggedName=sessionStorage.getItem('lab_logged_in');
  if(!loggedName) return false;
+ if(!isWithinServiceHours() && !TEACHER_TEST_ACCOUNTS.includes(loggedName)) return false;
  let studentId=null;
  try{ const info=JSON.parse(sessionStorage.getItem('studentInfo')||'null'); if(info&&info.name===loggedName) studentId=info.classNo; }catch(e){}
  CURRENT_STUDENT={name:loggedName, studentId, sessionToken:sessionStorage.getItem('lab_session_token')||null};

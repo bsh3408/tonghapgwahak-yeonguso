@@ -857,7 +857,11 @@ declare
   );
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
-  select data into cur from lab_game_state where name=trim(p_name);
+  -- for update가 반드시 필요하다. 이 함수만 잠금 없이 읽던 탓에, 학생이 조수를 뽑는 순간
+  -- 같이 나가는 상태 저장이 "뽑기 전"의 낡은 조수 목록을 읽어서 그대로 덮어썼다.
+  -- 그러면 포인트는 빠져나갔는데 방금 뽑은 조수가 사라진다(재현율 4회 중 1회).
+  -- 슬롯 확장도 같은 이유로 되돌아가서, 늘린 슬롯에 배치하려 하면 "가득 찼다"고 나왔다.
+  select data into cur from lab_game_state where name=trim(p_name) for update;
   cur := coalesce(cur, '{}'::jsonb);
   merged := coalesce(p_data, '{}'::jsonb);
   for k in select jsonb_object_keys(protected_defaults) loop
@@ -877,9 +881,33 @@ end; $$;
 -- 클라이언트가 "이 행동을 해달라"고 요청만 하고, 계산은 전부 여기(서버)에서 한다.
 -- 모든 함수는 p_token(로그인 때 발급된 세션 토큰)이 그 학생의 현재 세션과 일치하는지부터 확인한다.
 -- ============================================================
+-- ============================================================
+-- 이용 가능 시간(평일 08:00~17:00 KST, 공휴일 제외) — 서버가 최종 판단한다.
+-- 예전에는 로그인할 때 클라이언트만 검사해서, 4시 59분에 들어와 창을 켜 두면 밤새 게임이 됐다.
+-- ⚠️ 공휴일 목록은 shinjang_science.html의 SCHOOL_HOLIDAYS와 항상 같이 고쳐야 한다.
+-- ============================================================
+create or replace function public.lab_service_open(p_at timestamptz default now())
+returns boolean language sql stable as $$
+  select case
+    when to_char(p_at at time zone 'Asia/Seoul', 'DY') in ('SAT','SUN') then false
+    when to_char(p_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') = any (array[
+      '2026-08-15','2026-09-24','2026-09-25','2026-10-03','2026-10-05','2026-10-09',
+      '2026-11-19','2026-11-20','2026-12-25','2027-01-01']) then false
+    else (p_at at time zone 'Asia/Seoul')::time >= '08:00' and (p_at at time zone 'Asia/Seoul')::time < '17:00'
+  end;
+$$;
+-- 교사 테스트 계정과 점검용 계정(zz_)은 시간 제한을 받지 않는다.
+create or replace function public.lab_time_exempt(p_name text)
+returns boolean language sql immutable as $$
+  select trim(p_name) = '변석환' or trim(p_name) like 'zz\_%';
+$$;
+
 create or replace function public.lab_check_session(p_name text, p_token text) returns boolean
 language sql stable as $$
-  select exists(select 1 from lab_students where name=trim(p_name) and session_token=p_token and session_token is not null);
+  -- 토큰이 맞아도 이용 시간이 지났으면 세션을 인정하지 않는다. 모든 게임 함수가 이 함수를
+  -- 거치므로, 5시 전에 로그인해서 창을 켜 둔 학생도 5시가 되면 더 이상 아무것도 할 수 없다.
+  select (lab_service_open() or lab_time_exempt(p_name))
+     and exists(select 1 from lab_students where name=trim(p_name) and session_token=p_token and session_token is not null);
 $$;
 
 -- 조수(대학원생) 전체 명단 — shinjang_science.html의 ASSISTANTS_POOL과 반드시 동일하게 유지
@@ -1261,7 +1289,7 @@ begin
   -- 조수 한 명이 시간당 1,700점을 넘겼다. 이제 각 보너스는 "기본값의 몇 %"로 더해진다.
   case degree when 'bachelor' then base_rate:=20; when 'master' then base_rate:=35; else base_rate:=60; end case;
   lv_mult := (lv-1)*0.15;
-  legend_mult := case when is_rare then 1.2 else 0 end;
+  legend_mult := case when is_rare then 2.0 else 0 end;  -- 전설 +200%
   if a_theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? a_theme) then dept_mult := 0.2; end if;
 
   for j in 0..jsonb_array_length(assistants)-1 loop

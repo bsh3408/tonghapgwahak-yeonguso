@@ -77,6 +77,20 @@ alter table public.lab_students enable row level security;
 -- 네트워크 지연 한 번에 "끊긴 세션"으로 오판되지 않는다.
 create or replace function public.lab_session_timeout_minutes() returns int language sql immutable as $$ select 1 $$;
 
+-- ============================================================
+-- 신규 계정의 기본 게임 상태. lab_state_sync의 보호 기본값과 반드시 같은 값이어야 한다.
+-- ============================================================
+create or replace function public.lab_default_state()
+returns jsonb language sql immutable as $$
+  select jsonb_build_object(
+    'rc', 200, 'lv', 1, 'fail', 0, 'researchScore', 0, 'totalResearchEarned', 0, 'totalRcEarned', 0,
+    'assistants', '[]'::jsonb, 'nobelCount', 0, 'papers', '[]'::jsonb,
+    'everPassed', '{}'::jsonb, 'everPerfect', '{}'::jsonb, 'everCorrect', '{}'::jsonb,
+    'opinionAwarded', '{}'::jsonb, 'claimed', '{}'::jsonb, 'deptSlots', 2,
+    'ownedThemes', '["bright"]'::jsonb, 'labTheme', 'bright',
+    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', null, 'bestCorrect', '{}'::jsonb);
+$$;
+
 create or replace function public.lab_login(p_name text, p_password text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare s lab_students%rowtype; newtoken text;
@@ -94,6 +108,13 @@ begin
   end if;
   newtoken := encode(gen_random_bytes(16), 'hex');
   update lab_students set logged_in_at = now(), session_token = newtoken, session_at = now() where name = s.name;
+  -- 게임 상태 행을 여기서 확실히 만들어 둔다.
+  -- 예전에는 로그인한 뒤 클라이언트가 0.8초 뒤에 한 번 밀어 넣는 방식이라, 그 요청이 실패하거나
+  -- 학생이 곧바로 다른 화면으로 넘어가면 행이 안 생겼다. 행이 없으면 과제 제출과 서술형 포인트가
+  -- 전부 "게임 상태를 찾을 수 없습니다"로 거부돼서, 학생 눈에는 답안이 저장되지 않는 것으로 보였다.
+  insert into lab_game_state(name, class_no, data, updated_at)
+    values (s.name, s.student_id, lab_default_state(), now())
+  on conflict (name) do nothing;
   return jsonb_build_object('ok', true, 'mustChange', s.must_change, 'studentId', s.student_id, 'sessionToken', newtoken);
 end; $$;
 

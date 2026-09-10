@@ -71,6 +71,10 @@ button,.mrow,.splitcard,.pabtn,.clk,.opt{
  .labRow .nav button{flex-direction:row;justify-content:flex-start;padding:11px 12px}
  /* 조수 연구실: 왼쪽엔 배치 안 된 조수, 오른쪽엔 배치된 조수 — 넓은 화면(크롬북 등)에서만 2열 */
  /* 조수 전공 보기 단추 — 가로로 넘치면 옆으로 스크롤되게 해서 좁은 화면에서도 줄이 안 무너지게 한다 */
+/* 연구실 그림에 다 못 세운 대기 조수를 알려주는 줄 */
+.roomOverflow{position:absolute;left:8px;right:8px;bottom:6px;z-index:3;text-align:center;
+  font-size:11px;font-weight:800;color:var(--dim);background:rgba(255,253,248,.92);
+  border:1.5px solid var(--line);border-radius:999px;padding:5px 10px;pointer-events:none}
 .assistFilterBar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-bottom:2px;-webkit-overflow-scrolling:touch}
 .assistFilterBar::-webkit-scrollbar{height:4px}
 .assistFilterBar::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
@@ -357,6 +361,7 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 <div class="labRow">
 <div id="stage"><svg id="lab" viewBox="-236 -152 528 416" xmlns="http://www.w3.org/2000/svg"></svg>
   <div id="assistInfoPanel" class="assistInfoPanel hide"></div>
+  <div id="roomOverflow" class="roomOverflow" hidden></div>
 </div>
 
 <div class="nav" style="grid-template-columns:repeat(3,1fr)">
@@ -999,6 +1004,17 @@ function setStageViewBox(gx,gy){
    이동 상태(pos/path/say 등)는 화면 연출용이라 저장 상태(S)에는 넣지 않고 poolId로 따로 관리한다. */
 const ASSIST_ANIM={};
 function idleAssistants(){ return S.assistants.filter(a=>!a.assignedDept); }
+/* 연구실 그림에 한 번에 세울 수 있는 조수 수. 자리(SEATS 4곳)와 활동 지점(POIs 5곳)을 합쳐
+   9명이 기본이었는데, 대기 조수가 그보다 많으면 배열 앞쪽 9명만 그려졌다.
+   가챠는 배열 끝에 새 조수를 붙이므로, 대기가 9명을 넘은 학생은 방금 뽑은 조수가
+   화면에 아예 나타나지 않아 "뽑았는데 사라졌다"고 느꼈다(실제로는 서버에 잘 있었다).
+   그래서 최근에 영입한 조수부터 보여주고, 자리에 못 선 인원은 숫자로 알려준다. */
+const LAB_ROOM_MAX=12;
+function roomAssistants(){
+ // 뒤에 붙은 조수가 최근에 영입한 조수다. 뒤집어서 새 조수가 항상 맨 앞에 오게 한다.
+ return idleAssistants().slice().reverse().slice(0, LAB_ROOM_MAX);
+}
+function hiddenIdleCount(){ return Math.max(0, idleAssistants().length - LAB_ROOM_MAX); }
 function animFor(poolId){
  if(!ASSIST_ANIM[poolId]) ASSIST_ANIM[poolId]={pos:null,path:[],st:'idle',tmr:20+Math.random()*60|0,emo:'',face:1,say:'',sayT:0};
  return ASSIST_ANIM[poolId];
@@ -1124,7 +1140,7 @@ function route(a,b){
 function moveTick(){
   checkAutoReturns();
   const pois=POIs();
-  idleAssistants().slice(0,9).forEach((inst,i)=>{
+  roomAssistants().forEach((inst,i)=>{
     const c=animFor(inst.poolId);
     if(!c.pos)c.pos = i<SEATS.length? {...SEATS[i]} : {...pois[Math.random()*pois.length|0]};
     if(inT(c.pos.x,c.pos.y)) c.pos.y=(c.pos.y-TBL.y0)<(TBL.y1-c.pos.y)?TBL.y0-.5:TBL.y1+.6;
@@ -1195,7 +1211,7 @@ function npcMarkup(inst, def, c, i){
 function renderNpcs(){
   ensureLabLayers();
   const layer=document.getElementById('labNpcs');
-  const list=idleAssistants().slice(0,9);
+  const list=roomAssistants();
   const seen=new Set();
   let needFullSort=false;
   list.forEach((inst,i)=>{
@@ -1232,6 +1248,13 @@ function scene(){
   setStageViewBox(LAB_GX,LAB_GY);
   renderStatic();
   renderNpcs();
+  // 자리에 못 선 대기 조수가 있으면 숨기지 말고 숫자로 알려준다.
+  const ov=document.getElementById("roomOverflow");
+  if(ov){
+    const hidden=hiddenIdleCount();
+    ov.hidden = hidden<=0;
+    if(hidden>0) ov.textContent = "🎓 대기 조수 " + idleAssistants().length + "명 중 최근 " + LAB_ROOM_MAX + "명만 연구실에 보여요 · 나머지 " + hidden + "명은 조수 연구실에서 볼 수 있어요";
+  }
 }
 
 
@@ -1879,13 +1902,15 @@ function adoptAssistants(out){
  return true;
 }
 function applyGachaOutcome(out){
+ // 전공 보기가 켜져 있으면 방금 뽑은 조수가 목록에서 걸러져 안 보인다. 뽑을 때는 전체 보기로 되돌린다.
+ ASSIST_FILTER='all';
  // 조수 목록은 서버가 준 것을 그대로 쓴다. 예전에는 클라이언트가 자기 배열을 직접 고쳐서,
  // 한 번이라도 서버와 어긋나면 방금 뽑은 조수가 사라진 것처럼 보였다.
  adoptAssistants(out);
  S.rc=out.rc;
  const def=assistantDef(out.poolId);
  if(out.dup){ toast(`중복! ${def.name} → 🔬${out.refund} 환급`); flyGain('rc', out.refund); }
- else{ ASSIST_FILTER='all'; // 전공 보기가 켜져 있으면 새로 뽑은 조수가 걸러져 안 보인다
+ else{
   toast(`🎉 ${def.name}(${rankName(def,out.degree)} Lv.1) 영입!`, 'gold'); }
  saveLabState(); render(); assistantSheet();
 }

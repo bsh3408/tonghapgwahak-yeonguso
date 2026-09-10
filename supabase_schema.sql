@@ -1388,6 +1388,9 @@ begin
 end; $$;
 
 -- 연구포인트로 즉시 논문 작성(150🔬, 24시간 대기 없이 바로 완성).
+-- 논문 대기시간은 lastPaperAt으로만 센다(연구동 배치·수확이 쓰는 lastCollectedAt과 분리).
+-- 예전에는 둘이 같은 값을 써서, 연구동에 배치하거나 수확할 때마다 논문 대기시간이 초기화됐다.
+-- 그래서 연구동을 부지런히 돌린 조수일수록 24시간이 영영 채워지지 않아 논문을 쓸 수 없었다.
 create or replace function public.lab_instant_paper(p_name text, p_token text, p_idx int)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare
@@ -1405,7 +1408,7 @@ begin
   -- 논문은 조수 한 명당 하루 한 편이다. 예전에는 즉시 작성에만 이 제한이 빠져 있어서,
   -- 가장 좋은 조수 한 명으로 버튼을 연타하면 12초 만에 열 편이 나왔다(실제로 일어났다).
   now_ms := (extract(epoch from now())*1000)::bigint;
-  last_collected := coalesce((inst->>'lastCollectedAt')::bigint, 0);
+  last_collected := coalesce((inst->>'lastPaperAt')::bigint, 0);
   hours_elapsed := (now_ms - last_collected) / 3600000.0;
   if hours_elapsed < 24 then
     return jsonb_build_object('ok', false, 'error',
@@ -1419,7 +1422,7 @@ begin
   select ps.score, ps.nobel into score, nobel from lab_paper_score(degree, is_rare) ps;
 
   cur_rc := cur_rc - cost;
-  inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
+  inst := jsonb_set(inst, '{lastPaperAt}', to_jsonb(now_ms));
   new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
   rs := coalesce((gs.data->>'researchScore')::int,0) + score;
   total_earned := coalesce((gs.data->>'totalResearchEarned')::int,0) + score;
@@ -1455,7 +1458,7 @@ begin
   inst := assistants->p_idx;
   if inst->>'assignedDept' is not null then return jsonb_build_object('ok', false, 'error', '연구동에 배치된 조수예요.'); end if;
   now_ms := (extract(epoch from now())*1000)::bigint;
-  last_collected := coalesce((inst->>'lastCollectedAt')::bigint, 0);
+  last_collected := coalesce((inst->>'lastPaperAt')::bigint, 0);
   hours_elapsed := (now_ms - last_collected) / 3600000.0;
   if hours_elapsed < 24 then return jsonb_build_object('ok', false, 'error', '아직 24시간이 안 지났어요'); end if;
 
@@ -1463,7 +1466,7 @@ begin
   select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
   select ps.score, ps.nobel into score, nobel from lab_paper_score(degree, is_rare) ps;
 
-  inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
+  inst := jsonb_set(inst, '{lastPaperAt}', to_jsonb(now_ms));
   new_assistants := jsonb_set(assistants, array[p_idx::text], inst);
   rs := coalesce((gs.data->>'researchScore')::int,0) + score;
   total_earned := coalesce((gs.data->>'totalResearchEarned')::int,0) + score;
@@ -1503,13 +1506,13 @@ begin
   for i in 0..n-1 loop
     inst := assistants->i;
     if inst->>'assignedDept' is null then
-      last_collected := coalesce((inst->>'lastCollectedAt')::bigint, 0);
+      last_collected := coalesce((inst->>'lastPaperAt')::bigint, 0);
       hours_elapsed := (now_ms - last_collected) / 3600000.0;
       if hours_elapsed >= 24 then
         degree := coalesce(inst->>'degree','bachelor');
         select rare_draw, name, theme into is_rare, aname, atheme from lab_assistants_pool where id=inst->>'poolId';
         select ps.score, ps.nobel into score, nobel from lab_paper_score(degree, is_rare) ps;
-        inst := jsonb_set(inst, '{lastCollectedAt}', to_jsonb(now_ms));
+        inst := jsonb_set(inst, '{lastPaperAt}', to_jsonb(now_ms));
         assistants := jsonb_set(assistants, array[i::text], inst);
         rs := rs + score;
         total_earned := total_earned + score;

@@ -1839,11 +1839,14 @@ function deptHasLegendBuff(deptId, excludePoolId){
    보너스가 1.2의 거듭제곱이라 10명만 모아도 5.2배가 됐다. 여기에 전설(2.2배)과 레벨까지
    곱해지면 한 명이 시간당 1,700점 넘게 벌어서, 조수를 일찍 많이 모은 학생과 그렇지 않은
    학생의 격차가 걷잡을 수 없이 벌어졌다. 이제 각 보너스는 "기본값의 몇 %"로 더해진다. */
-const BONUS={legend:2.0, dept:0.2, legendBuff:0.5, lvPer:0.15, themePer:0.2};
+const BONUS={legend:2.0, dept:0.2, legendBuff:0.5, themePer:0.2};
+/* 레벨 보너스: 1~5레벨은 레벨당 +25%, 5레벨을 넘기면 레벨당 +50%.
+   서버(lab_collect_dept_production)와 반드시 같은 식이어야 한다. */
+function levelBonus(lv){ return lv<=5 ? (lv-1)*0.25 : 1.00+(lv-5)*0.50; }
 function assistantRateBreakdown(inst){
  const def=assistantDef(inst.poolId); const deg=DEGREE[inst.degree||'bachelor'];
  const lv=inst.lv||1;
- const lvBonus=(lv-1)*BONUS.lvPer;
+ const lvBonus=levelBonus(lv);
  const legendBonus=def.rareDraw?BONUS.legend:0;
  let deptBonus=0, legendBuffBonus=0;
  if(inst.assignedDept){

@@ -1324,7 +1324,12 @@ begin
   -- 보너스가 1.2의 거듭제곱이라 10명이면 5.2배가 됐고, 여기에 전설(2.2배)과 레벨까지 곱해져
   -- 조수 한 명이 시간당 1,700점을 넘겼다. 이제 각 보너스는 "기본값의 몇 %"로 더해진다.
   case degree when 'bachelor' then base_rate:=20; when 'master' then base_rate:=35; else base_rate:=60; end case;
-  lv_mult := (lv-1)*0.15;
+  -- 레벨 보너스: 1~5레벨은 레벨당 +25%, 5레벨을 넘기면 레벨당 +50%로 커진다.
+  -- 학사·석사는 5레벨에서 다음 학위로 승급하므로, 뒷구간은 박사에게만 적용된다.
+  -- 예전에는 레벨과 무관하게 +15%로 고정이라, 고레벨은 비용과 실패 위험만 커지고
+  -- 얻는 게 그대로여서 올릴 이유가 없었다.
+  if lv <= 5 then lv_mult := (lv-1)*0.25;
+  else lv_mult := 1.00 + (lv-5)*0.50; end if;
   legend_mult := case when is_rare then 2.0 else 0 end;  -- 전설 +200%
   if a_theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? a_theme) then dept_mult := 0.2; end if;
 

@@ -2541,7 +2541,7 @@ async function finishLogin(){
 /* 교사 테스트 계정 — 지금은 랭킹에서 제외하는 용도로만 쓴다.
    예전에는 여기서 테스트용 포인트를 자동으로 채워줬지만, 연구포인트를 서버가 전부 관리하게 되면서
    클라이언트가 S.rc를 직접 올리는 방식은 서버에 반영되지도 않고 혼란만 주어서 제거했다. */
-const TEACHER_TEST_ACCOUNTS=['변석환'];
+const TEACHER_TEST_ACCOUNTS=['변석환','테스트'];
 /* 실제 학생이 아니라서 전체 랭킹에서 빼야 하는 이름들 — 교사 테스트 계정 외에, 학생이 아닌 다른 계정도 여기 추가한다 */
 const RANK_EXCLUDE_ACCOUNTS=[...TEACHER_TEST_ACCOUNTS, '이지숙'];
 

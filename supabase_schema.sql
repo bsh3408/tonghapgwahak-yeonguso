@@ -927,10 +927,10 @@ returns boolean language sql stable as $$
     else (p_at at time zone 'Asia/Seoul')::time >= '08:00' and (p_at at time zone 'Asia/Seoul')::time < '17:00'
   end;
 $$;
--- 교사 테스트 계정과 점검용 계정(zz_)은 시간 제한을 받지 않는다.
+-- 교사 계정·시연용 테스트 계정·점검용 계정(zz_)은 이용 시간 제한을 받지 않는다.
 create or replace function public.lab_time_exempt(p_name text)
 returns boolean language sql immutable as $$
-  select trim(p_name) = '변석환' or trim(p_name) like 'zz\_%';
+  select trim(p_name) in ('변석환','테스트') or trim(p_name) like 'zz\_%';
 $$;
 
 create or replace function public.lab_check_session(p_name text, p_token text) returns boolean

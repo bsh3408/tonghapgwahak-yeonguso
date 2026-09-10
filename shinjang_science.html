@@ -2580,10 +2580,13 @@ function startSessionHeartbeat(){
 /* 서버에 예약해둔 세션을 풀고(가능하면) 이 기기의 로그인 흔적을 지운 뒤 새로고침한다.
    alertMsg가 있으면 새로고침 전에 안내를 띄운다(자동 로그아웃은 조용히, 다른 기기 때문에
    쫓겨난 경우만 이유를 알려준다). keepalive를 켜면 reload로 탭이 넘어가는 순간에도 요청이 끝까지 간다. */
-function clearSessionAndReload(alertMsg, keepalive){
+function clearSessionAndReload(alertMsg, keepalive, keepServerSession){
  stopSessionHeartbeat();
  clearAutoLogoutTimer();
- if(isSupabaseConfigured() && CURRENT_STUDENT && CURRENT_STUDENT.sessionToken){
+ // ⚠️ 서버 토큰을 지우면, 같은 학생이 다른 탭에서 문제를 풀고 있어도 그 탭의 제출이 거부된다.
+ //    자동 로그아웃(자리 비움·화면 꺼짐)은 이 탭만 정리하고 서버 토큰은 그대로 둔다.
+ //    1분간 활동이 없으면 어차피 다른 기기에서 새로 로그인할 수 있어서 보안상 손해가 없다.
+ if(!keepServerSession && isSupabaseConfigured() && CURRENT_STUDENT && CURRENT_STUDENT.sessionToken){
   supaRpc('lab_session_logout', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken}, keepalive?{keepalive:true}:undefined).catch(()=>{});
  }
  sessionStorage.removeItem('studentInfo');
@@ -2624,8 +2627,9 @@ function startAutoLogoutWatch(){
  _lastActivityAt=Date.now(); _hiddenSinceAt=null;
  _autoLogoutTimer=setInterval(()=>{
   if(!CURRENT_STUDENT) return;
-  if(Date.now()-_lastActivityAt>IDLE_LOGOUT_MS){ clearSessionAndReload(); return; }
-  if(_hiddenSinceAt && Date.now()-_hiddenSinceAt>HIDDEN_LOGOUT_MS){ clearSessionAndReload(null, true); return; }
+  // 세 번째 인자(keepServerSession)=true: 이 탭만 정리하고 서버 세션은 남긴다.
+  if(Date.now()-_lastActivityAt>IDLE_LOGOUT_MS){ clearSessionAndReload(null, false, true); return; }
+  if(_hiddenSinceAt && Date.now()-_hiddenSinceAt>HIDDEN_LOGOUT_MS){ clearSessionAndReload(null, true, true); return; }
  }, 20000);
 }
 

@@ -256,6 +256,21 @@ document.addEventListener('keydown', e=>{
    문제를 20분 동안 푸는 내내 서버를 한 번도 부르지 않아서, 제출 직전에 세션이 이미 만료돼 있고
    답안이 통째로 거부되는 일이 생겼다. 로비와 똑같은 주기로 하트비트를 보내 세션을 살려둔다. */
 const ENGINE_HEARTBEAT_MS=20000;
+/* 다른 탭에서 로그아웃되는 등으로 이 페이지의 로그인이 풀렸을 때 곧바로 알린다.
+   예전에는 20분을 다 풀고 제출하는 순간에야 "세션이 유효하지 않습니다"를 보게 돼서,
+   학생이 그때까지 쓴 답안을 못 내는 상황이 생겼다. 답안은 이 기기에 남아 있으니 안심시킨다. */
+let _sessionLostShown=false;
+function showSessionLostBanner(){
+  if(_sessionLostShown) return;
+  _sessionLostShown=true;
+  const el=document.createElement("div");
+  el.id="sessionLostBar";
+  el.style.cssText="position:fixed;left:0;right:0;top:0;z-index:9999;padding:10px 14px;text-align:center;"+
+    "background:#fff2f0;color:#c0392b;border-bottom:2px solid #f0b6ae;font-size:13px;font-weight:800;line-height:1.6";
+  el.innerHTML="⚠️ 로그인이 풀렸어요. 지금까지 쓴 답은 이 기기에 저장돼 있으니 걱정하지 마세요.<br>" +
+    "<span style='font-weight:700'>연구소 첫 화면에서 다시 로그인한 뒤, 이 문제 화면으로 돌아와 제출하면 그대로 이어집니다.</span>";
+  document.body.appendChild(el);
+}
 function startEngineHeartbeat(){
   if(typeof isSupabaseConfigured!=='function' || !isSupabaseConfigured()) return;
   const info=(typeof getStudentInfo==='function') ? getStudentInfo() : null;
@@ -264,6 +279,7 @@ function startEngineHeartbeat(){
     const token=sessionStorage.getItem('lab_session_token');
     if(!token) return;
     supaRpc('lab_session_heartbeat', {p_name:info.name, p_token:token})
+      .then(out=>{ if(out && out.kicked) showSessionLostBanner(); })
       .catch(()=>{ /* 한 번 실패한 정도로는 문제 풀이를 끊지 않는다 */ });
   }, ENGINE_HEARTBEAT_MS);
 }
@@ -705,7 +721,7 @@ async function syncToSupabase(){
     // 채점·크레딧 지급은 전부 서버(lab_submit_chapter)가 직접 다시 계산한다 — 이 페이지가
     // "몇 점 맞았다"고 자체 보고한 값은 더 이상 그대로 안 믿는다(개발자도구로 위조 방지).
     const token=sessionStorage.getItem('lab_session_token');
-    if(!token){ setSyncBadge('⚠️ 로그인 세션이 없어요. 새로고침 후 다시 로그인해주세요', 'err'); }
+    if(!token){ setSyncBadge('⚠️ 로그인이 풀렸어요. 답은 이 기기에 저장돼 있어요 · 다시 로그인한 뒤 이 화면으로 돌아와 제출하세요', 'err'); showSessionLostBanner(); }
     else{
       try{
         const out=await supaRpc('lab_submit_chapter', {
@@ -715,6 +731,7 @@ async function syncToSupabase(){
         });
         serverOut=out;
         if(out.ok) setSyncBadge('☁️ 결과 저장 완료', 'ok');
+        else if(/세션/.test(out.error||'')){ setSyncBadge('⚠️ 로그인이 풀렸어요. 답은 이 기기에 저장돼 있어요 · 다시 로그인한 뒤 이 화면으로 돌아와 제출하세요', 'err'); showSessionLostBanner(); }
         else setSyncBadge('⚠️ 저장에 실패했어요: '+(out.error||'')+' 선생님께 화면을 보여주세요', 'err');
       }catch(e){
         setSyncBadge('⚠️ 저장에 실패했어요(인터넷 연결을 확인해 주세요). 선생님께 알려주세요', 'err');

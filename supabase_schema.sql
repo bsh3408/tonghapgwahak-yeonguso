@@ -356,7 +356,7 @@ create or replace function public.lab_journal_save(p_student_name text, p_token 
   p_chapter_title text, p_round_id text, p_round_title text, p_text text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 begin
-  if not lab_check_session(p_student_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  if not lab_check_session_grace(p_student_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   insert into lab_journal_answers(id, student_name, class_no, chapter_id, chapter_title, round_id, round_title, text, updated_at)
     values ('jrn-' || substr(md5(random()::text || clock_timestamp()::text), 1, 16),
       p_student_name, p_class_no, p_chapter_id, p_chapter_title, p_round_id, p_round_title, p_text, now())
@@ -556,7 +556,7 @@ declare
   perfect_clear boolean; cur_rc int; new_data jsonb; is_correct boolean;
   submitted_ids jsonb; expected_n int := 0; report_total int;
 begin
-  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  if not lab_check_session_grace(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   -- 클라이언트는 seedKey('ch10_seed_v1')를 보내지만 lab_chapters.id는 짧은 형태('ch10')라 둘 다 받아준다.
   select * into cs from lab_chapters where id = p_chapter_id or data->>'seedKey' = p_chapter_id limit 1;
   if not found then return jsonb_build_object('ok', false, 'error', '알 수 없는 단원입니다.'); end if;
@@ -704,7 +704,7 @@ declare
   gs lab_game_state%rowtype; cs lab_chapters%rowtype; round_def jsonb; min_len int := 20;
   opinion_awarded jsonb; award_key text; cur_rc int; new_data jsonb;
 begin
-  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  if not lab_check_session_grace(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
   select * into gs from lab_game_state where name = trim(p_name) for update;
   if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
   cur_rc := coalesce((gs.data->>'rc')::int, 0);
@@ -938,6 +938,17 @@ language sql stable as $$
   -- 토큰이 맞아도 이용 시간이 지났으면 세션을 인정하지 않는다. 모든 게임 함수가 이 함수를
   -- 거치므로, 5시 전에 로그인해서 창을 켜 둔 학생도 5시가 되면 더 이상 아무것도 할 수 없다.
   select (lab_service_open() or lab_time_exempt(p_name))
+     and exists(select 1 from lab_students where name=trim(p_name) and session_token=p_token and session_token is not null);
+$$;
+
+-- 답안을 저장하는 요청만은 마감 시각을 조금 넘겨도 받아준다.
+-- 4시 50분에 문제를 풀기 시작한 학생이 5시 5분에 제출하면, 엄격하게 막을 경우
+-- 20분 동안 쓴 답안이 통째로 거부된다. 게임(포인트·조수)은 5시에 정확히 멈추되,
+-- 제출과 서술형 저장은 마감 후 SUBMIT_GRACE_MINUTES분까지 받는다.
+create or replace function public.lab_submit_grace_minutes() returns int language sql immutable as $$ select 20 $$;
+create or replace function public.lab_check_session_grace(p_name text, p_token text) returns boolean
+language sql stable as $$
+  select (lab_service_open(now() - (lab_submit_grace_minutes() || ' minutes')::interval) or lab_time_exempt(p_name))
      and exists(select 1 from lab_students where name=trim(p_name) and session_token=p_token and session_token is not null);
 $$;
 
@@ -1324,12 +1335,11 @@ begin
   -- 보너스가 1.2의 거듭제곱이라 10명이면 5.2배가 됐고, 여기에 전설(2.2배)과 레벨까지 곱해져
   -- 조수 한 명이 시간당 1,700점을 넘겼다. 이제 각 보너스는 "기본값의 몇 %"로 더해진다.
   case degree when 'bachelor' then base_rate:=20; when 'master' then base_rate:=35; else base_rate:=60; end case;
-  -- 레벨 보너스: 1~5레벨은 레벨당 +25%, 5레벨을 넘기면 레벨당 +50%로 커진다.
-  -- 학사·석사는 5레벨에서 다음 학위로 승급하므로, 뒷구간은 박사에게만 적용된다.
-  -- 예전에는 레벨과 무관하게 +15%로 고정이라, 고레벨은 비용과 실패 위험만 커지고
-  -- 얻는 게 그대로여서 올릴 이유가 없었다.
-  if lv <= 5 then lv_mult := (lv-1)*0.25;
-  else lv_mult := 1.00 + (lv-5)*0.50; end if;
+  -- 레벨 보너스는 지수로 커진다: 한 레벨 오를 때마다 생산량이 1.25배가 된다.
+  -- (학사·석사는 5레벨에서 다음 학위로 승급하므로, 높은 구간은 박사에게만 해당된다.)
+  -- 직선으로 올리면 비용은 계속 오르는데 늘어나는 양은 그대로여서 고레벨을 올릴 이유가 없었다.
+  -- 지수로 두면 한 레벨당 늘어나는 양도 함께 커져서, 높은 레벨일수록 체감이 확실해진다.
+  lv_mult := power(1.25, lv-1) - 1;
   legend_mult := case when is_rare then 2.0 else 0 end;  -- 전설 +200%
   if a_theme='uni' or (dept_majors ? dept_id and dept_majors->dept_id ? a_theme) then dept_mult := 0.2; end if;
 

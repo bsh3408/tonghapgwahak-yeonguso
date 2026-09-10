@@ -1840,9 +1840,10 @@ function deptHasLegendBuff(deptId, excludePoolId){
    곱해지면 한 명이 시간당 1,700점 넘게 벌어서, 조수를 일찍 많이 모은 학생과 그렇지 않은
    학생의 격차가 걷잡을 수 없이 벌어졌다. 이제 각 보너스는 "기본값의 몇 %"로 더해진다. */
 const BONUS={legend:2.0, dept:0.2, legendBuff:0.5, themePer:0.2};
-/* 레벨 보너스: 1~5레벨은 레벨당 +25%, 5레벨을 넘기면 레벨당 +50%.
+/* 레벨 보너스는 지수로 커진다: 한 레벨 오를 때마다 생산량이 1.25배.
    서버(lab_collect_dept_production)와 반드시 같은 식이어야 한다. */
-function levelBonus(lv){ return lv<=5 ? (lv-1)*0.25 : 1.00+(lv-5)*0.50; }
+const LEVEL_GROWTH=1.25; // 한 레벨 오를 때마다 생산량이 이 배수만큼 커진다
+function levelBonus(lv){ return Math.pow(LEVEL_GROWTH, lv-1) - 1; }
 function assistantRateBreakdown(inst){
  const def=assistantDef(inst.poolId); const deg=DEGREE[inst.degree||'bachelor'];
  const lv=inst.lv||1;
@@ -2265,19 +2266,23 @@ async function postLabScore(){
  }catch(e){}
 }
 /* 이 조수가(집에서 대기 중이어야 함) 24시간을 다 채웠는지 */
+/* 논문 진행도의 기준 시각. 서버(lab_collect_paper·lab_instant_paper)와 같은 값을 봐야 한다.
+   연구동 수확 시각(lastCollectedAt)과는 별개다 — 예전에 둘을 같이 쓰다가,
+   연구동을 돌릴 때마다 논문 대기시간이 초기화되는 문제가 있었다. */
+function paperReadyAt(inst){ return +inst.lastPaperAt || 0; }
 function homeReady(inst){
  if(inst.assignedDept) return false;
- return (Date.now()-inst.lastCollectedAt)/3600000 >= HOME_RESEARCH_HOURS;
+ return (Date.now()-paperReadyAt(inst))/3600000 >= HOME_RESEARCH_HOURS;
 }
 /* 집에서 대기 중인 조수의 논문 완성까지 남은 시간을 "H시간 M분"까지 분 단위로 보여준다(진행 바 옆에 표시) */
 function homeRemainingLabel(inst){
- const hoursLeft = HOME_RESEARCH_HOURS - (Date.now()-inst.lastCollectedAt)/3600000;
+ const hoursLeft = HOME_RESEARCH_HOURS - (Date.now()-paperReadyAt(inst))/3600000;
  if(hoursLeft<=0) return '📄 논문 완성! 수거할 수 있어요';
  const totalMin=Math.ceil(hoursLeft*60), h=Math.floor(totalMin/60), m=totalMin%60;
  return `⏱️ 논문 완성까지 ${h>0?h+'시간 ':''}${m}분`;
 }
 function homeProgressPct(inst){
- const elapsedHours=(Date.now()-inst.lastCollectedAt)/3600000;
+ const elapsedHours=(Date.now()-paperReadyAt(inst))/3600000;
  return Math.max(0, Math.min(100, elapsedHours/HOME_RESEARCH_HOURS*100));
 }
 const INSTANT_PAPER_COST=150; // 연구시간 단축권이 없어지면서 이게 유일한 "돈으로 시간을 사는" 수단이라 값을 올림
@@ -2342,7 +2347,7 @@ function tickHomeResearchUI(){
    24시간 검사도 서버가 하므로, 클라이언트는 응답을 받아 화면에 반영만 한다. */
 function applyPaperOutcome(idx, out, instant){
  const inst=S.assistants[idx];
- if(inst) inst.lastCollectedAt=Date.now();
+ if(inst) inst.lastPaperAt=Date.now();
  if(out.nobel) S.nobelCount=(S.nobelCount||0)+1;
  S.researchScore=out.researchScore;
  S.totalResearchEarned=(S.totalResearchEarned||0)+out.score;
@@ -2373,7 +2378,7 @@ async function collectAllHomeResearch(){
   if(p.nobel) S.nobelCount=(S.nobelCount||0)+1;
   S.papers.push({title:p.title, theme:p.theme, assistantName:p.assistantName, degree:p.degree, score:p.score, nobel:p.nobel, at:p.at});
  });
- S.assistants.forEach(a=>{ if(!a.assignedDept) a.lastCollectedAt=Date.now(); }); // 서버가 갱신한 대상들과 대략 맞춰둠(다음 렌더에서 정확한 값은 재로그인 시 동기화)
+ S.assistants.forEach(a=>{ if(!a.assignedDept) a.lastPaperAt=Date.now(); }); // 서버가 갱신한 대상들과 대략 맞춰둠(다음 렌더에서 정확한 값은 재로그인 시 동기화)
  saveLabState(); render(); postLabScore();
  const totalScore = out.collected.reduce((sum,p)=>sum+p.score,0);
  const nobelN = out.collected.filter(p=>p.nobel).length;

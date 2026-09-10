@@ -1004,7 +1004,8 @@ begin
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
       on conflict (name) do update set rc=excluded.rc, updated_at=now();
-    return jsonb_build_object('ok', true, 'dup', true, 'refund', refund, 'rc', cur_rc, 'poolId', picked.id);
+    return jsonb_build_object('ok', true, 'dup', true, 'refund', refund, 'rc', cur_rc, 'poolId', picked.id,
+      'assistants', coalesce(gs.data->'assistants','[]'::jsonb));
   else
     new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}',
       coalesce(gs.data->'assistants','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
@@ -1013,7 +1014,8 @@ begin
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
       on conflict (name) do update set rc=excluded.rc, updated_at=now();
-    return jsonb_build_object('ok', true, 'dup', false, 'rc', cur_rc, 'poolId', picked.id, 'degree', start_degree, 'isLegend', is_legend);
+    return jsonb_build_object('ok', true, 'dup', false, 'rc', cur_rc, 'poolId', picked.id, 'degree', start_degree, 'isLegend', is_legend,
+      'assistants', new_data->'assistants');
   end if;
 end; $$;
 
@@ -1040,7 +1042,8 @@ begin
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
       on conflict (name) do update set rc=excluded.rc, updated_at=now();
-    return jsonb_build_object('ok', true, 'dup', true, 'refund', refund, 'rc', cur_rc, 'poolId', picked.id);
+    return jsonb_build_object('ok', true, 'dup', true, 'refund', refund, 'rc', cur_rc, 'poolId', picked.id,
+      'assistants', coalesce(gs.data->'assistants','[]'::jsonb));
   else
     new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}',
       coalesce(gs.data->'assistants','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
@@ -1049,7 +1052,8 @@ begin
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
       on conflict (name) do update set rc=excluded.rc, updated_at=now();
-    return jsonb_build_object('ok', true, 'dup', false, 'rc', cur_rc, 'poolId', picked.id);
+    return jsonb_build_object('ok', true, 'dup', false, 'rc', cur_rc, 'poolId', picked.id,
+      'assistants', new_data->'assistants');
   end if;
 end; $$;
 
@@ -1239,7 +1243,8 @@ begin
   update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
   insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
     on conflict (name) do update set rc=excluded.rc, updated_at=now();
-  return jsonb_build_object('ok', true, 'kind', kind, 'rc', cur_rc, 'degree', new_degree, 'lv', new_lv, 'line', line, 'leftDegree', degree, 'name', aname);
+  return jsonb_build_object('ok', true, 'kind', kind, 'rc', cur_rc, 'degree', new_degree, 'lv', new_lv, 'line', line, 'leftDegree', degree, 'name', aname,
+    'assistants', new_data->'assistants');
 end; $$;
 
 -- 조수를 연구동에 배치/해제 — 배치 슬롯 한도를 서버가 직접 검사한다.
@@ -1365,7 +1370,8 @@ begin
   update lab_game_state set data = jsonb_set(jsonb_set(jsonb_set(gs.data,'{assistants}',new_assistants),'{rc}',to_jsonb(cur_rc)),'{totalRcEarned}',to_jsonb(total_rc)), updated_at=now() where name=trim(p_name);
   insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
     on conflict (name) do update set rc=excluded.rc, updated_at=now();
-  return jsonb_build_object('ok', true, 'rc', cur_rc, 'refund', refund, 'assistantName', aname);
+  return jsonb_build_object('ok', true, 'rc', cur_rc, 'refund', refund, 'assistantName', aname,
+    'assistants', new_assistants);
 end; $$;
 
 -- 논문 완성 점수(연구점수) 계산 — 학위(degree)별 범위 안에서 무작위로 뽑는다(원래 의도대로

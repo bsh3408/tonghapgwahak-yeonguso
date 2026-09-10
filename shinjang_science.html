@@ -1867,11 +1867,25 @@ async function callGameAction(fnName, extraParams){
   return out;
  }catch(e){ toast('서버 연결 오류: '+e.message,'bad'); return null; }
 }
+/* 서버가 돌려준 조수 목록을 그대로 받아들인다.
+   서버는 조수를 배열 순번(p_idx)으로 지목하기 때문에, 클라이언트 배열이 서버와 조금이라도
+   어긋나면 방금 뽑은 조수가 사라진 것처럼 보이거나 엉뚱한 조수가 강화·해고된다.
+   그래서 조수 목록이 바뀌는 요청(뽑기·강화·해고·전설확정권)은 서버가 바뀐 목록 전체를 함께 주고,
+   여기서 그것으로 통째로 맞춘다. 옛 서버 응답에 목록이 없으면 false를 돌려주어
+   호출한 쪽이 예전 방식(직접 고치기)으로 처리하게 둔다. */
+function adoptAssistants(out){
+ if(!out || !Array.isArray(out.assistants)) return false;
+ S.assistants = out.assistants;
+ return true;
+}
 function applyGachaOutcome(out){
+ // 조수 목록은 서버가 준 것을 그대로 쓴다. 예전에는 클라이언트가 자기 배열을 직접 고쳐서,
+ // 한 번이라도 서버와 어긋나면 방금 뽑은 조수가 사라진 것처럼 보였다.
+ adoptAssistants(out);
  S.rc=out.rc;
  const def=assistantDef(out.poolId);
  if(out.dup){ toast(`중복! ${def.name} → 🔬${out.refund} 환급`); flyGain('rc', out.refund); }
- else{ S.assistants.push({poolId:out.poolId, assignedDept:null, lastCollectedAt:Date.now(), degree:out.degree, lv:1});
+ else{ ASSIST_FILTER='all'; // 전공 보기가 켜져 있으면 새로 뽑은 조수가 걸러져 안 보인다
   toast(`🎉 ${def.name}(${rankName(def,out.degree)} Lv.1) 영입!`, 'gold'); }
  saveLabState(); render(); assistantSheet();
 }
@@ -1970,7 +1984,7 @@ async function dismissAssistant(idx){
  const out=await callGameAction('lab_dismiss', {p_idx: idx});
  if(!out) return;
  S.rc=out.rc; S.totalRcEarned=(S.totalRcEarned||0)+out.refund;
- S.assistants.splice(idx,1);
+ if(!adoptAssistants(out)) S.assistants.splice(idx,1);
  saveLabState(); render(); closeModal(); assistantSheet();
  toast(`${out.assistantName}을(를) 해고하고 연구포인트 +${out.refund}🔬 돌려받았어요`, 'gold');
 }
@@ -2026,14 +2040,14 @@ async function doEnhanceAssistant(idx){
  if(!out) return;
  S.rc=out.rc;
  if(out.kind==='fail-leave'){
-  S.assistants.splice(idx,1);
+  if(!adoptAssistants(out)) S.assistants.splice(idx,1);
   saveLabState(); render(); assistantSheet();
   showEnhanceResult(null, {kind:'fail-leave', name:out.name||def.name, line:out.line, degree:out.leftDegree});
  } else if(out.kind==='fail-stay'){
   saveLabState(); render(); assistantSheet();
   showEnhanceResult(idx, {kind:'fail-stay', name:def.name});
  } else {
-  inst.degree=out.degree; inst.lv=out.lv;
+  if(!adoptAssistants(out)){ inst.degree=out.degree; inst.lv=out.lv; }
   const newLabel=`${rankName(def,inst.degree)} Lv.${inst.lv}`;
   saveLabState(); render(); assistantSheet();
   showEnhanceResult(idx, {kind:out.kind, name:def.name, newLabel, before});

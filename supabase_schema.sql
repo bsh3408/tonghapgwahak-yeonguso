@@ -1042,6 +1042,7 @@ begin
     new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}',
       coalesce(gs.data->'assistants','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
         'poolId', picked.id, 'assignedDept', null, 'lastCollectedAt', (extract(epoch from now())*1000)::bigint,
+        'lastPaperAt', (extract(epoch from now())*1000)::bigint,
         'degree', start_degree, 'lv', 1)));
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
@@ -1080,6 +1081,7 @@ begin
     new_data := jsonb_set(jsonb_set(gs.data, '{rc}', to_jsonb(cur_rc)), '{assistants}',
       coalesce(gs.data->'assistants','[]'::jsonb) || jsonb_build_array(jsonb_build_object(
         'poolId', picked.id, 'assignedDept', null, 'lastCollectedAt', (extract(epoch from now())*1000)::bigint,
+        'lastPaperAt', (extract(epoch from now())*1000)::bigint,
         'degree', 'phd', 'lv', 1)));
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
@@ -1450,7 +1452,7 @@ begin
   -- 논문은 조수 한 명당 하루 한 편이다. 예전에는 즉시 작성에만 이 제한이 빠져 있어서,
   -- 가장 좋은 조수 한 명으로 버튼을 연타하면 12초 만에 열 편이 나왔다(실제로 일어났다).
   now_ms := (extract(epoch from now())*1000)::bigint;
-  last_collected := coalesce((inst->>'lastPaperAt')::bigint, 0);
+  last_collected := coalesce((inst->>'lastPaperAt')::bigint, (inst->>'lastCollectedAt')::bigint, 0);
   hours_elapsed := (now_ms - last_collected) / 3600000.0;
   if hours_elapsed < 24 then
     return jsonb_build_object('ok', false, 'error',
@@ -1500,7 +1502,7 @@ begin
   inst := assistants->p_idx;
   if inst->>'assignedDept' is not null then return jsonb_build_object('ok', false, 'error', '연구동에 배치된 조수예요.'); end if;
   now_ms := (extract(epoch from now())*1000)::bigint;
-  last_collected := coalesce((inst->>'lastPaperAt')::bigint, 0);
+  last_collected := coalesce((inst->>'lastPaperAt')::bigint, (inst->>'lastCollectedAt')::bigint, 0);
   hours_elapsed := (now_ms - last_collected) / 3600000.0;
   if hours_elapsed < 24 then return jsonb_build_object('ok', false, 'error', '아직 24시간이 안 지났어요'); end if;
 
@@ -1548,7 +1550,7 @@ begin
   for i in 0..n-1 loop
     inst := assistants->i;
     if inst->>'assignedDept' is null then
-      last_collected := coalesce((inst->>'lastPaperAt')::bigint, 0);
+      last_collected := coalesce((inst->>'lastPaperAt')::bigint, (inst->>'lastCollectedAt')::bigint, 0);
       hours_elapsed := (now_ms - last_collected) / 3600000.0;
       if hours_elapsed >= 24 then
         degree := coalesce(inst->>'degree','bachelor');

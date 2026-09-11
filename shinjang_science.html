@@ -2269,7 +2269,7 @@ async function postLabScore(){
 /* 논문 진행도의 기준 시각. 서버(lab_collect_paper·lab_instant_paper)와 같은 값을 봐야 한다.
    연구동 수확 시각(lastCollectedAt)과는 별개다 — 예전에 둘을 같이 쓰다가,
    연구동을 돌릴 때마다 논문 대기시간이 초기화되는 문제가 있었다. */
-function paperReadyAt(inst){ return +inst.lastPaperAt || 0; }
+function paperReadyAt(inst){ return +(inst.lastPaperAt ?? inst.lastCollectedAt) || 0; }
 function homeReady(inst){
  if(inst.assignedDept) return false;
  return (Date.now()-paperReadyAt(inst))/3600000 >= HOME_RESEARCH_HOURS;

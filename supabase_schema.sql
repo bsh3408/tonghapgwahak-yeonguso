@@ -1021,7 +1021,8 @@ create table if not exists public.lab_themes_catalog(key text primary key, cost 
 truncate public.lab_themes_catalog;
 insert into public.lab_themes_catalog(key,cost) values
  ('bright',0),('cozy',300),('playful',300),('classic',300),('space',400),('greenhouse',400),
- ('neon',400),('ocean',400),('snu',1000),('yonsei',1000),('korea',1000),('skku',1000),('hanyang',1000);
+ ('neon',400),('ocean',400),('snu',1000),('yonsei',1000),('korea',1000),('skku',1000),('hanyang',1000),
+ ('sogang',1000),('kaist',1000),('postech',1000),('cau',1000),('khu',1000),('hufs',1000),('uos',1000),('konkuk',1000),('dongguk',1000),('hongik',1000),('sejong',1000),('gachon',1000);
 alter table public.lab_themes_catalog enable row level security;
 drop policy if exists "anyone select themes catalog" on public.lab_themes_catalog;
 create policy "anyone select themes catalog" on public.lab_themes_catalog for select to anon using (true);

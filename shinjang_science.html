@@ -2291,11 +2291,13 @@ function researchSheet(){
  const homeAssistants=S.assistants.map((inst,idx)=>({inst,idx})).filter(x=>!x.inst.assignedDept);
  const readyCount=homeAssistants.filter(x=>homeReady(x.inst)).length;
  const papers=[...S.papers].reverse();
- const papersHtml=`<div class="box"><h3>📜 논문 기록 (${papers.length}건)</h3>
-   ${papers.length?papers.map(p=>`<div class="brow" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)">
-     ${p.nobel?'<span style="font-size:15px">🏅</span>':''}
+ const voidN=papers.filter(p=>p.voided).length; // 조수 한 명당 하루 한 편 규칙을 넘겨 무효 처리된 논문(연구점수에 안 들어감)
+ const papersHtml=`<div class="box"><h3>📜 논문 기록 (${papers.length-voidN}건${voidN?' · 무효 '+voidN+'건':''})</h3>
+   ${voidN?'<div style="font-size:11px;color:var(--dim);margin:2px 0 4px">회색으로 표시된 논문은 조수 한 명당 하루 한 편 규칙을 넘겨 무효 처리돼 연구점수에 들어가지 않아요.</div>':''}
+   ${papers.length?papers.map(p=>`<div class="brow" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)${p.voided?';opacity:.5':''}">
+     ${p.nobel&&!p.voided?'<span style="font-size:15px">🏅</span>':''}
      <span style="font-size:12px;font-weight:700;flex:1">「${p.title}」<small style="display:block;color:var(--dim);font-weight:500">${p.assistantName} · ${new Date(p.at).toLocaleDateString('ko-KR')}</small></span>
-     <span style="font-weight:900;color:${p.nobel?'var(--gold)':'var(--mint2)'}">+${p.score}🏆</span>
+     ${p.voided?'<span style="font-weight:800;color:var(--dim);font-size:12px"><s>+'+p.score+'</s> 무효</span>':'<span style="font-weight:900;color:'+(p.nobel?'var(--gold)':'var(--mint2)')+'">+'+p.score+'🏆</span>'}
     </div>`).join('') : '<div style="font-size:12px;color:var(--dim)">아직 완성한 논문이 없어요</div>'}
   </div>`;
  const assistantsHtml=(readyCount>1?`<button class="btn gold" onclick="collectAllHomeResearch()">📦 완성된 논문 한번에 수거 (${readyCount}편)</button>`:'') +

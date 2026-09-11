@@ -88,7 +88,7 @@ returns jsonb language sql immutable as $$
     'everPassed', '{}'::jsonb, 'everPerfect', '{}'::jsonb, 'everCorrect', '{}'::jsonb,
     'opinionAwarded', '{}'::jsonb, 'claimed', '{}'::jsonb, 'deptSlots', 2,
     'ownedThemes', '["bright"]'::jsonb, 'labTheme', 'bright',
-    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', null, 'bestCorrect', '{}'::jsonb);
+    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', null, 'bestCorrect', '{}'::jsonb, 'everMet', '[]'::jsonb);
 $$;
 
 create or replace function public.lab_login(p_name text, p_password text)
@@ -884,7 +884,7 @@ declare
     'ownedThemes', '["bright"]'::jsonb, 'labTheme', '"bright"'::jsonb,
     'oxEverCorrect', '{}'::jsonb, 'lastAttendance', 'null'::jsonb,
     -- 한 번의 도전에서 맞힌 최고 개수(단원별). 기출문제처럼 맞힌 개수로 점수를 나누는 과제에 쓴다.
-    'bestCorrect', '{}'::jsonb
+    'bestCorrect', '{}'::jsonb, 'everMet', '[]'::jsonb
   );
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
@@ -986,7 +986,32 @@ insert into public.lab_assistants_pool (id, name, theme, set_id, rare_draw) valu
  ('a_etc7','마빈 민스키','etc','set_etc',false),('a_etc8','존 매카시','etc','set_etc',false),
  ('a_etc9','캐서린 존슨','etc','set_etc',false),('a_etc10','존 폰 노이만','etc','set_etc',false),
  ('a_davinci','레오나르도 다빈치','uni','set_universal',true),('a_uni1','알렉산더 폰 훔볼트','uni','set_universal',false),
- ('a_uni2','고트프리트 라이프니츠','uni','set_universal',false),('a_uni3','아리스토텔레스','uni','set_universal',false);
+ ('a_uni2','고트프리트 라이프니츠','uni','set_universal',false),('a_uni3','아리스토텔레스','uni','set_universal',false),
+ ('a_bio11','칼 폰 린네','bio','set_bio',false),
+ ('a_bio12','안톤 판 레이우엔훅','bio','set_bio',false),
+ ('a_bio13','로베르트 코흐','bio','set_bio',false),
+ ('a_bio14','윌리엄 하비','bio','set_bio',false),
+ ('a_bio15','토머스 헌트 모건','bio','set_bio',false),
+ ('a_chem11','아메데오 아보가드로','chem','set_chem',false),
+ ('a_chem12','옌스 야코브 베르셀리우스','chem','set_chem',false),
+ ('a_chem13','길버트 루이스','chem','set_chem',false),
+ ('a_chem14','조지프 프리스틀리','chem','set_chem',false),
+ ('a_chem15','프리드리히 뵐러','chem','set_chem',false),
+ ('a_earth11','에드윈 허블','earth','set_earth',false),
+ ('a_earth12','해리 헤스','earth','set_earth',false),
+ ('a_earth13','윌리엄 스미스','earth','set_earth',false),
+ ('a_earth14','튀코 브라헤','earth','set_earth',false),
+ ('a_earth15','찰스 리히터','earth','set_earth',false),
+ ('a_phys11','막스 플랑크','phys','set_phys',false),
+ ('a_phys12','엔리코 페르미','phys','set_phys',false),
+ ('a_phys13','에르빈 슈뢰딩거','phys','set_phys',false),
+ ('a_phys14','폴 디랙','phys','set_phys',false),
+ ('a_phys15','제임스 줄','phys','set_phys',false),
+ ('a_etc11','조지 불','etc','set_etc',false),
+ ('a_etc12','존 바딘','etc','set_etc',false),
+ ('a_etc13','잭 킬비','etc','set_etc',false),
+ ('a_etc14','데니스 리치','etc','set_etc',false),
+ ('a_etc15','제프리 힌턴','etc','set_etc',false);
 alter table public.lab_assistants_pool enable row level security;
 drop policy if exists "anyone select assistants pool" on public.lab_assistants_pool;
 create policy "anyone select assistants pool" on public.lab_assistants_pool for select to anon using (true);
@@ -1044,6 +1069,8 @@ begin
         'poolId', picked.id, 'assignedDept', null, 'lastCollectedAt', (extract(epoch from now())*1000)::bigint,
         'lastPaperAt', (extract(epoch from now())*1000)::bigint,
         'degree', start_degree, 'lv', 1)));
+    -- 도감: 한 번이라도 만난 과학자를 남긴다(해고해도 도감에서 사라지지 않게)
+    new_data := jsonb_set(new_data, '{everMet}', case when coalesce(gs.data->'everMet','[]'::jsonb) ? picked.id then coalesce(gs.data->'everMet','[]'::jsonb) else coalesce(gs.data->'everMet','[]'::jsonb) || to_jsonb(picked.id) end, true);
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
       on conflict (name) do update set rc=excluded.rc, updated_at=now();
@@ -1083,6 +1110,8 @@ begin
         'poolId', picked.id, 'assignedDept', null, 'lastCollectedAt', (extract(epoch from now())*1000)::bigint,
         'lastPaperAt', (extract(epoch from now())*1000)::bigint,
         'degree', 'phd', 'lv', 1)));
+    -- 도감: 한 번이라도 만난 과학자를 남긴다(해고해도 도감에서 사라지지 않게)
+    new_data := jsonb_set(new_data, '{everMet}', case when coalesce(gs.data->'everMet','[]'::jsonb) ? picked.id then coalesce(gs.data->'everMet','[]'::jsonb) else coalesce(gs.data->'everMet','[]'::jsonb) || to_jsonb(picked.id) end, true);
     update lab_game_state set data=new_data, updated_at=now() where name=trim(p_name);
     insert into lab_points(name, class_no, rc, src, updated_at) values (trim(p_name), gs.class_no, cur_rc, 0, now())
       on conflict (name) do update set rc=excluded.rc, updated_at=now();
@@ -1359,7 +1388,7 @@ begin
 
   select count(*) into owned_count from jsonb_array_elements(assistants) a
     join lab_assistants_pool p on p.id = a->>'poolId' where p.theme = a_theme;
-  theme_mult := greatest(0, owned_count-1) * 0.2;
+  theme_mult := least(2.0, greatest(0, owned_count-1) * 0.2);  -- 같은 전공 보너스 상한 +200%(화면 THEME_BONUS_CAP과 같다)
 
   rate := base_rate * (1 + lv_mult + legend_mult + dept_mult + legend_buff_mult + theme_mult);
   cap := rate; -- 코드 규칙상 cap은 rate와 항상 같은 배율(1시간이면 최대치)

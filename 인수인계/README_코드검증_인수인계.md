@@ -28,7 +28,7 @@
 **그래서 게임 재화를 조작할 수 있으면 성적 관련 기록도 건드릴 수 있는 구조**라, 재화 로직도 성적만큼 엄격하게 봐야 합니다.
 
 ### 배포
-- 학생용: https://shinjangscience.vercel.app/shinjang_science.html (Vercel, git push하면 자동 배포)
+- 학생용: https://bsh3408.github.io/tonghapgwahak-yeonguso/shinjang_science.html (Vercel, git push하면 자동 배포)
 - 교사용: `teacher.html` — **배포하지 않고 선생님 PC에서 로컬 파일로만 엽니다. `.gitignore`에 들어 있어 git에 올리면 안 됩니다.**
 - 백엔드: Supabase (프로젝트 ref `oqhldrkmcewcjslciqmp`)
 

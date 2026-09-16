@@ -46,5 +46,17 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "https://bsh3408.github.io/tonghapgwahak-yeonguso/shinjang_science.html",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "destination": "https://bsh3408.github.io/tonghapgwahak-yeonguso/:path*",
+      "permanent": false
+    }
   ]
 }

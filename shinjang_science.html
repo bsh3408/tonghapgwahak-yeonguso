@@ -532,6 +532,14 @@ const TERM_LABEL={1:'수행 1회 · 전반부 (중간고사 전 마감)',2:'수�
    각 이미지는 게임과 같은 2:1 아이소메트릭 탑뷰로 그려진 1024x1024 정사각형 컨셉아트다(assets/lab/concepts/).
    방(다이아몬드) 바깥의 네 모서리도 페이지 배경색(#f3ece0)으로 그림 자체에 이미 칠해져 있어서, crop이나
    clip-path 없이 그대로 놓기만 해도 페이지와 이어져 보인다. */
+/* 그림 주소 도우미: 목록·도감처럼 작게 보이는 자리에는 줄여 놓은 webp를 쓴다.
+   원본 png(1024px, 한 장 1.2~1.7MB)를 목록에 그대로 쓰면 도감 한 번 여는 데 100MB 가까이 내려받게 되어
+   무료 사용량을 며칠 만에 다 쓴다. 작은 그림은 assets/thumbs/ 아래에 있고, 연구실 배경은 concepts_webp에 있다.
+   ⚠️ 새 조수·테마 그림을 넣을 때는 작은 그림도 함께 만들어야 한다(scratchpad의 make_thumbs.js 참고). */
+function thumbAssistant(id){ return 'assets/thumbs/assistants/'+id+'.webp'; }
+function thumbDept(id){ return 'assets/thumbs/depts/'+id+'.webp'; }
+function thumbTheme(img){ return img.replace('assets/lab/concepts/','assets/thumbs/concepts/').replace(/.png$/,'.webp'); }
+function roomTheme(img){ return img.replace('assets/lab/concepts/','assets/lab/concepts_webp/').replace(/.png$/,'.webp'); }
 const LAB_THEMES=[
  {key:'bright', n:'밝고 모던함', img:'assets/lab/concepts/concept_bright.png', cost:0},
  {key:'cozy', n:'아늑한 서재', img:'assets/lab/concepts/concept_cozy.png', cost:300},
@@ -1254,7 +1262,7 @@ function moveTick(){
 function labBgImage(gx,gy){
   const vb=roomViewBox(gx,gy).split(' ').map(Number);
   const [x,y,w,h]=vb, t=labThemeDef(S.labTheme);
-  return `<image href="${t.img}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+  return `<image href="${roomTheme(t.img)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 /* #lab을 정적 레이어(labStatic: 배경 — 거의 안 바뀜)와 동적 레이어(labNpcs: 조수 —
    0.09초마다 바뀜)로 나눈다. 예전에는 매 틱마다 방 전체(배경 이미지 포함)를 통째로 다시 그려서,
@@ -1283,7 +1291,7 @@ function npcMarkup(inst, def, c, i){
          <ellipse cx="0" cy="1" rx="22" ry="8" fill="rgba(90,70,50,.13)"/>
          <circle cx="0" cy="-28" r="28" fill="#fff" stroke="${col}" stroke-width="4" class="${isLegend?'legendGlow':''}"/>
          <defs><clipPath id="npcclip_${inst.poolId}_${i}"><circle cx="0" cy="-28" r="26"/></clipPath></defs>
-         <image href="assets/assistants/${inst.poolId}.png" x="-26" y="-54" width="52" height="52"
+         <image href="${thumbAssistant(inst.poolId)}" x="-26" y="-54" width="52" height="52"
            clip-path="url(#npcclip_${inst.poolId}_${i})" preserveAspectRatio="xMidYMid slice"/>
         </g></g>
       ${c.say?bubble(c.say)+`<text x="0" y="-65" font-size="9.5" text-anchor="middle" fill="#8d8175"
@@ -1591,7 +1599,7 @@ function deptSheet(){
   ${DEPTS.map(d=>{
   const ready=d.ms.filter(m=>m.status==='ready'), done=ready.filter(m=>m.cleared).length;
   return `<button class="mrow" style="${d.open?'':'opacity:.55'}" onclick="${d.open?`missionSheet('${d.id}')`:`toast('진도가 나가면 열려요','bad')`}">
-   <span style="font-size:22px">${d.open?`<img src="assets/depts/${d.id}.png" style="width:22px;height:22px;border-radius:8px;object-fit:cover;vertical-align:middle">`:'🔒'}</span>
+   <span style="font-size:22px">${d.open?`<img loading="lazy" decoding="async" src="${thumbDept(d.id)}" style="width:22px;height:22px;border-radius:8px;object-fit:cover;vertical-align:middle">`:'🔒'}</span>
    <span class="mt">${d.n}<small>${d.u}${d.dueDate?' · '+deptDueLabel(d):''}</small></span>
    <span class="bg ${d.open?'p':'n'}">${d.open?`${done}/${ready.length} 클리어`:'잠김'}</span></button>`;}).join('')}`);}
 function missionSheet(did){
@@ -1604,7 +1612,7 @@ function missionSheet(did){
     const idx=S.assistants.indexOf(inst);
     const isLegend=!!def.rareDraw, isPhd=inst.degree==='phd';
     return `<div class="brow ${isLegend?'legendCard':(isPhd?'phdCard':'')}" style="display:flex;align-items:center;gap:8px;padding:6px 10px;flex-wrap:wrap;border-radius:12px;border:2px solid transparent">
-     <img src="assets/assistants/${inst.poolId}.png" class="${isLegend?'legendGlow':(isPhd?'phdRing':'')}" style="flex:none;width:30px;height:30px;border-radius:50%;
+     <img loading="lazy" decoding="async" src="${thumbAssistant(inst.poolId)}" class="${isLegend?'legendGlow':(isPhd?'phdRing':'')}" style="flex:none;width:30px;height:30px;border-radius:50%;
        object-fit:cover;border:2.5px solid ${isLegend?'#f5d060':deg.color}"/>
      ${rarityBadgeHtml(def,inst.degree,inst.lv||1)}
      <span style="font-weight:800;font-size:12.5px">${def.name}</span>
@@ -1624,7 +1632,7 @@ function missionSheet(did){
    <div style="font-size:11px;color:var(--dim);font-weight:800;margin-bottom:7px">🏢 다른 연구동으로 이동</div>
    <div style="display:flex;gap:6px;flex-wrap:wrap">
     ${otherDepts.map(od=>`<button class="btn" style="margin-top:0;width:auto;padding:6px 10px;font-size:11.5px;
-      background:#fff;color:var(--txt);border:1.5px solid var(--line)" onclick="missionSheet('${od.id}')"><img src="assets/depts/${od.id}.png" style="width:14px;height:14px;border-radius:5px;object-fit:cover;vertical-align:-2px;margin-right:2px">${od.n}</button>`).join('')}
+      background:#fff;color:var(--txt);border:1.5px solid var(--line)" onclick="missionSheet('${od.id}')"><img loading="lazy" decoding="async" src="${thumbDept(od.id)}" style="width:14px;height:14px;border-radius:5px;object-fit:cover;vertical-align:-2px;margin-right:2px">${od.n}</button>`).join('')}
    </div></div>` : '';
  const quick=`<div class="row" style="display:flex;gap:8px;margin-bottom:12px">
    <button class="btn" style="margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="oxSheet('${did}')">🔘 OX 퀴즈</button>
@@ -1676,7 +1684,7 @@ function deptMapSheet(){
     const workingCount=S.assistants.filter(a=>a.assignedDept===d.id).length;
     return `<button class="mrow" style="flex-direction:column;align-items:center;text-align:center;height:auto;padding:14px;${d.open?'':'opacity:.55'}"
       onclick="${d.open?`missionSheet('${d.id}')`:`toast('진도가 나가면 열려요','bad')`}">
-     <div style="font-size:130px;line-height:1">${d.open?`<img src="assets/depts/${d.id}.png" style="width:130px;height:130px;border-radius:20px;object-fit:cover;vertical-align:middle;box-shadow:0 4px 10px rgba(90,70,50,.18)">`:'🔒'}</div>
+     <div style="font-size:130px;line-height:1">${d.open?`<img loading="lazy" decoding="async" src="${thumbDept(d.id)}" style="width:130px;height:130px;border-radius:20px;object-fit:cover;vertical-align:middle;box-shadow:0 4px 10px rgba(90,70,50,.18)">`:'🔒'}</div>
      <div style="font-weight:800;font-size:13px;margin-top:10px">${d.n}</div>
      <div style="font-size:10.5px;color:var(--dim);margin-top:2px">${d.u}</div>
      ${d.dueDate?`<div style="font-size:10px;margin-top:3px">${deptDueLabel(d)}</div>`:''}
@@ -1693,7 +1701,7 @@ function shopSheet(){
    ${LAB_THEMES.map(t=>{
      const owned=S.ownedThemes.includes(t.key), active=S.labTheme===t.key;
      return `<div class="box" style="padding:8px;text-align:center">
-      <img src="${t.img}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;box-shadow:0 3px 8px rgba(90,70,50,.18)">
+      <img loading="lazy" decoding="async" src="${thumbTheme(t.img)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;box-shadow:0 3px 8px rgba(90,70,50,.18)">
       <div style="font-weight:800;font-size:13px;margin-top:8px">${t.n}</div>
       ${active?`<div style="font-size:11.5px;color:var(--mint2);font-weight:800;margin-top:6px">✅ 적용 중</div>`
         : owned?`<button class="buy" style="margin-top:6px;width:100%" onclick="selectLabTheme('${t.key}')">적용하기</button>`
@@ -2288,7 +2296,7 @@ function renderAssistCard({inst,idx}){
     const mj=MJ[def.theme]||{n:def.theme, c:'#8d8175', bg:'#f3ece0', ic:'🔬'};
     return `<div class="assistcard ${isLegend?'legendCard':(isPhd?'phdCard':'')}" style="background:${mj.bg};${assigned?'border-color:#5fc9b0':`border-color:${mj.c}55`}">
      <div class="ahead" style="align-items:center">
-      <img src="assets/assistants/${inst.poolId}.png" class="${isLegend?'legendGlow':(isPhd?'phdRing':'')}" style="flex:none;width:34px;height:34px;border-radius:50%;
+      <img loading="lazy" decoding="async" src="${thumbAssistant(inst.poolId)}" class="${isLegend?'legendGlow':(isPhd?'phdRing':'')}" style="flex:none;width:34px;height:34px;border-radius:50%;
         object-fit:cover;border:2.5px solid ${isLegend?'#f5d060':deg.color}"/>
       ${rarityBadgeHtml(def,inst.degree,lv)}
       <span class="aname" style="cursor:pointer;text-decoration:underline dotted" onclick="scientistInfoModal('${def.id}')" title="눌러서 실제 업적 보기">${def.name}</span><span style="font-size:11px;color:${isLegend?'var(--gold)':'var(--dim)'};font-weight:${isLegend?800:400}">${SET_NAMES[def.setId]}</span></div>
@@ -2342,10 +2350,10 @@ function dogamSheet(){
   const list=ASSISTANTS_POOL.filter(a=>a.theme===k);
   const n=list.filter(a=>met.has(a.id)).length;
   const cards=list.map(a=>{
-   if(!met.has(a.id)) return `<div class="dgCard dgLocked"><img src="assets/assistants/${a.id}.png" alt=""><div class="dgName">???</div><div class="dgSub">아직 못 만났어요</div></div>`;
+   if(!met.has(a.id)) return `<div class="dgCard dgLocked"><img loading="lazy" decoding="async" src="${thumbAssistant(a.id)}" alt=""><div class="dgName">???</div><div class="dgSub">아직 못 만났어요</div></div>`;
    const legend=!!a.rareDraw;
    return `<div class="dgCard${legend?' dgLegend':''}" onclick="scientistInfoModal('${a.id}')" title="눌러서 업적 보기">`+
-    `<img src="assets/assistants/${a.id}.png" alt="${escHtml(a.name)}">`+
+    `<img loading="lazy" decoding="async" src="${thumbAssistant(a.id)}" alt="${escHtml(a.name)}">`+
     `<div class="dgName">${escHtml(a.name)}</div>`+
     `<div class="dgSub">${legend?'✨ '+escHtml(a.legendTitle||'전설'):(MJ[a.theme]?MJ[a.theme].n:'')}</div></div>`;
   }).join('');
@@ -2361,7 +2369,7 @@ function scientistInfoModal(poolId){
  const def=assistantDef(poolId); if(!def) return;
  const info=SCIENTIST_INFO[poolId]||'아직 소개가 준비되지 않았어요.';
  const isLegend=!!def.rareDraw;
- modal(`<img src="assets/assistants/${poolId}.png" class="${isLegend?'legendGlow':''}" style="display:block;width:84px;height:84px;border-radius:50%;
+ modal(`<img decoding="async" src="${thumbAssistant(poolId)}" class="${isLegend?'legendGlow':''}" style="display:block;width:84px;height:84px;border-radius:50%;
     object-fit:cover;margin:0 auto 10px;border:3px solid ${isLegend?'#f5d060':'var(--line)'}"/>
   <h2 style="text-align:center">${def.name}</h2>
   <div class="cap" style="text-align:center${isLegend?';color:var(--gold);font-weight:800':''}">${MJ[def.theme]?MJ[def.theme].n:def.theme} · ${isLegend?'✨ '+def.legendTitle:SET_NAMES[def.setId]}</div>

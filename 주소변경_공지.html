@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>신장고 통합과학연구소 주소변경</title>
+<style>
+ :root{
+  --ink:#3f3327; --dim:#8a7a67; --line:#e3d7c6; --paper:#fbf7f0;
+  --point:#2f7d63; --warn:#b4472f;
+ }
+ *{box-sizing:border-box}
+ body{margin:0;background:#efe9df;color:var(--ink);
+   font-family:"Pretendard","맑은 고딕","Malgun Gothic",system-ui,sans-serif;
+   display:flex;justify-content:center;padding:24px}
+ .sheet{width:210mm;min-height:297mm;background:var(--paper);padding:20mm 18mm;
+   border:1px solid var(--line);box-shadow:0 8px 28px rgba(80,60,40,.14);
+   display:flex;flex-direction:column;align-items:center;text-align:center}
+ .eng{font-size:12pt;letter-spacing:.32em;color:var(--dim);font-weight:700}
+ h1{font-size:30pt;font-weight:900;margin:6mm 0 2mm;letter-spacing:-.02em;line-height:1.25}
+ h1 span{color:var(--point)}
+ .sub{font-size:13pt;color:var(--dim);font-weight:700;margin-bottom:8mm}
+ .qrbox{background:#fff;border:2px solid var(--line);border-radius:6mm;
+   padding:6mm;box-shadow:0 4px 14px rgba(80,60,40,.10)}
+ .qrbox img{display:block;width:108mm;height:108mm}
+ .scan{font-size:14pt;font-weight:900;margin-top:6mm}
+ .urlbox{margin-top:5mm;width:100%;background:#fff;border:2px dashed var(--line);
+   border-radius:4mm;padding:5mm 4mm}
+ .urlLabel{font-size:10pt;color:var(--dim);font-weight:800;margin-bottom:2mm}
+ .url{font-size:12.5pt;font-weight:800;color:var(--point);word-break:break-all;line-height:1.5}
+ .old{margin-top:4mm;font-size:10.5pt;color:var(--dim);line-height:1.6}
+ .old b{color:var(--warn)}
+ .old s{color:#a8998a}
+ .howto{margin-top:auto;width:100%;text-align:left;background:#fff;
+   border:1px solid var(--line);border-radius:4mm;padding:6mm 7mm;font-size:11.5pt;line-height:2}
+ .howto h2{font-size:12pt;margin:0 0 3mm;font-weight:900}
+ .howto b{color:var(--point)}
+ .foot{margin-top:6mm;font-size:10pt;color:var(--dim);font-weight:700}
+ @page{size:A4;margin:0}
+ @media print{
+  body{background:#fff;padding:0}
+  .sheet{box-shadow:none;border:none;width:210mm;height:297mm}
+ }
+</style>
+</head>
+<body>
+<div class="sheet">
+ <div class="eng">SHINJANG HIGH SCHOOL</div>
+ <h1>신장고 통합과학연구소<br><span>주소변경</span> 안내</h1>
+ <div class="sub">통합과학2 수행평가 게임 · 접속 주소가 바뀌었어요</div>
+
+ <div class="qrbox">
+  <img src="assets/qr_shinjang_science_big.png" alt="새 주소 접속 QR 코드">
+ </div>
+ <div class="scan">휴대폰 카메라로 위 QR을 비추면 바로 접속돼요</div>
+
+ <div class="urlbox">
+  <div class="urlLabel">새 주소</div>
+  <div class="url">https://bsh3408.github.io/<br>tonghapgwahak-yeonguso/shinjang_science.html</div>
+ </div>
+
+ <div class="old">
+  <b>예전 주소는 이제 쓰지 않아요.</b><br>
+  <s>shinjangscience.vercel.app</s> 로 저장해 둔 친구는 위 QR로 다시 접속해 주세요.
+ </div>
+
+ <div class="howto">
+  <h2>접속 방법</h2>
+  <b>1.</b> 위 QR을 찍거나 새 주소를 직접 입력해요.<br>
+  <b>2.</b> 아이디는 <b>이름</b>, 처음 비밀번호는 <b>학번</b>이에요.<br>
+  <b>3.</b> 이용 시간은 <b>평일 오전 8시 ~ 오후 5시</b>예요(공휴일 제외).<br>
+  <b>4.</b> 지금까지 모은 연구포인트와 제출한 답안은 <b>그대로 남아 있어요</b>. 새 주소로 들어가도 이어서 하면 돼요.
+ </div>
+
+ <div class="foot">신장고등학교 통합과학2</div>
+</div>
+</body>
+</html>

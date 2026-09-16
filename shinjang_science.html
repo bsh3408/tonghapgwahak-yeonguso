@@ -405,7 +405,7 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 /* ================= 🔧 점검 모드 =================
    true로 두면 로그인 화면 대신 점검 안내만 보이고, 아래 게임 코드는 아예 실행되지 않는다.
    점검이 끝나면 이 값을 false로 되돌려 배포하고, 서버 쪽 lab_login 실행 권한도 함께 복구할 것. */
-const MAINTENANCE_MODE = false;
+const MAINTENANCE_MODE = true;  // 2026-09-16 서버 오류 수정·재배포 (끝나면 false로 되돌릴 것)
 if(MAINTENANCE_MODE){
   document.body.innerHTML = `
    <div class="loginwrap">
@@ -415,8 +415,8 @@ if(MAINTENANCE_MODE){
      <div style="font-size:40px;margin:18px 0 10px">🔧</div>
      <div style="font-size:15px;font-weight:900;margin-bottom:10px">지금은 점검 중입니다</div>
      <div class="loginSub" style="line-height:1.8">
-      더 정확한 채점과 안전한 저장을 위해 잠시 손보는 중이에요.<br>
-      점검이 끝나면 바로 다시 열립니다. 조금만 기다려주세요.<br>
+      오늘은 서버 오류를 고치고 다시 올리는 중이에요.<br>
+      작업이 끝나면 바로 다시 열립니다. 조금만 기다려주세요.<br>
       <span style="font-size:11px;color:var(--dim2)">※ 지금까지 제출한 서술형 답안은 그대로 보관돼 있어요.</span>
      </div>
      <div class="loginCredit">made by BYUN</div>

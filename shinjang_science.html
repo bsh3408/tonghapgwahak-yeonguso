@@ -1838,8 +1838,30 @@ async function checkRedoRequests(){
 }
 
 /* ================= ✏️ 내 생각 다시 쓰기 (의견·논술형·심화읽기 언제든 수정) ================= */
+/* 서버에 저장된 내 서술형 답안을 이 브라우저 저장소로 내려받는다.
+   답안 화면(journalSheet)과 과제 화면(roundengine)은 브라우저 저장소(localStorage)만 읽는데,
+   이 저장소는 주소(도메인)마다 따로라서 주소를 옮기거나 다른 기기에서 접속하면 비어 보인다(2026-09-16 깃허브 이전 때 발생).
+   이 브라우저에 이미 쓰던 내용(아직 안 올린 초안일 수 있음)은 덮어쓰지 않고, 빈 칸만 채운다. */
+let _journalRestore=null;
+function restoreJournalFromServer(force){
+ if(!CURRENT_STUDENT || !CURRENT_STUDENT.sessionToken || !isSupabaseConfigured()) return Promise.resolve(0);
+ if(_journalRestore && !force) return _journalRestore;
+ _journalRestore=supaRpc('lab_journal_mine', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken})
+  .then(rows=>{
+   let n=0;
+   (Array.isArray(rows)?rows:[]).forEach(r=>{
+    if(!r || !r.chapter_id || !r.round_id || !r.text) return;
+    const k=opinionKey(r.chapter_id, r.round_id);
+    try{ if(!(localStorage.getItem(k)||'').trim()){ localStorage.setItem(k, r.text); n++; } }catch(e){}
+   });
+   return n;
+  })
+  .catch(()=>{ _journalRestore=null; return 0; });
+ return _journalRestore;
+}
 async function journalSheet(chNum){
  const chapterId=chNum+'_seed_v1';
+ await restoreJournalFromServer();
  let data;
  try{ const res=await fetch('data/'+chNum+'.json',{cache:'no-store'}); data=await res.json(); }
  catch(e){ toast('불러오기 실패','bad'); return; }
@@ -2663,6 +2685,7 @@ async function finishLogin(){
  // 앞의 지급분을 덮어써서 선생님이 준 포인트가 사라질 수 있다. 반드시 순서대로 기다린다.
  await claimTeacherPointGrants();
  syncChapterResults();
+ restoreJournalFromServer(true);
  await checkDailyAttendance();
  checkRedoRequests();
  render();

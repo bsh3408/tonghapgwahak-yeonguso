@@ -1852,7 +1852,14 @@ function restoreJournalFromServer(force){
    (Array.isArray(rows)?rows:[]).forEach(r=>{
     if(!r || !r.chapter_id || !r.round_id || !r.text) return;
     const k=opinionKey(r.chapter_id, r.round_id);
-    try{ if(!(localStorage.getItem(k)||'').trim()){ localStorage.setItem(k, r.text); n++; } }catch(e){}
+    try{
+     // 선생님이 서버에서 답안을 되돌린 경우(restored_at)는 이 기기에 남은 내용보다 우선한다.
+     // 한 번 반영하면 표시(@restored)를 남겨서, 그 뒤에 학생이 새로 쓴 내용은 다시 덮어쓰지 않는다.
+     const t=r.restored_at ? Date.parse(r.restored_at) : 0;
+     const mk=k+'@restored';
+     if(t && !(+(localStorage.getItem(mk)||0) >= t)){ localStorage.setItem(k, r.text); localStorage.setItem(mk, String(t)); n++; return; }
+     if(!(localStorage.getItem(k)||'').trim()){ localStorage.setItem(k, r.text); n++; }
+    }catch(e){}
    });
    return n;
   })

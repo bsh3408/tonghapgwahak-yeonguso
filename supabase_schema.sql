@@ -325,6 +325,8 @@ create table if not exists public.lab_journal_answers (
   unique(student_name, chapter_id, round_id)
 );
 alter table public.lab_journal_answers enable row level security;
+-- 교사가 서버에서 답안을 되돌린 시각. 학생 화면은 이 값이 있으면 기기에 남은 내용보다 서버 답안을 우선한다(2026-09-17).
+alter table public.lab_journal_answers add column if not exists restored_at timestamptz;
 -- ⚠️ 예전엔 anon 전체 조회가 열려 있어서, 학생이 공개된 anon 키만으로 전교생의 서술형 답안·이름·반을
 -- 통째로 내려받을 수 있었다(베끼기·개인정보 유출). 이제 테이블은 완전히 막고, 교사 조회와 학생 본인
 -- 조회를 각각 아래 함수로만 내보낸다.

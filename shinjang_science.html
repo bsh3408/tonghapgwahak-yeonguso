@@ -431,9 +431,9 @@ if(MAINTENANCE_MODE){
 const MJ={bio:{n:'생명',c:'#7cc98d',bg:'#e6f7ea',ic:'🧬'},chem:{n:'화학',c:'#e77e8c',bg:'#fdeaed',ic:'⚗️'},
  earth:{n:'지구',c:'#6ba3de',bg:'#e6f0fb',ic:'🌍'},phys:{n:'물리',c:'#e0a32c',bg:'#fdf3dd',ic:'⚡'},
  etc:{n:'융합',c:'#a892e0',bg:'#eee7fa',ic:'🔬'},uni:{n:'만능',c:'#c99622',bg:'#fff3d6',ic:'🌐'}};
-/* 기출문제 풀기처럼 "맞힌 개수"로 점수가 갈리는 과제의 기준 — 20문제 중 9개 이상 1점, 18개 이상 2점.
+/* 기출문제 풀기처럼 "맞힌 개수"로 점수가 갈리는 과제의 기준 — 20문제 중 18개 이상이면 1점(2026-09-22 변경).
    DEPTS를 만들 때 chapterMissions가 이 값을 읽으므로 반드시 그보다 먼저 선언해야 한다. */
-const COUNT_SCORE_RULE={ tiers:[{min:18, pt:2}, {min:9, pt:1}], max:2 };
+const COUNT_SCORE_RULE={ tiers:[{min:18, pt:1}], max:1 };
 const CHAPTER_DRAW_COUNT=20; // 기출문제 풀기에서 한 번에 뽑는 문제 수(data/ch21.json의 gradablePoolCount와 같아야 한다)
 const KIND_LABEL={gauge:'게이지',quiz:'객관식',short:'서답형',ask:'질문 제출',chapter:'수행평가 게임'};
 
@@ -1018,7 +1018,7 @@ async function loadChapterMetas(){
 function termGames(term){return READY().filter(g=>gameTerm(g)===term);}
 const TERM_BASE=8, TERM_EXTRA_MAX=12; // 20점 중 기본점수 8(원래 7+참여 1) + 해결하면 받는 점수 최대 12
 /* 기출문제 풀기(21단원)만 "맞힌 개수"로 점수가 갈린다 — 통과/미통과 1점이 아니라
-   한 번의 도전에서 20문제 중 9개 이상이면 1점, 18개 이상이면 2점이다.
+   한 번의 도전에서 20문제 중 18개 이상을 맞히면 1점이다.
    재도전은 얼마든지 할 수 있고, 점수는 항상 가장 잘한 회차(S.bestCorrect)로 남는다.
    기준값은 서버(lab_submit_chapter)가 기록한 최고 개수를 그대로 읽어서 판단한다. */
 function missionBestCorrect(g){
@@ -1037,7 +1037,7 @@ function missionEarnedPoint(g){
 /* 개수형 과제의 한 줄 설명 — "최고 18/20문제 · 2점" 처럼 지금 몇 점인지 바로 보이게 한다 */
 function missionCountLabel(g){
  const n=missionBestCorrect(g), pt=missionEarnedPoint(g);
- if(!n) return '20문제 도전 · 9개 이상 1점, 18개 이상 2점';
+ if(!n) return '20문제 도전 · 18개 이상 맞히면 1점';
  return '최고 '+n+'/'+CHAPTER_DRAW_COUNT+'문제 · '+pt+'점 (재도전으로 올릴 수 있어요)';
 }
 function termScore(term){

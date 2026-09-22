@@ -473,7 +473,8 @@ const DEPTS=[
   ...chapterMissions('ch12',{num:12,slug:'산화와환원',t:'산화와 환원',cp:'산화와 환원',mj:'chem'}),
   ...chapterMissions('ch13',{num:13,slug:'산과염기와중화반응',t:'산과 염기와 중화 반응',cp:'중화 반응과 이온',mj:'chem'}),
   ...chapterMissions('ch20',{num:20,slug:'물질변화와에너지의출입',t:'물질 변화와 에너지의 출입',cp:'발열 반응과 흡열 반응',mj:'chem',term:2}),
-  ...chapterMissions('ch21',{num:21,slug:'화학기출문제풀기',t:'화학 기출문제 풀기',cp:'기출 유형으로 개념 다지기',mj:'chem',noEssay:true})]},
+  ...chapterMissions('ch21',{num:21,slug:'화학기출문제풀기',t:'화학 기출문제 풀기',cp:'기출 유형으로 개념 다지기',mj:'chem',noEssay:true}),
+  ...chapterMissions('ch22',{num:22,slug:'숲속의연금술사',t:'숲속의 연금술사',cp:'숲속의연금술사',mj:'chem'})]},
  {id:'d3',n:'생태 관측동',u:'Ⅱ-1. 생태계와 환경',ic:'🌿',c:'#e4f4e6',open:0,term:2,ms:[
   ...chapterMissions('ch14',{num:14,slug:'생태계의구성과변화',t:'생태계의 구성과 생태계 변화',cp:'생태계 평형',mj:'bio',term:1}),
   ...chapterMissions('ch15',{num:15,slug:'지구환경의변화',t:'지구 환경의 변화',cp:'지구 온난화',mj:'earth'})]},
@@ -840,7 +841,7 @@ const DEFAULT_DEPT_SLOTS=2, DEPT_SLOT_COST=100;
 const S={rc:200,lv:1,fail:0,lastMini:0,assistants:[],researchScore:0,totalResearchEarned:0,totalRcEarned:0,papers:[],nobelCount:0,labTheme:'bright',ownedThemes:['bright'],
  deptSlots:DEFAULT_DEPT_SLOTS,
  everCorrect:{}, everPerfect:{}, everPassed:{}, opinionAwarded:{}, claimed:{}, oxEverCorrect:{}, lastAttendance:null, teacherSeeded:false,
- bestCorrect:{}, everMet:[]};
+ bestCorrect:{}, everMet:[], codeBonus:0};
 
 /* localStorage 캐시(loadLabState)와 수파베이스 원격 스냅샷(pullGameStateFromServer) 양쪽이
    같은 모양의 객체를 S에 적용하니 한 곳에 모아둔다. */
@@ -863,6 +864,7 @@ function applyStateSnapshot(s){
  S.lastAttendance=s.lastAttendance||null;
  S.bestCorrect=(s.bestCorrect&&typeof s.bestCorrect==='object')?s.bestCorrect:{};
  S.everMet=Array.isArray(s.everMet)?s.everMet:[];
+ S.codeBonus=+s.codeBonus||0; // 22단원 코드 보너스 — 서버만 올려줄 수 있다
  S.teacherSeeded=!!s.teacherSeeded;
 }
 function loadLabState(){
@@ -893,7 +895,7 @@ function saveLabState(){
    labTheme:S.labTheme, ownedThemes:S.ownedThemes,
    everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
    claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
-   lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded, bestCorrect:S.bestCorrect, everMet:S.everMet
+   lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded, bestCorrect:S.bestCorrect, everMet:S.everMet, codeBonus:S.codeBonus
  })); }
  catch(e){}
  syncGameStateMirror();
@@ -908,7 +910,7 @@ function gameStateSyncPayload(){
   papers:S.papers, nobelCount:S.nobelCount, labTheme:S.labTheme, ownedThemes:S.ownedThemes,
   everCorrect:S.everCorrect, everPerfect:S.everPerfect, everPassed:S.everPassed, opinionAwarded:S.opinionAwarded,
   claimed:S.claimed, oxEverCorrect:S.oxEverCorrect,
-  lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded, bestCorrect:S.bestCorrect, everMet:S.everMet};
+  lastAttendance:S.lastAttendance, teacherSeeded:S.teacherSeeded, bestCorrect:S.bestCorrect, everMet:S.everMet, codeBonus:S.codeBonus};
 }
 /* keepalive:true를 주면, 이 요청을 보내는 도중에 탭이 닫히거나 페이지를 떠나도 브라우저가 요청을
    끝까지 이어서 보내준다(sendBeacon은 커스텀 헤더를 못 넣어서 수파베이스 인증 헤더가 필요한 여기선 못 씀).
@@ -1066,7 +1068,8 @@ async function computeBonusInfo(){
   rankTop10 = myRank>=0 && myRank<10;
  }catch(e){}
  // 2026-09-22: '통과+서술완성 단원마다 +1점'은 없앴다. 보너스는 연구점수 랭킹 top10 +1점뿐이다.
- return {rankTop10, total: rankTop10?1:0};
+ const codeBonus = (+S.codeBonus||0) ? 1 : 0;
+ return {rankTop10, codeBonus, total: (rankTop10?1:0) + codeBonus};
 }
 
 
@@ -1573,10 +1576,11 @@ async function paSheet(){
  const box=document.getElementById('bonusBox');
  if(!box) return; // 그 사이 창을 닫았으면 무시
  box.outerHTML=`<div class="box" style="text-align:center;${bonus.total?'background:#fff3d6;border-color:#edd49a':''}">
-   <div style="font-size:12px;color:${bonus.total?'#a5822c':'var(--dim)'};font-weight:800">③ 연구점수 랭킹 보너스 (선생님 확인 후 반영)</div>
+   <div style="font-size:12px;color:${bonus.total?'#a5822c':'var(--dim)'};font-weight:800">③ 보너스 (선생님 확인 후 반영)</div>
    <div style="font-size:38px;font-weight:900;color:${bonus.total?'var(--gold)':'var(--dim2)'};line-height:1.1">+${bonus.total}점</div>
    ${bonus.rankTop10?`<div style="font-size:11.5px;color:#7a5c1c;margin-top:4px">🏆 연구점수 전체 랭킹 top10(+1점)</div>`:''}
-   ${!bonus.total?`<div style="font-size:11px;color:var(--dim)">연구점수 전체 랭킹 10위 안에 들면 +1점이 여기 표시돼요.</div>`:''}
+   ${bonus.codeBonus?`<div style="font-size:11.5px;color:#7a5c1c;margin-top:4px">🌲 숲속의 연금술사 코드(+1점)</div>`:''}
+   ${!bonus.total?`<div style="font-size:11px;color:var(--dim)">연구점수 전체 랭킹 10위 안에 들거나, 숲속의 연금술사 코드를 맞히면 +1점이 여기 표시돼요.</div>`:''}
   </div>`;
  const gt=document.getElementById('grandTotalBox');
  if(gt) gt.querySelector('div:last-child').innerHTML = `${Math.min(pa.grandTotal, pa.appSum+bonus.total)}<span style="font-size:15px">/40점</span>`;
@@ -1592,6 +1596,34 @@ function deptSheet(){
    <span style="font-size:22px">${d.open?`<img loading="lazy" decoding="async" src="${thumbDept(d.id)}" style="width:22px;height:22px;border-radius:8px;object-fit:cover;vertical-align:middle">`:'🔒'}</span>
    <span class="mt">${d.n}<small>${d.u}${d.dueDate?' · '+deptDueLabel(d):''}</small></span>
    <span class="bg ${d.open?'p':'n'}">${d.open?`${done}/${ready.length} 클리어`:'잠김'}</span></button>`;}).join('')}`);}
+/* 🌲 22단원 「숲속의 연금술사」 코드 — 학생마다 다른 코드를 넣으면 수행평가 +1점.
+   코드는 서버(lab_redeem_codes)에만 있고 여기에는 없다. 맞는지는 서버가 판정한다(하루 10번 제한). */
+const ALCHEMY_CHAPTER='ch22';
+function alchemyCodeBox(){
+ if(+S.codeBonus||0) return `<div class="box" style="background:#eef7f4;border-color:#bce3d8;text-align:center">
+   <div style="font-size:12.5px;font-weight:800;color:var(--mint2)">🌲 숲속의 연금술사 코드 · 완료</div>
+   <div style="font-size:11.5px;color:var(--dim);margin-top:4px">수행평가 +1점이 보너스에 들어갔어요</div></div>`;
+ return `<div class="box" style="background:#f4f8ee;border-color:#cfe0b8">
+   <div style="font-size:12.5px;font-weight:800">🌲 숲속의 연금술사 · 코드 입력</div>
+   <div style="font-size:11.5px;color:var(--dim);margin:4px 0 8px">선생님이 나에게 준 코드를 넣으면 수행평가 <b>+1점</b>을 받아요. 내 코드만 통해요.</div>
+   <input id="alchemyCode" placeholder="예: ALCH-7K2M" autocomplete="off" style="text-transform:uppercase">
+   <button class="btn" onclick="submitAlchemyCode()">코드 확인</button></div>`;
+}
+async function submitAlchemyCode(){
+ const el=document.getElementById('alchemyCode'); if(!el) return;
+ const code=el.value.trim();
+ if(!code){ toast('코드를 입력해주세요','bad'); return; }
+ if(!CURRENT_STUDENT || !isSupabaseConfigured()){ toast('로그인 상태를 확인해주세요','bad'); return; }
+ const out=await supaRpc('lab_redeem_code', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||'', p_code:code})
+  .catch(()=>null);
+ if(!out){ toast('서버와 연결하지 못했어요. 잠시 뒤 다시 해보세요','bad'); return; }
+ if(!out.ok){ toast(out.error||'코드가 맞지 않아요','bad'); return; }
+ S.codeBonus=1; saveLabState();
+ toast('🌲 코드 확인! 수행평가 +1점','gold');
+ const dept=DEPTS.find(d=>d.ms.some(m=>String(m.chapterId||'').indexOf(ALCHEMY_CHAPTER)===0));
+ if(dept) missionSheet(dept.id);
+ render();
+}
 function missionSheet(did){
  const d=DEPTS.find(x=>x.id===did);
  const working=S.assistants.filter(a=>a.assignedDept===did);
@@ -1628,7 +1660,8 @@ function missionSheet(did){
    <button class="btn" style="margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="oxSheet('${did}')">🔘 OX 퀴즈</button>
    <button class="btn" style="margin-top:0;background:#fff;color:var(--txt);border:2px solid var(--line)" onclick="casualGameSheet('${did}')">🎮 미니게임</button>
   </div>`;
- sheet(d.n,d.u, deptSwitcher + workerPanel + slotPanel + quick + d.ms.map(m=>{
+ const hasAlchemy = d.ms.some(m=>String(m.chapterId||'').indexOf(ALCHEMY_CHAPTER)===0 && m.status==='ready');
+ sheet(d.n,d.u, deptSwitcher + workerPanel + slotPanel + quick + (hasAlchemy?alchemyCodeBox():'') + d.ms.map(m=>{
   if(m.status==='soon')return `<div class="mrow soon">🔒<span class="mt">${m.t}<small>학기 중 추가 예정</small></span></div>`;
   const chNum=m.dataFile.split('/').pop().replace('.json','');
   const open=missionOpen(d, m);

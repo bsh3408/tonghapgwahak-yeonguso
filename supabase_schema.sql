@@ -88,7 +88,8 @@ returns jsonb language sql immutable as $$
     'everPassed', '{}'::jsonb, 'everPerfect', '{}'::jsonb, 'everCorrect', '{}'::jsonb,
     'opinionAwarded', '{}'::jsonb, 'claimed', '{}'::jsonb, 'deptSlots', 2,
     'ownedThemes', '["bright"]'::jsonb, 'labTheme', 'bright',
-    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', null, 'bestCorrect', '{}'::jsonb, 'everMet', '[]'::jsonb);
+    'oxEverCorrect', '{}'::jsonb, 'lastAttendance', null, 'bestCorrect', '{}'::jsonb, 'everMet', '[]'::jsonb,
+    'codeBonus', 0);
 $$;
 
 create or replace function public.lab_login(p_name text, p_password text)
@@ -886,7 +887,9 @@ declare
     'ownedThemes', '["bright"]'::jsonb, 'labTheme', '"bright"'::jsonb,
     'oxEverCorrect', '{}'::jsonb, 'lastAttendance', 'null'::jsonb,
     -- 한 번의 도전에서 맞힌 최고 개수(단원별). 기출문제처럼 맞힌 개수로 점수를 나누는 과제에 쓴다.
-    'bestCorrect', '{}'::jsonb, 'everMet', '[]'::jsonb
+    'bestCorrect', '{}'::jsonb, 'everMet', '[]'::jsonb,
+    -- 22단원 코드 보너스(+1점). 학생 화면이 보내는 값은 무시하고 서버가 준 값만 남긴다.
+    'codeBonus', 0
   );
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
@@ -1641,6 +1644,65 @@ begin
   return jsonb_build_object('ok', true, 'alreadyOwned', false, 'rc', cur_rc, 'labTheme', p_key);
 end; $$;
 
+-- ============================================================
+-- 22단원 「숲속의 연금술사」 코드 (2026-09-22)
+-- 학생마다 다른 코드를 입력하면 수행평가 +1점. 저장소가 공개라서 코드는 화면 파일에 절대 두지 않고
+-- 이 표에만 둔다. 학생 화면에서는 표를 통째로 읽을 수 없고(정책 없음 = 전부 차단),
+-- 본인 코드가 맞는지만 아래 함수로 확인할 수 있다.
+-- ============================================================
+create table if not exists public.lab_redeem_codes(
+  name text primary key,
+  code text not null,
+  used_at timestamptz
+);
+alter table public.lab_redeem_codes enable row level security;
+
+-- 교사가 코드 목록을 한 번에 등록한다. p_rows = [{"name":"홍길동1","code":"ALCH-7K2M"}, ...]
+create or replace function public.lab_redeem_codes_set(p_teacher_password text, p_rows jsonb)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare n int;
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 아닙니다.'); end if;
+  insert into lab_redeem_codes(name, code)
+  select trim(r->>'name'), upper(trim(r->>'code')) from jsonb_array_elements(p_rows) r
+  where coalesce(trim(r->>'name'),'') <> '' and coalesce(trim(r->>'code'),'') <> ''
+  on conflict (name) do update set code = excluded.code, used_at = null;
+  get diagnostics n = row_count;
+  return jsonb_build_object('ok', true, 'count', n);
+end; $$;
+
+-- 학생이 코드를 입력한다. 본인 세션으로만, 하루 10번까지, 한 번 성공하면 끝이다.
+create or replace function public.lab_redeem_code(p_name text, p_token text, p_code text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype; want text; tries jsonb; today text; n int; new_data jsonb;
+begin
+  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  select * into gs from lab_game_state where name = trim(p_name) for update;
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  if coalesce((gs.data->>'codeBonus')::int, 0) > 0 then
+    return jsonb_build_object('ok', false, 'already', true, 'error', '이미 코드를 사용했어요.');
+  end if;
+  -- 찍어서 맞히는 것을 막는다(하루 10번).
+  today := to_char(now() at time zone 'Asia/Seoul', 'YYYY-MM-DD');
+  tries := coalesce(gs.data->'codeTry', '{}'::jsonb);
+  n := case when tries->>'d' = today then coalesce((tries->>'n')::int, 0) else 0 end;
+  if n >= 10 then return jsonb_build_object('ok', false, 'error', '오늘은 더 시도할 수 없어요. 내일 다시 해보세요.'); end if;
+  new_data := jsonb_set(gs.data, '{codeTry}', jsonb_build_object('d', today, 'n', n + 1), true);
+
+  select code into want from lab_redeem_codes where name = trim(p_name);
+  if want is null then
+    update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
+    return jsonb_build_object('ok', false, 'error', '아직 코드가 준비되지 않았어요. 선생님께 문의하세요.');
+  end if;
+  if want <> upper(trim(coalesce(p_code, ''))) then
+    update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
+    return jsonb_build_object('ok', false, 'error', '코드가 맞지 않아요. (오늘 '||(n+1)||'/10번째 시도)');
+  end if;
+  new_data := jsonb_set(new_data, '{codeBonus}', '1'::jsonb, true);
+  update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
+  update lab_redeem_codes set used_at = now() where name = trim(p_name);
+  return jsonb_build_object('ok', true, 'codeBonus', 1);
+end; $$;
 -- ============================================================
 -- 권한 정리
 -- ⚠️ 예전 주석은 "테이블 직접 권한은 안 줌"이라고 했지만 실제로는 Supabase가 public 스키마에

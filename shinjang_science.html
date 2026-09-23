@@ -1605,13 +1605,16 @@ function deptSheet(){
 /* 🌲 22단원 「숲속의 연금술사」 코드 — 학생마다 다른 코드를 넣으면 수행평가 +1점.
    코드는 서버(lab_redeem_codes)에만 있고 여기에는 없다. 맞는지는 서버가 판정한다(하루 10번 제한). */
 const ALCHEMY_CHAPTER='ch22';
+const ALCHEMY_GAME_URL='https://bsh3408.github.io/forest-alchemist/'; // 숲속의 연금술사 게임(별도 사이트)
 function alchemyCodeBox(){
  if(+S.codeBonus||0) return `<div class="box" style="background:#eef7f4;border-color:#bce3d8;text-align:center">
    <div style="font-size:12.5px;font-weight:800;color:var(--mint2)">🌲 숲속의 연금술사 코드 · 완료</div>
-   <div style="font-size:11.5px;color:var(--dim);margin-top:4px">수행평가 +1점이 보너스에 들어갔어요</div></div>`;
+   <div style="font-size:11.5px;color:var(--dim);margin-top:4px">수행평가 +1점이 보너스에 들어갔어요</div>
+   <a href="${ALCHEMY_GAME_URL}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-size:11.5px;color:var(--mint2);font-weight:800">🎮 게임 다시 하러 가기</a></div>`;
  return `<div class="box" style="background:#f4f8ee;border-color:#cfe0b8">
    <div style="font-size:12.5px;font-weight:800">🌲 숲속의 연금술사 · 코드 입력</div>
    <div style="font-size:11.5px;color:var(--dim);margin:4px 0 8px">선생님이 나에게 준 코드를 넣으면 수행평가 <b>+1점</b>을 받아요. 내 코드만 통해요.</div>
+   <a href="${ALCHEMY_GAME_URL}" target="_blank" rel="noopener" class="btn" style="display:block;text-align:center;text-decoration:none;margin:0 0 10px;background:#fff;color:var(--txt);border:2px solid var(--line)">🎮 연금술사 게임 하러 가기 (새 창)</a>
    <input id="alchemyCode" placeholder="예: ALCH-7K2M" autocomplete="off" style="text-transform:uppercase">
    <button class="btn" onclick="submitAlchemyCode()">코드 확인</button></div>`;
 }

@@ -1615,6 +1615,14 @@ function alchemyCodeBox(){
    <input id="alchemyCode" placeholder="예: ALCH-7K2M" autocomplete="off" style="text-transform:uppercase">
    <button class="btn" onclick="submitAlchemyCode()">코드 확인</button></div>`;
 }
+/* 22단원 줄을 누르면 열리는 코드 입력 화면. 이 단원은 연금술사 게임을 따로 하고 와서
+   여기에는 코드만 넣으므로, 문제 화면으로 넘어가지 않는다. */
+function alchemyCodeSheet(){
+ const dept=DEPTS.find(d=>d.ms.some(m=>String(m.chapterId||'').indexOf(ALCHEMY_CHAPTER)===0));
+ sheet('🌲 숲속의 연금술사','연금술사 게임을 끝내고 받은 코드를 넣어주세요',
+  alchemyCodeBox(), dept?`missionSheet('${dept.id}')`:'deptSheet()');
+ const el=document.getElementById('alchemyCode'); if(el) el.focus();
+}
 async function submitAlchemyCode(){
  const el=document.getElementById('alchemyCode'); if(!el) return;
  const code=el.value.trim();
@@ -1626,8 +1634,7 @@ async function submitAlchemyCode(){
  if(!out.ok){ toast(out.error||'코드가 맞지 않아요','bad'); return; }
  S.codeBonus=1; saveLabState();
  toast('🌲 코드 확인! 수행평가 +1점','gold');
- const dept=DEPTS.find(d=>d.ms.some(m=>String(m.chapterId||'').indexOf(ALCHEMY_CHAPTER)===0));
- if(dept) missionSheet(dept.id);
+ alchemyCodeSheet();
  render();
 }
 function missionSheet(did){
@@ -1683,16 +1690,17 @@ function missionSheet(did){
   // 이름과 색을 다르게 보여준다(솔로 미션은 서술형이 없는 단원이라 객관식 취급).
   const kindClass = m.kind==='chapter' ? 'chapter-'+(m.mode==='essay'?'essay':'obj') : m.kind;
   const kindLabel = m.kindLabel || (m.kind==='chapter' ? (m.mode==='essay'?'서술형':'객관식') : KIND_LABEL[m.kind]);
-  return `<div class="mrow" style="cursor:pointer;flex-wrap:wrap" onclick="playGame('${m.id}')">
+  // 22단원은 문제 화면 대신 코드 입력 화면을 연다.
+  const isAlchemy = String(m.chapterId||'').indexOf(ALCHEMY_CHAPTER)===0;
+  const badge = isAlchemy ? ((+S.codeBonus||0) ? '<span class="bg p">완료</span>' : '<span class="bg n">코드 입력</span>') : b;
+  return `<div class="mrow" style="cursor:pointer;flex-wrap:wrap" onclick="${isAlchemy?'alchemyCodeSheet()':`playGame('${m.id}')`}">
    ${m.cleared?'<span style="color:var(--green);font-weight:900">✓</span>':'<span style="width:12px"></span>'}
    <span class="kind ${kindClass}">${kindLabel}</span>
    <span class="mt">${m.t}<small>${MJ[m.mj].ic} ${MJ[m.mj].n} · 개념 「${m.cp}」 · ${m.scoreBy==='count'? missionCountLabel(m) : '최고기록 '+(m.best||0)+'점'}${m.chDueDate?' · '+missionDueLabel(d,m):''}</small></span>
    ${m.mode==='obj' ? '' : `<a href="javascript:void(0)" onclick="event.stopPropagation();journalSheet('${chNum}')"
      title="의견·논술형·심화읽기 다시 쓰기" style="flex:none;text-decoration:none;background:#fff;border:1.5px solid var(--line);
      border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px">✏️</a>`}
-   ${b}</div>`
-   // 22단원은 게임을 깬 뒤 받은 코드를 여기(단원 줄 바로 아래)에서 넣는다.
-   + (String(m.chapterId||'').indexOf(ALCHEMY_CHAPTER)===0 ? alchemyCodeBox() : '');}).join(''),
+   ${badge}</div>`;}).join(''),
  'deptSheet()');}
 
 /* ================= 과제 실행: 항상 실제 챕터 게임 페이지로 이동 ================= */

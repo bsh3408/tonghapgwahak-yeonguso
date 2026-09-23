@@ -2658,7 +2658,7 @@ async function doLogin(){
  if(!name || !password){ setLoginErr('이름과 비밀번호를 모두 입력하세요.'); return; }
  // 이용 시간이 아닐 땐 교사 테스트 계정만 로그인할 수 있다(상단 "테스트" 버튼으로 로그인창을 연 경우).
  if(!isWithinServiceHours() && !TEACHER_TEST_ACCOUNTS.includes(name)){
-  setLoginErr('지금은 이용 가능한 시간이 아니에요. 평일 오전 8시~오후 5시에 다시 접속해주세요.');
+  setLoginErr('지금은 이용 가능한 시간이 아니에요. 평일 오전 8시 30분부터 '+serviceCloseLabel()+'까지 열려요.');
   return;
  }
  try{
@@ -2714,7 +2714,7 @@ async function finishLogin(){
  sessionStorage.setItem('lab_logged_in', CURRENT_STUDENT.name);
  if(CURRENT_STUDENT.sessionToken) sessionStorage.setItem('lab_session_token', CURRENT_STUDENT.sessionToken);
  startSessionHeartbeat();
- startServiceHourWatch(); // 오후 5시가 되면 스스로 정리하고 안내한다
+ startServiceHourWatch(); // 문 닫는 시각이 되면 스스로 정리하고 안내한다
  startAutoLogoutWatch();
  document.getElementById('loginScreen').classList.add('hide');
  document.getElementById('labApp').classList.remove('hide');
@@ -2850,13 +2850,23 @@ document.getElementById('newPw2').addEventListener('keydown', e=>{ if(e.key==='E
    기기 시간대 설정과 무관하게 항상 한국 표준시(Asia/Seoul) 기준으로 판단한다.
    추석·설날처럼 매년 날짜가 바뀌는 공휴일은 학사일정을 보고 이 배열에 직접 추가/수정할 것
    (신정·삼일절·어린이날·현충일·광복절·개천절·한글날·크리스마스처럼 날짜가 고정된 공휴일만 기본으로 넣어둠). */
+/* 이용 시간: 월·화·금은 08:30~16:00, 수·목은 08:30~17:00 (2026-09-23 변경).
+   ⚠️ 서버(supabase_schema.sql의 lab_service_open)와 항상 같이 고쳐야 한다. */
+const SERVICE_OPEN_MIN = 8*60+30;
+const SERVICE_CLOSE_MIN = {Mon:16*60, Tue:16*60, Wed:17*60, Thu:17*60, Fri:16*60};
+function serviceCloseLabel(){ return '월·화·금 오후 4시, 수·목 오후 5시'; }
 const SCHOOL_HOLIDAYS = [
  '2026-08-15', // 광복절
  '2026-09-24', // 추석 연휴
  '2026-09-25', // 추석
+ '2026-09-26', // 추석 연휴
+ '2026-09-27', // 추석 연휴
  '2026-10-03', // 개천절
+ '2026-10-04', // 개천절 연휴
  '2026-10-05', // 추석 대체휴일
  '2026-10-09', // 한글날
+ '2026-10-10', // 한글날 연휴
+ '2026-10-11', // 한글날 연휴
  '2026-11-19', // 대학수학능력시험일
  '2026-11-20', // 수능 대체휴일
  '2026-12-25', // 크리스마스
@@ -2873,8 +2883,9 @@ function isWithinServiceHours(){
  const dateStr=`${get('year')}-${get('month')}-${get('day')}`;
  if(weekday==='Sat'||weekday==='Sun') return false;
  if(SCHOOL_HOLIDAYS.includes(dateStr)) return false;
+ const close=SERVICE_CLOSE_MIN[weekday]; if(!close) return false;
  const minutes=hour*60+minute;
- return minutes>=8*60 && minutes<17*60;
+ return minutes>=SERVICE_OPEN_MIN && minutes<close;
 }
 /* 이용 시간이 끝나면 스스로 로그아웃한다.
    예전에는 로그인할 때 딱 한 번만 검사해서, 4시 59분에 들어와 창을 켜 두면 밤새 게임이 됐다.
@@ -2886,7 +2897,7 @@ function startServiceHourWatch(){
  _serviceHourTimer=setInterval(()=>{
   if(isWithinServiceHours()) return;
   clearInterval(_serviceHourTimer);
-  clearSessionAndReload('🕐 오후 5시가 되어 연구소 문을 닫습니다. 오늘 진행한 내용은 모두 저장됐어요. 내일 오전 8시에 다시 만나요!');
+  clearSessionAndReload('🕐 오늘 연구소 문을 닫습니다. 진행한 내용은 모두 저장됐어요. 다음 수업일 오전 8시 30분에 다시 만나요!');
  }, 30000);
 }
 
@@ -2913,7 +2924,7 @@ if(!tryAutoLogin() && !isWithinServiceHours()){
    <div class="loginEnglish">Shinjang High School</div>
    <div class="loginTitle">신장고 통합과학<span>연구소</span></div>
    <div class="loginSub" style="margin-top:16px;line-height:1.7">🕐 지금은 이용 가능한 시간이 아니에요.<br>
-    평일(월~금) 오전 8시 ~ 오후 5시에 다시 접속해주세요.</div>
+    평일(월~금) 오전 8시 30분부터 월·화·금은 오후 4시, 수·목은 오후 5시까지 열려요.</div>
    <button id="devTestBtn" style="margin-top:18px;font-size:12px;padding:7px 14px;
      border-radius:9px;border:1.5px solid var(--line);background:#fff;color:var(--dim);cursor:pointer">🧪 교사 테스트 계정으로 로그인</button>
   </div>`;

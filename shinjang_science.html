@@ -2710,6 +2710,16 @@ function showOnboardingIntro(){
   <button class="btn gold" onclick="closeModal()">시작하기</button>`);
 }
 
+/* 과제 화면이 남겨둔 돌아갈 주소(lab_return_to)가 있으면 그리로 보낸다.
+   이 사이트의 과제 화면(챕터N_이름.html)만 허용해서, 다른 주소로 튕겨 나가는 것을 막는다. */
+function returnToChapterIfPending(){
+ let ret=null; try{ ret=sessionStorage.getItem('lab_return_to'); }catch(e){}
+ if(!ret) return false;
+ try{ sessionStorage.removeItem('lab_return_to'); }catch(e){}
+ if(!/^챕터\d+_[^\/?#]+\.html(\?mode=(obj|essay))?$/.test(ret)) return false;
+ location.href=ret;
+ return true;
+}
 async function finishLogin(){
  // roundengine.js의 renderStudentGate가 쓰는 것과 같은 형식으로 남겨서,
  // 실제 과제(챕터) 게임을 열 때 이름을 다시 묻지 않게 한다.
@@ -2736,6 +2746,8 @@ async function finishLogin(){
  restoreJournalFromServer(true);
  await checkDailyAttendance();
  checkRedoRequests();
+ // 과제 화면에서 로그인하러 온 경우(roundengine의 goLoginAndReturn) 로그인이 끝나면 그 과제로 돌려보낸다.
+ if(returnToChapterIfPending()) return;
  render();
  loadChapterMetas().then(()=>{ render(); });
  loadDeptConfig().then(()=>{

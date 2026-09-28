@@ -198,8 +198,33 @@ function startSession(ROUNDS, META){
   };
   installLeaveDetection();
   renderTop();
-  if(getStudentInfo()){ beginRounds(); }
+  // 서버에 제출하는 과제인데 이 탭에 로그인 정보가 없으면, 다 풀고 나서 제출이 막힌다. 풀기 전에 먼저 알린다.
+  if(typeof isSupabaseConfigured==='function' && isSupabaseConfigured() && !sessionStorage.getItem('lab_session_token')){ renderLoginRequired(); }
+  else if(getStudentInfo()){ beginRounds(); }
   else { renderStudentGate(); }
+}
+
+/* ---------- 로그인하고 이 과제로 돌아오기 ----------
+   로그인 정보(sessionStorage)는 탭마다 따로라서, 과제 화면이 연구소와 다른 탭에서 열리면 토큰이 없다.
+   예전 안내는 "다른 곳에서 로그인하고 이 화면으로 돌아와 제출"이었는데, 돌아온 이 탭에는 여전히 토큰이
+   없어서 같은 안내가 계속 떴다(2026-09-29 학생 제보). 이제는 같은 탭에서 연구소로 가서 로그인하면
+   로그인이 끝난 뒤 이 과제로 자동으로 돌아온다. 답은 기기에 과제별로 저장돼 있어서 그대로 이어진다. */
+function goLoginAndReturn(){
+  try{
+    sessionStorage.setItem('lab_return_to', decodeURIComponent(location.pathname.split('/').pop())+location.search);
+    // 서버에서 이미 무효가 된 토큰이 남아 있으면 연구소가 그걸로 자동 로그인해서 다시 막히므로 지운다.
+    sessionStorage.removeItem('lab_session_token'); sessionStorage.removeItem('lab_logged_in');
+  }catch(e){}
+  location.href='shinjang_science.html';
+}
+function renderLoginRequired(){
+  app().innerHTML=`
+    <div class="notice">🔑 이 창에는 로그인 정보가 없어요. 이대로 풀면 마지막에 제출이 되지 않아요.</div>
+    <div class="card" style="text-align:center;line-height:1.8">
+      <div style="margin-bottom:12px">아래 단추를 누르고 로그인하면 <b>이 과제로 바로 돌아와요.</b><br>풀던 답이 있으면 그대로 이어서 풀 수 있어요.</div>
+      <button class="navbtn" onclick="goLoginAndReturn()">🔑 로그인하고 이 과제로 돌아오기</button>
+      <div style="margin-top:10px;font-size:12px;color:#8a7a67">연구소 창이 이미 열려 있다면, 그 창에서 이 과제를 다시 눌러도 돼요.</div>
+    </div>`;
 }
 
 /* ---------- 학생 정보 입력 게이트 (세션당 1회) ---------- */
@@ -268,7 +293,8 @@ function showSessionLostBanner(){
   el.style.cssText="position:fixed;left:0;right:0;top:0;z-index:9999;padding:10px 14px;text-align:center;"+
     "background:#fff2f0;color:#c0392b;border-bottom:2px solid #f0b6ae;font-size:13px;font-weight:800;line-height:1.6";
   el.innerHTML="⚠️ 로그인이 풀렸어요. 지금까지 쓴 답은 이 기기에 저장돼 있으니 걱정하지 마세요.<br>" +
-    "<span style='font-weight:700'>연구소 첫 화면에서 다시 로그인한 뒤, 이 문제 화면으로 돌아와 제출하면 그대로 이어집니다.</span>";
+    "<button onclick='goLoginAndReturn()' style='margin-top:6px;padding:7px 14px;border-radius:10px;border:0;" +
+    "background:#c0392b;color:#fff;font-weight:800;font-size:13px;cursor:pointer'>🔑 로그인하고 이 과제로 돌아오기</button>";
   document.body.appendChild(el);
 }
 function startEngineHeartbeat(){
@@ -721,7 +747,7 @@ async function syncToSupabase(){
     // 채점·크레딧 지급은 전부 서버(lab_submit_chapter)가 직접 다시 계산한다 — 이 페이지가
     // "몇 점 맞았다"고 자체 보고한 값은 더 이상 그대로 안 믿는다(개발자도구로 위조 방지).
     const token=sessionStorage.getItem('lab_session_token');
-    if(!token){ setSyncBadge('⚠️ 로그인이 풀렸어요. 답은 이 기기에 저장돼 있어요 · 다시 로그인한 뒤 이 화면으로 돌아와 제출하세요', 'err'); showSessionLostBanner(); }
+    if(!token){ setSyncBadge('⚠️ 로그인이 풀렸어요. 답은 이 기기에 저장돼 있어요 · 위의 단추로 로그인하면 이 과제로 돌아와요', 'err'); showSessionLostBanner(); }
     else{
       try{
         const out=await supaRpc('lab_submit_chapter', {

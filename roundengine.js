@@ -757,7 +757,7 @@ async function syncToSupabase(){
         });
         serverOut=out;
         if(out.ok) setSyncBadge('☁️ 결과 저장 완료', 'ok');
-        else if(/세션/.test(out.error||'')){ setSyncBadge('⚠️ 로그인이 풀렸어요. 답은 이 기기에 저장돼 있어요 · 다시 로그인한 뒤 이 화면으로 돌아와 제출하세요', 'err'); showSessionLostBanner(); }
+        else if(/세션/.test(out.error||'')){ setSyncBadge('⚠️ 로그인이 풀렸어요. 답은 이 기기에 저장돼 있어요 · 위의 단추로 로그인하면 이 과제로 돌아와요', 'err'); showSessionLostBanner(); }
         else setSyncBadge('⚠️ 저장에 실패했어요: '+(out.error||'')+' 선생님께 화면을 보여주세요', 'err');
       }catch(e){
         setSyncBadge('⚠️ 저장에 실패했어요(인터넷 연결을 확인해 주세요). 선생님께 알려주세요', 'err');

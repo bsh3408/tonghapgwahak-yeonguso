@@ -1630,11 +1630,15 @@ async function submitAlchemyCode(){
  const el=document.getElementById('alchemyCode'); if(!el) return;
  const code=el.value.trim();
  if(!code){ toast('코드를 입력해주세요','bad'); return; }
+ // 코드에는 헷갈리는 글자(숫자 0·1, 영문 O·I)를 쓰지 않는다. 들어 있으면 서버에 보내기 전에 알려준다.
+ const body=code.toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^(ALC1|TEST)/,'');
+ if(/[01OI]/.test(body)){ toast('코드에는 숫자 0·1과 영문 O·I가 없어요. 비슷한 글자(D·Q·L·J 등)를 다시 확인해 보세요','bad'); return; }
+ if(body.length!==20){ toast('코드 길이가 맞지 않아요. ALC1- 뒤에 5글자씩 4묶음이에요 (지금 '+body.length+'글자)','bad'); return; }
  if(!CURRENT_STUDENT || !isSupabaseConfigured()){ toast('로그인 상태를 확인해주세요','bad'); return; }
  const out=await supaRpc('lab_redeem_code', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||'', p_code:code})
   .catch(()=>null);
  if(!out){ toast('서버와 연결하지 못했어요. 잠시 뒤 다시 해보세요','bad'); return; }
- if(!out.ok){ toast(out.error||'코드가 맞지 않아요','bad'); return; }
+ if(!out.ok){ toast(out.error||'코드가 맞지 않아요','bad'); if(out.session) setTimeout(()=>location.reload(), 2500); return; }
  S.codeBonus=1; saveLabState();
  toast('🌲 코드 확인! 수행평가 +1점','gold');
  alchemyCodeSheet();

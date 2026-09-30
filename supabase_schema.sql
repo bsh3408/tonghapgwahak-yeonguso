@@ -889,7 +889,9 @@ declare
     -- 한 번의 도전에서 맞힌 최고 개수(단원별). 기출문제처럼 맞힌 개수로 점수를 나누는 과제에 쓴다.
     'bestCorrect', '{}'::jsonb, 'everMet', '[]'::jsonb,
     -- 22단원 코드 보너스(+1점). 학생 화면이 보내는 값은 무시하고 서버가 준 값만 남긴다.
-    'codeBonus', 0
+    'codeBonus', 0,
+    -- 코드 시도 횟수(하루 10번 제한). 보호하지 않으면 화면이 상태를 저장할 때마다 지워져 제한이 무력해진다.
+    'codeTry', '{}'::jsonb
   );
 begin
   if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
@@ -1654,6 +1656,17 @@ end; $$;
 -- 이 표에만 둔다. 학생 화면에서는 표를 통째로 읽을 수 없고(정책 없음 = 전부 차단),
 -- 본인 코드가 맞는지만 아래 함수로 확인할 수 있다.
 -- ============================================================
+-- 코드 입력 시도 기록(교사 확인용). "코드가 안 맞아요" 문의가 오면 학생이 실제로 넣은 값을 확인한다.
+create table if not exists public.lab_redeem_attempts(
+  id bigserial primary key,
+  name text not null,
+  input text,
+  ok boolean not null,
+  reason text,
+  at timestamptz not null default now()
+);
+alter table public.lab_redeem_attempts enable row level security;
+
 create table if not exists public.lab_redeem_codes(
   name text primary key,
   code text not null,
@@ -1680,10 +1693,17 @@ create or replace function public.lab_redeem_code(p_name text, p_token text, p_c
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare gs lab_game_state%rowtype; want text; tries jsonb; today text; n int; new_data jsonb;
 begin
-  if not lab_check_session(p_name, p_token) then return jsonb_build_object('ok', false, 'error', '세션이 유효하지 않습니다.'); end if;
+  if not lab_check_session(p_name, p_token) then
+    -- 로그인이 풀린 채 코드를 넣으면 학생은 "코드가 안 맞다"고 오해하기 쉽다. 등록된 학생 이름일 때만 기록한다(아무 이름으로 표를 채우는 것 방지).
+    if exists(select 1 from lab_students where name = trim(p_name)) then
+      insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), false, '로그인 풀림');
+    end if;
+    return jsonb_build_object('ok', false, 'session', true, 'error', '로그인이 풀렸어요. 화면을 새로고침한 뒤 다시 로그인해 주세요.');
+  end if;
   select * into gs from lab_game_state where name = trim(p_name) for update;
   if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
   if coalesce((gs.data->>'codeBonus')::int, 0) > 0 then
+    insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), false, '이미 사용');
     return jsonb_build_object('ok', false, 'already', true, 'error', '이미 코드를 사용했어요.');
   end if;
   -- 찍어서 맞히는 것을 막는다(하루 10번).
@@ -1696,15 +1716,21 @@ begin
   select code into want from lab_redeem_codes where name = trim(p_name);
   if want is null then
     update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
+    insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), false, '코드 미등록');
     return jsonb_build_object('ok', false, 'error', '아직 코드가 준비되지 않았어요. 선생님께 문의하세요.');
   end if;
-  if want <> upper(trim(coalesce(p_code, ''))) then
+  -- 하이픈·띄어쓰기·대소문자는 무시하고 글자만 비교한다(학생이 하이픈을 빼거나 더 넣어도 통과).
+  -- 앞머리(ALC1·TEST)를 빼고 넣어도 같은 코드로 본다.
+  if regexp_replace(regexp_replace(upper(want), '[^A-Z0-9]', '', 'g'), '^(ALC1|TEST)', '')
+     <> regexp_replace(regexp_replace(upper(coalesce(p_code, '')), '[^A-Z0-9]', '', 'g'), '^(ALC1|TEST)', '') then
     update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
+    insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), false, '불일치');
     return jsonb_build_object('ok', false, 'error', '코드가 맞지 않아요. (오늘 '||(n+1)||'/10번째 시도)');
   end if;
   new_data := jsonb_set(new_data, '{codeBonus}', '1'::jsonb, true);
   update lab_game_state set data = new_data, updated_at = now() where name = trim(p_name);
   update lab_redeem_codes set used_at = now() where name = trim(p_name);
+  insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), true, '성공');
   return jsonb_build_object('ok', true, 'codeBonus', 1);
 end; $$;
 -- ============================================================

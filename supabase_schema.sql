@@ -1700,6 +1700,11 @@ begin
     end if;
     return jsonb_build_object('ok', false, 'session', true, 'error', '로그인이 풀렸어요. 화면을 새로고침한 뒤 다시 로그인해 주세요.');
   end if;
+  -- 연구소 마감: 코드 입력은 10월 8일(한국 시각)까지만 받는다(2026-10-01 교사 요청).
+  if (now() at time zone 'Asia/Seoul') >= timestamp '2026-10-09 00:00' then
+    insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), false, '마감 지남');
+    return jsonb_build_object('ok', false, 'closed', true, 'error', '코드 입력은 10월 8일까지였어요. 선생님께 문의하세요.');
+  end if;
   select * into gs from lab_game_state where name = trim(p_name) for update;
   if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
   if coalesce((gs.data->>'codeBonus')::int, 0) > 0 then
@@ -1753,6 +1758,10 @@ declare gs lab_game_state%rowtype;
 begin
   if not lab_check_session(p_name, p_token) then
     return jsonb_build_object('ok', false, 'session', true, 'error', '로그인이 풀렸어요. 화면을 새로고침한 뒤 다시 로그인해 주세요.');
+  end if;
+  -- 본인 취소는 10월 8일(한국 시각)까지만 받는다. 그 뒤로는 교사만 취소할 수 있다(2026-10-01 교사 요청).
+  if (now() at time zone 'Asia/Seoul') >= timestamp '2026-10-09 00:00' then
+    return jsonb_build_object('ok', false, 'closed', true, 'error', '본인 취소는 10월 8일까지만 할 수 있어요. 선생님께 문의하세요.');
   end if;
   select * into gs from lab_game_state where name = trim(p_name) for update;
   if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;

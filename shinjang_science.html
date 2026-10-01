@@ -1610,7 +1610,10 @@ function alchemyCodeBox(){
  if(+S.codeBonus||0) return `<div class="box" style="background:#eef7f4;border-color:#bce3d8;text-align:center">
    <div style="font-size:12.5px;font-weight:800;color:var(--mint2)">🌲 숲속의 연금술사 코드 · 완료</div>
    <div style="font-size:11.5px;color:var(--dim);margin-top:4px">수행평가 +1점이 보너스에 들어갔어요</div>
-   <a href="${ALCHEMY_GAME_URL}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-size:11.5px;color:var(--mint2);font-weight:800">🎮 게임 다시 하러 가기</a></div>`;
+   <a href="${ALCHEMY_GAME_URL}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-size:11.5px;color:var(--mint2);font-weight:800">🎮 게임 다시 하러 가기</a>
+   <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #bce3d8;font-size:11px;color:var(--dim);line-height:1.6">
+    혼자 힘으로 푼 게 아니라면 취소할 수 있어요. 나중에 스스로 풀 수 있게 되면<br>같은 코드를 다시 넣어 +1점을 받으면 돼요.</div>
+   <button class="btn" style="margin-top:6px;background:#fff;color:var(--txt);border:1.5px solid var(--line);font-size:12px" onclick="cancelAlchemyCode()">↩️ 코드 입력 취소하기</button></div>`;
  return `<div class="box" style="background:#f4f8ee;border-color:#cfe0b8">
    <div style="font-size:12.5px;font-weight:800">🌲 숲속의 연금술사 · 코드 입력</div>
    <div style="font-size:11.5px;color:var(--dim);margin:4px 0 8px">선생님이 나에게 준 코드를 넣으면 수행평가 <b>+1점</b>을 받아요. 내 코드만 통해요.</div>
@@ -1625,6 +1628,19 @@ function alchemyCodeSheet(){
  sheet('🌲 숲속의 연금술사','연금술사 게임을 끝내고 받은 코드를 넣어주세요',
   alchemyCodeBox(), dept?`missionSheet('${dept.id}')`:'deptSheet()');
  const el=document.getElementById('alchemyCode'); if(el) el.focus();
+}
+/* 본인 취소(2026-10-01): AI 도움 등으로 깬 학생이 스스로 +1점을 내려놓는다.
+   나중에 혼자 풀 수 있게 되면 같은 코드를 다시 넣어 +1점을 받을 수 있다(서버 lab_redeem_cancel_self). */
+async function cancelAlchemyCode(){
+ if(!confirm('코드 입력을 취소할까요?\n수행평가 +1점이 빠져요. 나중에 스스로 풀 수 있게 되면 같은 코드를 다시 넣으면 돼요.')) return;
+ if(!CURRENT_STUDENT || !isSupabaseConfigured()){ toast('로그인 상태를 확인해주세요','bad'); return; }
+ const out=await supaRpc('lab_redeem_cancel_self', {p_name:CURRENT_STUDENT.name, p_token:CURRENT_STUDENT.sessionToken||''}).catch(()=>null);
+ if(!out){ toast('서버와 연결하지 못했어요. 잠시 뒤 다시 해보세요','bad'); return; }
+ if(!out.ok){ toast(out.error||'취소하지 못했어요','bad'); if(out.session) setTimeout(()=>location.reload(), 2500); return; }
+ S.codeBonus=0; saveLabState();
+ toast('코드 입력을 취소했어요. 스스로 풀 수 있을 때 다시 넣어 주세요');
+ alchemyCodeSheet();
+ render();
 }
 async function submitAlchemyCode(){
  const el=document.getElementById('alchemyCode'); if(!el) return;

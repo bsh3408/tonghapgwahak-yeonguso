@@ -1706,6 +1706,11 @@ begin
     insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), false, '이미 사용');
     return jsonb_build_object('ok', false, 'already', true, 'error', '이미 코드를 사용했어요.');
   end if;
+  -- 교사가 취소하면서 잠근 학생은 교사가 풀기 전까지 다시 넣을 수 없다.
+  if exists(select 1 from lab_redeem_codes where name = trim(p_name) and locked) then
+    insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), false, '잠김');
+    return jsonb_build_object('ok', false, 'error', '선생님이 코드 입력을 잠가 두었어요. 선생님께 문의하세요.');
+  end if;
   -- 찍어서 맞히는 것을 막는다(하루 10번).
   today := to_char(now() at time zone 'Asia/Seoul', 'YYYY-MM-DD');
   tries := coalesce(gs.data->'codeTry', '{}'::jsonb);
@@ -1733,6 +1738,83 @@ begin
   insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), left(p_code, 60), true, '성공');
   return jsonb_build_object('ok', true, 'codeBonus', 1);
 end; $$;
+-- ============================================================
+-- 연금술사 코드 입력 취소 (2026-10-01)
+-- AI 도움으로 깬 학생이 스스로 취소하고, 나중에 혼자 풀 수 있게 되면 같은 코드를 다시 넣어 +1점을 받는다.
+-- 교사는 학생별로 취소할 수 있고, 필요하면 잠가서 교사가 풀기 전까지 다시 넣지 못하게 한다.
+-- ============================================================
+alter table public.lab_redeem_codes add column if not exists revoked_at timestamptz;
+alter table public.lab_redeem_codes add column if not exists revoked_by text;
+alter table public.lab_redeem_codes add column if not exists locked boolean not null default false;
+
+create or replace function public.lab_redeem_cancel_self(p_name text, p_token text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype;
+begin
+  if not lab_check_session(p_name, p_token) then
+    return jsonb_build_object('ok', false, 'session', true, 'error', '로그인이 풀렸어요. 화면을 새로고침한 뒤 다시 로그인해 주세요.');
+  end if;
+  select * into gs from lab_game_state where name = trim(p_name) for update;
+  if not found then return jsonb_build_object('ok', false, 'error', '게임 상태를 찾을 수 없습니다.'); end if;
+  if coalesce((gs.data->>'codeBonus')::int, 0) = 0 then
+    return jsonb_build_object('ok', false, 'error', '취소할 코드 입력 기록이 없어요.');
+  end if;
+  update lab_game_state set data = jsonb_set(gs.data, '{codeBonus}', '0'::jsonb, true), updated_at = now() where name = trim(p_name);
+  update lab_redeem_codes set used_at = null, revoked_at = now(), revoked_by = 'self' where name = trim(p_name);
+  insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), null, false, '본인 취소');
+  return jsonb_build_object('ok', true, 'codeBonus', 0);
+end; $$;
+
+create or replace function public.lab_redeem_cancel_teacher(p_teacher_password text, p_name text, p_lock boolean default false)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare gs lab_game_state%rowtype;
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 아닙니다.'); end if;
+  select * into gs from lab_game_state where name = trim(p_name) for update;
+  if found and coalesce((gs.data->>'codeBonus')::int, 0) > 0 then
+    update lab_game_state set data = jsonb_set(gs.data, '{codeBonus}', '0'::jsonb, true), updated_at = now() where name = trim(p_name);
+  end if;
+  update lab_redeem_codes set used_at = null, revoked_at = now(), revoked_by = 'teacher', locked = coalesce(p_lock, false)
+   where name = trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '이 학생의 코드가 등록돼 있지 않아요.'); end if;
+  insert into lab_redeem_attempts(name, input, ok, reason)
+   values (trim(p_name), null, false, case when coalesce(p_lock, false) then '교사 취소(잠금)' else '교사 취소' end);
+  return jsonb_build_object('ok', true, 'locked', coalesce(p_lock, false));
+end; $$;
+
+create or replace function public.lab_redeem_unlock_teacher(p_teacher_password text, p_name text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 아닙니다.'); end if;
+  update lab_redeem_codes set locked = false where name = trim(p_name);
+  if not found then return jsonb_build_object('ok', false, 'error', '이 학생의 코드가 등록돼 있지 않아요.'); end if;
+  insert into lab_redeem_attempts(name, input, ok, reason) values (trim(p_name), null, false, '잠금 해제');
+  return jsonb_build_object('ok', true);
+end; $$;
+
+-- 교사용 목록: 코드를 넣었거나, 취소·잠금됐거나, 한 번이라도 시도한 학생
+create or replace function public.lab_redeem_admin_list(p_teacher_password text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 아닙니다.'); end if;
+  return jsonb_build_object('ok', true, 'rows', coalesce((
+    select jsonb_agg(x order by x->>'student_id') from (
+      select jsonb_build_object(
+        'name', s.name, 'student_id', s.student_id,
+        'used_at', c.used_at, 'revoked_at', c.revoked_at, 'revoked_by', c.revoked_by, 'locked', coalesce(c.locked, false),
+        'bonus', coalesce((g.data->>'codeBonus')::int, 0),
+        'fails', (select count(*) from lab_redeem_attempts a where a.name = s.name and a.reason in ('불일치', '코드 미등록')),
+        'last_try', (select max(a.at) from lab_redeem_attempts a where a.name = s.name)
+      ) x
+      from lab_students s
+      left join lab_redeem_codes c on c.name = s.name
+      left join lab_game_state g on g.name = s.name
+      where s.name not like 'zz\_%'
+        and (c.used_at is not null or c.revoked_at is not null or coalesce(c.locked, false)
+             or exists(select 1 from lab_redeem_attempts a where a.name = s.name))
+    ) t), '[]'::jsonb));
+end; $$;
+
 -- ============================================================
 -- 권한 정리
 -- ⚠️ 예전 주석은 "테이블 직접 권한은 안 줌"이라고 했지만 실제로는 Supabase가 public 스키마에

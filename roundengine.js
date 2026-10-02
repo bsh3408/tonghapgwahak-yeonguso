@@ -89,7 +89,13 @@ function restoreProgressIfAny(){
   let saved; try{ saved=JSON.parse(raw); }catch(e){ return; }
   if(!saved || (!saved.cur && !Object.keys(saved.answers||{}).length)) return; // 저장된 진행이 없으면 그냥 무시
   // 저장된 라운드 구성이 있고 개수가 맞으면 그대로 복원한다(다시 뽑기로 바뀐 문제를 지키기 위해서다).
-  if(Array.isArray(saved.rounds) && saved.rounds.length===S.rounds.length) S.rounds = saved.rounds;
+  // 단, 서술형(의견형) 라운드는 지금 자료의 문구로 바꿔 끼운다. 그대로 두면 선생님이 문구를 고쳐도
+  // 고치기 전에 이 단원을 시작한 학생에게는 옛 문구가 계속 보인다(2026-10-02 12단원 제보).
+  // 객관식은 숫자가 바뀌면 이미 고른 답과 어긋나므로 저장된 그대로 둔다. 학생이 쓰던 답(S.answers)은 영향 없다.
+  if(Array.isArray(saved.rounds) && saved.rounds.length===S.rounds.length){
+    const fresh=new Map(S.rounds.filter(r=>r && r.kind==='opinion').map(r=>[r.id,r]));
+    S.rounds = saved.rounds.map(r=> r && r.kind==='opinion' && fresh.has(r.id) ? fresh.get(r.id) : r);
+  }
   S.cur = Math.min(saved.cur||0, S.rounds.length-1);
   S.answers = saved.answers||{};
   S.leaveCount = saved.leaveCount||0;

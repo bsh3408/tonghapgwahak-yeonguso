@@ -244,7 +244,8 @@ create or replace function public.lab_submissions_list(p_teacher_password text)
 returns setof lab_submissions language plpgsql security definer set search_path = public, extensions as $$
 begin
   if not lab_teacher_check(p_teacher_password) then return; end if;
-  return query select * from lab_submissions order by created_at desc;
+  -- 1000건씩 나눠 받을 때 빠지거나 겹치지 않도록 id로 순서를 확정한다(2026-10-02).
+  return query select * from lab_submissions order by created_at desc, id desc;
 end; $$;
 
 -- ============================================================

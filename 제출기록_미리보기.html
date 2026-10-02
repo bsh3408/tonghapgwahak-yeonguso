@@ -94,7 +94,7 @@ async function loadSubmissions(){
   try{
     let list;
     if(isSupabaseConfigured()){
-      list = await supaRpc('lab_submissions_list', {p_teacher_password: teacherPw()});
+      list = await supaRpcAll('lab_submissions_list', {p_teacher_password: teacherPw()});
       if(!Array.isArray(list)){
         wrap.innerHTML = '<div class="empty">교사 비밀번호가 올바르지 않아요.</div>';
         document.getElementById('countLabel').textContent = '';

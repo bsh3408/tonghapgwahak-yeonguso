@@ -18,6 +18,23 @@ async function supaRpc(fnName, params, opts){
   if(!res.ok){ const t = await res.text().catch(()=>String(res.status)); throw new Error('supabase rpc 실패: '+t); }
   return res.json();
 }
+/* setof를 돌려주는 RPC를 끝까지 받아 온다. 수파베이스는 함수 결과도 한 번에 최대 1000행만 돌려주므로(max_rows),
+   limit/offset으로 나눠 받아 이어 붙인다. 함수 쪽 정렬이 고정돼 있어야 빠지거나 겹치지 않는다.
+   (2026-10-02: 서술형 답 모음이 1000건에서 끊겨 3반까지만 받아지던 문제) */
+async function supaRpcAll(fnName, params, pageSize){
+  const size = pageSize || 1000;
+  let all = [];
+  for(let offset = 0; ; offset += size){
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}?limit=${size}&offset=${offset}`, {
+      method:'POST', headers: SUPA_HEADERS, body: JSON.stringify(params||{})
+    });
+    if(!res.ok){ const t = await res.text().catch(()=>String(res.status)); throw new Error('supabase rpc 실패: '+t); }
+    const page = await res.json();
+    if(!Array.isArray(page)) return page; // 오류 객체 등은 그대로 돌려준다
+    all = all.concat(page);
+    if(page.length < size) return all;
+  }
+}
 /* 테이블을 RLS가 허용하는 범위에서 직접 조회 — queryString은 PostgREST 문법(예: 'student_name=eq.홍길동&order=created_at.desc') */
 async function supaSelect(table, queryString){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${queryString?'?'+queryString:''}`, { headers: SUPA_HEADERS });

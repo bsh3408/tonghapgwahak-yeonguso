@@ -39,3 +39,6 @@ shinjang_science.pre-ui-polish-*.html.bak
 지도서.txt
 통합총론.txt
 .claude/
+
+# 학생 개인정보가 든 서버 백업 (공개 레포에 올리지 않음)
+백업_*/

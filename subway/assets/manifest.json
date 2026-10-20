@@ -1,0 +1,775 @@
+{
+ "jobs": {
+  "doctor": {
+   "body": "jobs/doctor_body.png",
+   "far": "jobs/doctor_far.png",
+   "near": "jobs/doctor_near.png",
+   "bodyMeta": {
+    "w": 44,
+    "h": 54,
+    "legY": 47,
+    "split": 22
+   },
+   "arms": {
+    "far": {
+     "w": 12,
+     "h": 8,
+     "pivot": [
+      3,
+      3.7714285714285714
+     ],
+     "hand": [
+      8,
+      3.8684210526315788
+     ]
+    },
+    "near": {
+     "w": 12,
+     "h": 8,
+     "pivot": [
+      3,
+      3.4444444444444446
+     ],
+     "hand": [
+      8,
+      3.697674418604651
+     ]
+    }
+   }
+  },
+  "electric": {
+   "body": "jobs/electric_body.png",
+   "far": "jobs/electric_far.png",
+   "near": "jobs/electric_near.png",
+   "bodyMeta": {
+    "w": 33,
+    "h": 54,
+    "legY": 48,
+    "split": 16
+   },
+   "arms": {
+    "far": {
+     "w": 13,
+     "h": 9,
+     "pivot": [
+      3,
+      4.384615384615385
+     ],
+     "hand": [
+      9,
+      4.133333333333334
+     ]
+    },
+    "near": {
+     "w": 13,
+     "h": 8,
+     "pivot": [
+      3,
+      3.5
+     ],
+     "hand": [
+      9,
+      3.116279069767442
+     ]
+    }
+   }
+  },
+  "climate": {
+   "body": "jobs/climate_body.png",
+   "far": "jobs/climate_far.png",
+   "near": "jobs/climate_near.png",
+   "bodyMeta": {
+    "w": 38,
+    "h": 54,
+    "legY": 47,
+    "split": 20
+   },
+   "arms": {
+    "far": {
+     "w": 10,
+     "h": 8,
+     "pivot": [
+      3,
+      3.6842105263157894
+     ],
+     "hand": [
+      6,
+      3.577777777777778
+     ]
+    },
+    "near": {
+     "w": 10,
+     "h": 9,
+     "pivot": [
+      3,
+      4.0476190476190474
+     ],
+     "hand": [
+      6,
+      4.086956521739131
+     ]
+    }
+   }
+  },
+  "chemist": {
+   "body": "jobs/chemist_body.png",
+   "far": "jobs/chemist_far.png",
+   "near": "jobs/chemist_near.png",
+   "bodyMeta": {
+    "w": 34,
+    "h": 54,
+    "legY": 49,
+    "split": 17
+   },
+   "arms": {
+    "far": {
+     "w": 12,
+     "h": 9,
+     "pivot": [
+      3,
+      4.589743589743589
+     ],
+     "hand": [
+      8,
+      4.0
+     ]
+    },
+    "near": {
+     "w": 12,
+     "h": 9,
+     "pivot": [
+      3,
+      3.9767441860465116
+     ],
+     "hand": [
+      8,
+      4.0588235294117645
+     ]
+    }
+   }
+  },
+  "ecologist": {
+   "body": "jobs/ecologist_body.png",
+   "far": "jobs/ecologist_far.png",
+   "near": "jobs/ecologist_near.png",
+   "bodyMeta": {
+    "w": 36,
+    "h": 54,
+    "legY": 44,
+    "split": 18
+   },
+   "arms": {
+    "far": {
+     "w": 12,
+     "h": 9,
+     "pivot": [
+      3,
+      3.925
+     ],
+     "hand": [
+      8,
+      3.8653846153846154
+     ]
+    },
+    "near": {
+     "w": 12,
+     "h": 8,
+     "pivot": [
+      3,
+      3.5945945945945947
+     ],
+     "hand": [
+      8,
+      3.533333333333333
+     ]
+    }
+   }
+  },
+  "ai": {
+   "body": "jobs/ai_body.png",
+   "far": "jobs/ai_far.png",
+   "near": "jobs/ai_near.png",
+   "bodyMeta": {
+    "w": 33,
+    "h": 54,
+    "legY": 48,
+    "split": 16
+   },
+   "arms": {
+    "far": {
+     "w": 13,
+     "h": 9,
+     "pivot": [
+      3,
+      3.909090909090909
+     ],
+     "hand": [
+      9,
+      4.020833333333333
+     ]
+    },
+    "near": {
+     "w": 13,
+     "h": 9,
+     "pivot": [
+      3,
+      4.090909090909091
+     ],
+     "hand": [
+      9,
+      3.938775510204082
+     ]
+    }
+   }
+  }
+ },
+ "weapons": {
+  "pipe": {
+   "img": "weapons/pipe.png",
+   "grip": [
+    18.33644859813084,
+    5.5
+   ],
+   "muzzle": [
+    37,
+    4.764705882352941
+   ]
+  },
+  "slingshot": {
+   "img": "weapons/slingshot.png",
+   "grip": [
+    10.79245283018868,
+    8.5
+   ],
+   "muzzle": [
+    23,
+    4.764705882352941
+   ]
+  },
+  "crossbow": {
+   "img": "weapons/crossbow.png",
+   "grip": [
+    15.212121212121213,
+    9.5
+   ],
+   "muzzle": [
+    35,
+    8.777777777777779
+   ]
+  },
+  "lime": {
+   "img": "weapons/lime.png",
+   "grip": [
+    10.597402597402597,
+    11.5
+   ],
+   "muzzle": [
+    30,
+    12.0
+   ]
+  },
+  "limegrenade": {
+   "img": "weapons/limegrenade.png",
+   "grip": [
+    5.408163265306122,
+    8.5
+   ],
+   "muzzle": [
+    12,
+    6.6
+   ]
+  },
+  "sodabomb": {
+   "img": "weapons/sodabomb.png",
+   "grip": [
+    10.2,
+    9.5
+   ],
+   "muzzle": [
+    20,
+    15.714285714285714
+   ]
+  },
+  "coil": {
+   "img": "weapons/coil.png",
+   "grip": [
+    13.448979591836734,
+    8.5
+   ],
+   "muzzle": [
+    34,
+    4.5
+   ]
+  },
+  "baton": {
+   "img": "weapons/baton.png",
+   "grip": [
+    17.5,
+    4.0
+   ],
+   "muzzle": [
+    35,
+    3.5
+   ]
+  },
+  "net": {
+   "img": "weapons/net.png",
+   "grip": [
+    18.026666666666667,
+    9.0
+   ],
+   "muzzle": [
+    38,
+    7.739130434782608
+   ]
+  },
+  "co2": {
+   "img": "weapons/co2.png",
+   "grip": [
+    9.278350515463918,
+    13.0
+   ],
+   "muzzle": [
+    34,
+    11.26086956521739
+   ]
+  },
+  "cool": {
+   "img": "weapons/cool.png",
+   "grip": [
+    11.976,
+    10.5
+   ],
+   "muzzle": [
+    33,
+    8.23076923076923
+   ]
+  },
+  "sprayer": {
+   "img": "weapons/sprayer.png",
+   "grip": [
+    6.376470588235295,
+    14.0
+   ],
+   "muzzle": [
+    25,
+    13.5
+   ]
+  },
+  "smoke": {
+   "img": "weapons/smoke.png",
+   "grip": [
+    4.9245283018867925,
+    10.5
+   ],
+   "muzzle": [
+    20,
+    4.764705882352941
+   ]
+  },
+  "flash": {
+   "img": "weapons/flash.png",
+   "grip": [
+    12.772151898734178,
+    11.0
+   ],
+   "muzzle": [
+    34,
+    8.0
+   ]
+  },
+  "led": {
+   "img": "weapons/led.png",
+   "grip": [
+    12.486238532110091,
+    12.0
+   ],
+   "muzzle": [
+    23,
+    8.625
+   ]
+  },
+  "solar": {
+   "img": "weapons/solar.png",
+   "grip": [
+    10.628865979381443,
+    12.0
+   ],
+   "muzzle": [
+    25,
+    10.2
+   ]
+  },
+  "water": {
+   "img": "weapons/water.png",
+   "grip": [
+    10.487804878048781,
+    11.5
+   ],
+   "muzzle": [
+    34,
+    11.5
+   ]
+  }
+ },
+ "mons": {
+  "rat": {
+   "run": [
+    "mons/rat_0.png",
+    "mons/rat_1.png",
+    "mons/rat_2.png",
+    "mons/rat_3.png"
+   ]
+  },
+  "dog": {
+   "run": [
+    "mons/dog_0.png",
+    "mons/dog_1.png",
+    "mons/dog_2.png",
+    "mons/dog_3.png"
+   ]
+  },
+  "roach": {
+   "run": [
+    "mons/roach_0.png",
+    "mons/roach_1.png",
+    "mons/roach_2.png",
+    "mons/roach_3.png"
+   ]
+  },
+  "boar": {
+   "run": [
+    "mons/boar_0.png",
+    "mons/boar_1.png",
+    "mons/boar_2.png",
+    "mons/boar_3.png"
+   ]
+  },
+  "raccoon": {
+   "run": [
+    "mons/raccoon_0.png",
+    "mons/raccoon_1.png",
+    "mons/raccoon_2.png",
+    "mons/raccoon_3.png"
+   ]
+  },
+  "looter": {
+   "run": [
+    "mons/looter_0.png",
+    "mons/looter_1.png",
+    "mons/looter_2.png",
+    "mons/looter_3.png"
+   ]
+  },
+  "monkey": {
+   "run": [
+    "mons/monkey_0.png",
+    "mons/monkey_1.png",
+    "mons/monkey_2.png",
+    "mons/monkey_3.png"
+   ]
+  },
+  "pigeon": {
+   "run": [
+    "mons/pigeon_0.png",
+    "mons/pigeon_1.png",
+    "mons/pigeon_2.png",
+    "mons/pigeon_3.png"
+   ]
+  },
+  "drone": {
+   "run": [
+    "mons/drone_0.png",
+    "mons/drone_1.png",
+    "mons/drone_2.png",
+    "mons/drone_3.png"
+   ]
+  },
+  "mosquito": {
+   "run": [
+    "mons/mosquito_0.png",
+    "mons/mosquito_1.png",
+    "mons/mosquito_2.png",
+    "mons/mosquito_3.png"
+   ]
+  },
+  "fireant": {
+   "run": [
+    "mons/fireant_0.png",
+    "mons/fireant_1.png",
+    "mons/fireant_2.png",
+    "mons/fireant_3.png"
+   ]
+  },
+  "wasp": {
+   "run": [
+    "mons/wasp_0.png",
+    "mons/wasp_1.png",
+    "mons/wasp_2.png",
+    "mons/wasp_3.png"
+   ]
+  },
+  "viper": {
+   "run": [
+    "mons/viper_0.png",
+    "mons/viper_1.png",
+    "mons/viper_2.png",
+    "mons/viper_3.png"
+   ]
+  },
+  "bat": {
+   "run": [
+    "mons/bat_0.png",
+    "mons/bat_1.png",
+    "mons/bat_2.png",
+    "mons/bat_3.png"
+   ]
+  },
+  "nutria": {
+   "run": [
+    "mons/nutria_0.png",
+    "mons/nutria_1.png",
+    "mons/nutria_2.png",
+    "mons/nutria_3.png"
+   ]
+  },
+  "frog": {
+   "run": [
+    "mons/frog_0.png",
+    "mons/frog_1.png",
+    "mons/frog_2.png",
+    "mons/frog_3.png"
+   ]
+  },
+  "crow": {
+   "run": [
+    "mons/crow_0.png",
+    "mons/crow_1.png",
+    "mons/crow_2.png",
+    "mons/crow_3.png"
+   ]
+  },
+  "cobra": {
+   "run": [
+    "mons/cobra_0.png",
+    "mons/cobra_1.png",
+    "mons/cobra_2.png",
+    "mons/cobra_3.png"
+   ]
+  },
+  "archerfish": {
+   "run": [
+    "mons/archerfish_0.png",
+    "mons/archerfish_1.png",
+    "mons/archerfish_2.png",
+    "mons/archerfish_3.png"
+   ]
+  },
+  "skunk": {
+   "run": [
+    "mons/skunk_0.png",
+    "mons/skunk_1.png",
+    "mons/skunk_2.png",
+    "mons/skunk_3.png"
+   ]
+  },
+  "slinger": {
+   "run": [
+    "mons/slinger_0.png",
+    "mons/slinger_1.png",
+    "mons/slinger_2.png",
+    "mons/slinger_3.png"
+   ]
+  },
+  "alpha": {
+   "run": [
+    "mons/alpha_0.png",
+    "mons/alpha_1.png",
+    "mons/alpha_2.png",
+    "mons/alpha_3.png"
+   ]
+  },
+  "queenant": {
+   "run": [
+    "mons/queenant_0.png",
+    "mons/queenant_1.png",
+    "mons/queenant_2.png",
+    "mons/queenant_3.png"
+   ]
+  },
+  "momboar": {
+   "run": [
+    "mons/momboar_0.png",
+    "mons/momboar_1.png",
+    "mons/momboar_2.png",
+    "mons/momboar_3.png"
+   ]
+  },
+  "piglet": {
+   "run": [
+    "mons/piglet_0.png",
+    "mons/piglet_1.png",
+    "mons/piglet_2.png",
+    "mons/piglet_3.png"
+   ]
+  },
+  "ratking": {
+   "run": [
+    "mons/ratking_0.png",
+    "mons/ratking_1.png",
+    "mons/ratking_2.png",
+    "mons/ratking_3.png"
+   ]
+  },
+  "infected": {
+   "run": [
+    "mons/infected_0.png",
+    "mons/infected_1.png",
+    "mons/infected_2.png",
+    "mons/infected_3.png"
+   ]
+  },
+  "shieldbot": {
+   "run": [
+    "mons/shieldbot_0.png",
+    "mons/shieldbot_1.png",
+    "mons/shieldbot_2.png",
+    "mons/shieldbot_3.png"
+   ]
+  },
+  "infmosq": {
+   "run": [
+    "mons/infmosq_0.png",
+    "mons/infmosq_1.png",
+    "mons/infmosq_2.png",
+    "mons/infmosq_3.png"
+   ]
+  },
+  "b_boar": {
+   "run": [
+    "mons/b_boar_0.png",
+    "mons/b_boar_1.png",
+    "mons/b_boar_2.png",
+    "mons/b_boar_3.png"
+   ],
+   "atk": [
+    "mons/b_boarA_0.png",
+    "mons/b_boarA_1.png",
+    "mons/b_boarA_2.png",
+    "mons/b_boarA_3.png"
+   ]
+  },
+  "b_cleaner": {
+   "run": [
+    "mons/b_cleaner_0.png",
+    "mons/b_cleaner_1.png",
+    "mons/b_cleaner_2.png",
+    "mons/b_cleaner_3.png"
+   ],
+   "atk": [
+    "mons/b_cleanerA_0.png",
+    "mons/b_cleanerA_1.png",
+    "mons/b_cleanerA_2.png",
+    "mons/b_cleanerA_3.png"
+   ]
+  },
+  "b_croc": {
+   "run": [
+    "mons/b_croc_0.png",
+    "mons/b_croc_1.png",
+    "mons/b_croc_2.png",
+    "mons/b_croc_3.png"
+   ],
+   "atk": [
+    "mons/b_crocA_0.png",
+    "mons/b_crocA_1.png",
+    "mons/b_crocA_2.png",
+    "mons/b_crocA_3.png"
+   ]
+  },
+  "b_queen": {
+   "run": [
+    "mons/b_queen_0.png",
+    "mons/b_queen_1.png",
+    "mons/b_queen_2.png",
+    "mons/b_queen_3.png"
+   ],
+   "atk": [
+    "mons/b_queenA_0.png",
+    "mons/b_queenA_1.png",
+    "mons/b_queenA_2.png",
+    "mons/b_queenA_3.png"
+   ]
+  },
+  "b_ratking": {
+   "run": [
+    "mons/b_ratking_0.png",
+    "mons/b_ratking_1.png",
+    "mons/b_ratking_2.png",
+    "mons/b_ratking_3.png"
+   ],
+   "atk": [
+    "mons/b_ratkingA_0.png",
+    "mons/b_ratkingA_1.png",
+    "mons/b_ratkingA_2.png",
+    "mons/b_ratkingA_3.png"
+   ]
+  },
+  "b_hyena": {
+   "run": [
+    "mons/b_hyena_0.png",
+    "mons/b_hyena_1.png",
+    "mons/b_hyena_2.png",
+    "mons/b_hyena_3.png"
+   ],
+   "atk": [
+    "mons/b_hyenaA_0.png",
+    "mons/b_hyenaA_1.png",
+    "mons/b_hyenaA_2.png",
+    "mons/b_hyenaA_3.png"
+   ]
+  },
+  "b_bear": {
+   "run": [
+    "mons/b_bear_0.png",
+    "mons/b_bear_1.png",
+    "mons/b_bear_2.png",
+    "mons/b_bear_3.png"
+   ],
+   "atk": [
+    "mons/b_bearA_0.png",
+    "mons/b_bearA_1.png",
+    "mons/b_bearA_2.png",
+    "mons/b_bearA_3.png"
+   ]
+  },
+  "b_frog": {
+   "run": [
+    "mons/b_frog_0.png",
+    "mons/b_frog_1.png",
+    "mons/b_frog_2.png",
+    "mons/b_frog_3.png"
+   ],
+   "atk": [
+    "mons/b_frogA_0.png",
+    "mons/b_frogA_1.png",
+    "mons/b_frogA_2.png",
+    "mons/b_frogA_3.png"
+   ]
+  },
+  "b_looter": {
+   "run": [
+    "mons/b_looter_0.png",
+    "mons/b_looter_1.png",
+    "mons/b_looter_2.png",
+    "mons/b_looter_3.png"
+   ],
+   "atk": [
+    "mons/b_looterA_0.png",
+    "mons/b_looterA_1.png",
+    "mons/b_looterA_2.png",
+    "mons/b_looterA_3.png"
+   ]
+  }
+ }
+}

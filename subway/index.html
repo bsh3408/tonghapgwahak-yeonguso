@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>지하철 노선 탈출</title>
+<style>
+:root{--bg:#141619;--panel:#23262d;--panel2:#2c3039;--ink:#ece6d6;--sub:#a59f90;--acc:#e0b04a;--good:#6ad07a;--bad:#e0604a;--line:#3a3f4a}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#141619}}
+:root[data-theme="dark"]{--bg:#141619}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;touch-action:none}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+#hud[hidden]{display:none}
+#hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:8px 10px;display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.bars{display:flex;flex-direction:column;gap:3px;min-width:160px}
+.bar{height:10px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);border-radius:3px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%}
+.bar span{position:absolute;inset:0;font-size:9px;line-height:10px;text-align:center;color:#fff;text-shadow:0 0 2px #000}
+#hpBar i{background:#d84a3a}#shBar i{background:#8aa8c8}#enBar i{background:#5ab0e0}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{background:rgba(0,0,0,.6);border-radius:10px;padding:1px 7px;font-size:12px;white-space:nowrap}
+#right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+#tip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);max-width:min(92vw,620px);background:rgba(20,22,26,.92);border:1px solid var(--acc);border-radius:8px;padding:8px 12px;font-size:14px;pointer-events:none;opacity:0;transition:opacity .3s}
+#tip.on{opacity:1}
+#screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,11,13,.86);padding:16px;overflow:auto}
+#screen.on{display:flex}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:880px;width:100%;max-height:100%;overflow:auto}
+.card h1{margin:0 0 4px;font-size:22px}.card h2{margin:0 0 10px;font-size:17px;color:var(--acc)}
+.card p{margin:6px 0;color:var(--sub);font-size:14px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:10px}
+.opt{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+.opt:hover,.opt:focus{border-color:var(--acc);outline:none}
+.opt b{display:block;font-size:15px;margin-bottom:4px}.opt small{display:block;color:var(--sub);font-size:12px;line-height:1.45}
+.opt.dis{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{background:var(--acc);color:#1a1410;border:0;border-radius:8px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.sign{display:flex;align-items:center;gap:8px;font-size:22px}
+#touch{position:fixed;right:10px;bottom:10px;display:none;gap:8px;flex-direction:column;align-items:flex-end}
+#touch .r{display:flex;gap:8px}
+#touch button{width:62px;height:62px;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:rgba(30,32,38,.55);color:#fff;font:inherit;font-size:13px;font-weight:700}
+#touch button.big{width:78px;height:78px;font-size:15px}
+#touch button.down{background:rgba(224,176,74,.7)}
+@media (pointer:coarse){#touch{display:flex}#tip{bottom:auto;top:64px}}
+canvas.pv{background:#3a4150;border-radius:6px;margin:0 auto 6px;width:96px;height:120px}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="game" width="640" height="360"></canvas></div>
+<div id="hud" hidden>
+  <div>
+    <div class="bars">
+      <div class="bar" id="hpBar"><i></i><span></span></div>
+      <div class="bar" id="shBar"><i></i><span></span></div>
+      <div class="bar" id="enBar"><i></i><span></span></div>
+    </div>
+    <div class="chips" id="statusChips"></div>
+  </div>
+  <div id="right"><div class="chip" id="where"></div><div class="chip" id="weaponChip"></div><div class="chip" id="skillChip"></div><div class="chip" id="itemChip"></div></div>
+</div>
+<div id="tip"></div>
+<div id="touch"><div class="r"><button data-btn="item">소모품</button><button data-btn="swap">무기</button></div><div class="r"><button data-btn="skill">스킬</button><button data-btn="attack" class="big">공격</button></div></div>
+<div id="screen"><div class="card" id="screenCard"></div></div>
+<script src="../supabase-config.js"></script>
+<script src="../lab_auth.js"></script>
+<script type="module" src="client/app.js"></script>
+</body>
+</html>

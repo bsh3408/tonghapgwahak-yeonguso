@@ -104,6 +104,9 @@ export function fire(s, rng) {
   }
   if (p.cool > 0) return;
   // 상자 같은 소품에 바짝 붙어 있고 가까운 적이 없으면 총으로 후려쳐 부순다(소울나이트처럼)
+  // 몬스터가 바짝 붙으면 총으로 후려쳐서 쏠 수 있는 거리까지 밀어낸다(근접 무기는 원래대로 휘두름)
+  const close = st.type !== 'melee' && nearestFoot(s, 44);
+  if (close) { const b = monCenter(close), c = chest(p); p.aim = Math.atan2(b.y - c.y, b.x - c.x); p.face = Math.cos(p.aim) >= 0 ? 1 : -1; p.swing = SWING_TICKS; p.bash = 'mon'; p.cool = 10; return; }
   const prop = nearProp(s); if (prop) { p.aim = Math.atan2(prop.y - prop.r - (p.y - 24), prop.x - p.x); p.face = Math.cos(p.aim) >= 0 ? 1 : -1; p.swing = SWING_TICKS; p.bash = true; p.cool = 9; return; }
   const fear = p.status.fear ? 2 : 1;
   p.cool = Math.max(1, Math.round(TICK_HZ / st.rate * fear));
@@ -139,6 +142,12 @@ export function fire(s, rng) {
 }
 function nearestMonWithin(s, r) { return nearestMon(s, r); }
 const BASH_RANGE = 38;
+function nearestFoot(s, r) { const p = s.player; let best = null, bd = r; for (const m of alive(s)) { if (m.dummy) continue; const d = Math.hypot(m.x - p.x, m.y - p.y); if (d < bd) { bd = d; best = m; } } return best; }
+function bashMons(s) {
+  const p = s.player, c = chest(p), w = p.weapons[p.weapon] || p.weapons[0];
+  for (const m of alive(s)) { const b = monCenter(m), d = Math.hypot(b.x - c.x, b.y - c.y), a = Math.atan2(b.y - c.y, b.x - c.x);
+    if (d < 52 + monRadius(m) && Math.abs(angDiff(a, p.aim)) < 1.5) damageMon(s, m, 3 + 2 * (w.star - 1), { weapon: 'bash', kx: Math.cos(a) * 20, ky: Math.sin(a) * 8, stun: 0.4, dirX: Math.cos(a) }); }
+}
 function nearProp(s) {
   const p = s.player; if (nearestMon(s, 70)) return null;
   let best = null, bd = BASH_RANGE;
@@ -169,7 +178,8 @@ export function damageProp(s, o, dmg, rng) {
   o.broken = true; s.props = s.props.filter(x => x !== o);
   const give = m => { s.gained.materials[m] = (s.gained.materials[m] || 0) + 1; };
   const r = rng || { pick: a => a[(o.uid * 7) % a.length], chance: p => ((o.uid * 37) % 100) / 100 < p };
-  if (o.kind === 'crate') { give(r.pick(MATS)); give(r.pick(MATS)); s.gained.parts += 1; }
+  if (o.drops) { for (const m of o.drops) give(m); if (r.chance(0.5)) s.gained.parts += 1; }
+  else if (o.kind === 'crate') { give(r.pick(MATS)); give(r.pick(MATS)); s.gained.parts += 1; }
   else if (o.kind === 'bin') { give(r.pick(MATS)); if (r.chance(0.3)) s.gained.parts += 1; }
   else if (o.kind === 'seat') { give(r.pick(['cloth', 'vinyl'])); give(r.pick(['scrap', 'string'])); }
   else if (o.kind === 'barrel') { s.events.push({ type: 'boom', x: o.x, y: o.y - o.r, r: 50 });
@@ -275,7 +285,7 @@ export function updatePlayerCombat(s, input, rng) {
   if (p.swing <= 0) autoAim(s);
   const attacking = !!(input & INPUT.ATTACK) && !(p.status.shock);   // 달리면서도 쏠 수 있다(교사 요청)
   if (attacking) fire(s, rng);
-  if (p.swing > 0 && p.bash) { p.swing--; if (p.swing === SWING_TICKS / 2) { const c = chest(p); hitProps(s, c.x + Math.cos(p.aim) * 24, c.y + Math.sin(p.aim) * 24 + 12, 22, 4, rng); s.events.push({ type: 'bash' }); } if (p.swing <= 0) p.bash = false; }
+  if (p.swing > 0 && p.bash) { p.swing--; if (p.swing === SWING_TICKS / 2) { const c = chest(p); hitProps(s, c.x + Math.cos(p.aim) * 24, c.y + Math.sin(p.aim) * 24 + 12, 22, 4, rng); if (p.bash === 'mon') bashMons(s); s.events.push({ type: 'bash' }); } if (p.swing <= 0) p.bash = false; }
   else if (p.swing > 0) { p.swing--; if (p.swing === SWING_TICKS / 2) { resolveSwing(s); const c = chest(p), st = weaponStat(p.swingStat, p.swingStar); hitProps(s, c.x + Math.cos(p.aim) * 30, c.y + Math.sin(p.aim) * 30, (st.reach || 60) * 0.6, st.dmg, rng); } }
   if (!attacking || freeWeapon(p)) p.energy = Math.min(p.maxEnergy, p.energy + 2 * DT * (p.relics.includes('solarPanel') ? 2 : 1));
   p.sinceHit++;

@@ -64,6 +64,18 @@ function spawnWave(s, rng) {
 // 노선마다 놓이는 소품: 부술 수 있는 상자·쓰레기통·의자·폭발 드럼통(파밍), 노선 재난에 맞는 위험 바닥
 const HAZARD = { 1: ['heatVent', 'heatstroke'], 2: ['sparkBox', 'shock'], 3: ['puddle', 'wet'], 4: ['acidPool', 'acidBurn'], 5: ['sporeMold', 'infection'],
   6: ['sandPile', 'blur'], 7: ['icePatch', 'slip'], 8: ['poisonPool', 'poison'] };
+// 호선마다 컨셉에 맞는 장애물: 지나가기 힘들고(단단함), 부수면 장비를 만들 재료가 나온다
+export const LINE_OBSTACLE = {
+  1: { kind: 'woodPile', name: '낡은 나무 짐짝', drops: ['cloth', 'leather'] },
+  2: { kind: 'adBoard', name: '쓰러진 광고판', drops: ['glass', 'scrap'] },
+  3: { kind: 'junkPile', name: '떠밀려 온 쓰레기 더미', drops: ['vinyl', 'rubber'] },
+  4: { kind: 'rustPanel', name: '녹슨 철판', drops: ['scrap', 'filter'] },
+  5: { kind: 'vinylCurtain', name: '방역 비닐 가림막', drops: ['vinyl', 'filter'] },
+  6: { kind: 'sandbag', name: '모래주머니', drops: ['cloth', 'string'] },
+  7: { kind: 'iceBlock', name: '얼음 덩어리', drops: ['waterBottle', 'glass'] },
+  8: { kind: 'bush', name: '우거진 덤불', drops: ['string', 'leather'] },
+  9: { kind: 'tireWall', name: '타이어 바리케이드', drops: ['rubber', 'scrap'] },
+};
 const LOOT_PROPS = { crate: { hp: 6, r: 14 }, bin: { hp: 4, r: 11 }, seat: { hp: 8, r: 14 }, barrel: { hp: 3, r: 12 } };
 function placeProps(s, rng, line) {
   if (s.carType === 'boss') { s.layout = 'gate'; return; }
@@ -81,6 +93,8 @@ function placeProps(s, rng, line) {
     if (kind === 'seat') p.y = rng.chance(0.5) ? Y0 + 4 : Y1 - 2;   // 의자는 벽 쪽에 붙어 있다
     s.props.push({ uid: s.nextId++, kind, x: p.x, y: p.y, hp: P.hp, maxHp: P.hp, r: P.r, solid: true });
   }
+  const O = LINE_OBSTACLE[line];
+  for (let i = 0, k = 2 + rng.int(2); i < k; i++) { const p = spot(); s.props.push({ uid: s.nextId++, kind: O.kind, x: p.x, y: p.y, hp: 12, maxHp: 12, r: 16, solid: true, drops: O.drops }); }
   const hz = HAZARD[line === 9 ? rng.pick([1, 3, 7]) : line];
   if (hz && !s.solved) for (let i = 0; i < 1 + rng.int(2); i++) { const p = spot();
     s.props.push({ uid: s.nextId++, kind: hz[0], x: p.x, y: p.y, r: 26, hazard: hz[1] });

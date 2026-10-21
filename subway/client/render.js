@@ -17,13 +17,39 @@ const THEME = {
   7: { wall: '#3c4a56', floor: '#a9b8c4', seat: '#4a6a7a' }, 8: { wall: '#334036', floor: '#6f7f60', seat: '#4f6a3a' }, 9: { wall: '#3a4150', floor: '#8a8574', seat: '#5d7a52' },
 };
 const bgCache = {};
+const LINE_FILTER = { 1: 'sepia(.6) saturate(1.2) brightness(.92)', 2: 'saturate(.2) brightness(1.2) contrast(1.05)', 3: 'hue-rotate(15deg) saturate(.8) brightness(.82)',
+  4: 'sepia(.65) hue-rotate(-25deg) saturate(1.6) brightness(.75)', 5: 'saturate(.3) brightness(1.1)', 6: 'sepia(.75) saturate(1.1) brightness(1.02)',
+  7: 'saturate(.4) brightness(1.28) hue-rotate(-12deg)', 8: 'hue-rotate(38deg) saturate(1.2) brightness(.82)', 9: 'contrast(1.25) brightness(.72) saturate(.85)' };
+const tintCache = new Map();
+function tinted(img, line) {
+  let m = tintCache.get(img); if (!m) tintCache.set(img, m = {});
+  if (!m[line]) { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.filter = LINE_FILTER[line] || 'none'; x.drawImage(img, 0, 0); m[line] = c; }
+  return m[line];
+}
+const lineParts = (A, line) => Object.fromEntries(Object.entries(A.subway).map(([k, v]) => [k, k === 'meta' ? v : tinted(v, line)]));
+// 가까운 쪽(아래) 벽: 카메라가 이 벽 바깥 위에서 내려다보므로 안쪽 면은 안 보이고,
+// 좌석 방석·등받이의 윗면 → 벽 윗면(창틀) → 차체 바깥 면(스테인리스·창·노선 띠)이 차례로 보인다
+const NEAR_Y = 302;
+function nearWall(x, line, seat) {
+  const ny = NEAR_Y, inDoor = X => SIDE_DOORS.some(d => Math.abs(X - d) < 34);
+  for (let X = 0; X < CAR_W; X += 26) { if (inDoor(X + 13)) continue;
+    x.fillStyle = seat; x.fillRect(X + 1, ny - 4, 24, 9); x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(X + 2, ny - 3, 22, 2);
+    x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(X + 1, ny + 5, 24, 5); x.fillStyle = 'rgba(0,0,0,.5)'; x.fillRect(X + 13, ny - 4, 1, 9); }
+  x.fillStyle = '#c4cad2'; x.fillRect(0, ny + 10, CAR_W, 3); x.fillStyle = '#7d848d'; x.fillRect(0, ny + 13, CAR_W, 3);
+  x.fillStyle = '#8d949c'; x.fillRect(0, ny + 16, CAR_W, VIEW_H - ny - 16);
+  for (let X = 8; X < CAR_W - 8; X += 4) if (!inDoor(X)) { x.fillStyle = ((X / 4) | 0) % 9 === 0 ? '#9aa1a9' : '#141a24'; x.fillRect(X, ny + 20, 4, 14); }
+  x.fillStyle = 'rgba(160,200,255,.25)'; for (let X = 12; X < CAR_W; X += 40) if (!inDoor(X)) x.fillRect(X, ny + 21, 6, 2);
+  x.fillStyle = LINE_COLOR[line] || '#888'; x.fillRect(0, ny + 37, CAR_W, 4);
+  x.fillStyle = '#6b7179'; x.fillRect(0, ny + 41, CAR_W, VIEW_H - ny - 41); x.fillStyle = '#4c5158'; for (let X = 0; X < CAR_W; X += 64) x.fillRect(X, ny + 41, 1, 20);
+  for (const d of SIDE_DOORS) { x.fillStyle = '#e0b040'; x.fillRect(d - 30, ny + 7, 60, 3); }
+}
 // 노선 색(실제 서울 지하철 노선 색을 따름): 벽의 띠에 칠한다
 export const LINE_COLOR = { 1: '#0052A4', 2: '#00A84D', 3: '#EF7C1C', 4: '#00A5DE', 5: '#996CAC', 6: '#CD7C2F', 7: '#747F00', 8: '#E6186C', 9: '#BDB092' };
 // 객실 배경: AI로 그린 객실 부품(벽·의자·손잡이·출입문·바닥)을 이어 붙인다. 출입문은 그 위에 따로 그려서 여닫는다
 function carBackground(line, boss, A, variant = 0, hazard = false) {
   const key = line + (boss ? 'b' : '') + ':' + variant + (hazard ? 'h' : '');
   if (bgCache[key]) return bgCache[key];
-  const S = A.subway, M = S.meta, c = document.createElement('canvas'); c.width = CAR_W; c.height = VIEW_H; const x = c.getContext('2d');
+  const S = lineParts(A, line), M = S.meta, c = document.createElement('canvas'); c.width = CAR_W; c.height = VIEW_H; const x = c.getContext('2d');
   x.fillStyle = '#1d2026'; x.fillRect(0, 0, CAR_W, VIEW_H);
   for (let X = 0; X < CAR_W; X += M.floor.w) for (let Y = 100; Y < 300; Y += M.floor.h) x.drawImage(S.floor, X, Y);
   if (boss) { // 개찰구: 벽 대신 개찰기 줄
@@ -36,8 +62,7 @@ function carBackground(line, boss, A, variant = 0, hazard = false) {
     for (let X = 10; X < CAR_W; X += M.handles.w + 20) x.drawImage(S.handles, X, wy - 6);
     for (let X = 0; X < CAR_W; X += M.bench.w) x.drawImage(S.bench, X, 100 - M.bench.h + 6);
     // 가까운 쪽(아래): 의자 등받이와 벽 아랫부분
-    x.save(); x.translate(0, 300 + M.bench.h - 6); x.scale(1, -1); for (let X = -60; X < CAR_W; X += M.bench.w) x.drawImage(S.bench, X, 0); x.restore();
-    x.fillStyle = '#25282e'; x.fillRect(0, 300 + M.bench.h - 6, CAR_W, VIEW_H); x.fillStyle = LINE_COLOR[line] || '#888'; x.fillRect(0, 338, CAR_W, 3);
+    nearWall(x, line, (THEME[line] || THEME[2]).seat);
     x.drawImage(S.endDoor, 0, 100 - M.endDoor.h); x.drawImage(S.endDoor, CAR_W - M.endDoor.w, 100 - M.endDoor.h);
     lineDecor(x, line, variant);
     if (hazard) { x.fillStyle = 'rgba(200,40,30,.10)'; x.fillRect(0, 0, CAR_W, VIEW_H); x.fillStyle = '#d83a2a'; for (let X = 60; X < CAR_W; X += 120) x.fillRect(X, 4, 30, 5); }
@@ -48,6 +73,15 @@ function carBackground(line, boss, A, variant = 0, hazard = false) {
 function lineDecor(x, line, v) {
   let r = (line * 7919 + v * 104729) >>> 0; const rnd = () => ((r = (r * 1103515245 + 12345) >>> 0) / 4294967296);
   const px = (c, X, Y, w, h) => { x.fillStyle = c; x.fillRect(Math.round(X), Math.round(Y), w, h); };
+  const FY0 = 100, FY1 = 300;
+  if (line === 1) for (let Y = FY0; Y < FY1; Y += 10) { px('rgba(120,78,40,.55)', 0, Y, CAR_W, 9); px('rgba(60,36,18,.6)', 0, Y + 9, CAR_W, 1); for (let X = (Y / 10 % 2) * 40; X < CAR_W; X += 80) px('rgba(60,36,18,.6)', X, Y, 1, 9); }
+  if (line === 2) { px('rgba(200,210,225,.18)', 0, FY0, CAR_W, FY1 - FY0); for (let X = 0; X < CAR_W; X += 32) px('rgba(255,255,255,.08)', X, FY0, 1, FY1 - FY0); px('rgba(255,40,40,.08)', 0, 0, CAR_W, VIEW_H); }
+  if (line === 3) { px('rgba(60,120,190,.28)', 0, FY0 + 20, CAR_W, FY1 - FY0 - 20); }
+  if (line === 5) for (let X = 20; X < CAR_W; X += 70) { x.fillStyle = 'rgba(220,235,240,.28)'; x.fillRect(X, 0, 26, 100); x.fillStyle = 'rgba(255,255,255,.4)'; x.fillRect(X + 3, 0, 1, 100); }
+  if (line === 6) { px('rgba(214,184,120,.35)', 0, FY0, CAR_W, FY1 - FY0); }
+  if (line === 7) { px('rgba(225,242,255,.30)', 0, FY0, CAR_W, FY1 - FY0); }
+  if (line === 8) for (let i = 0; i < 14; i++) { x.fillStyle = 'rgba(80,150,60,.45)'; x.beginPath(); x.ellipse(rnd() * CAR_W, FY0 + 10 + rnd() * 180, 20 + rnd() * 26, 8 + rnd() * 6, 0, 0, 6.283); x.fill(); }
+  if (line === 9) { px('rgba(20,10,10,.25)', 0, FY0, CAR_W, FY1 - FY0); for (let i = 0; i < 3; i++) { const X = 60 + rnd() * (CAR_W - 120); x.fillStyle = 'rgba(255,140,40,.18)'; x.beginPath(); x.ellipse(X, FY0 + 40 + rnd() * 120, 46, 20, 0, 0, 6.283); x.fill(); } }
   switch (line) {
     case 1: // 오래된 지상 구간·폭염: 깨진 창으로 들어오는 햇빛 줄기, 금 간 바닥
       for (let i = 0; i < 4; i++) { const X = 40 + rnd() * (CAR_W - 120); x.fillStyle = 'rgba(255,220,120,.13)'; x.beginPath(); x.moveTo(X, 100); x.lineTo(X + 40, 100); x.lineTo(X + 90, 300); x.lineTo(X + 50, 300); x.fill(); }
@@ -88,13 +122,16 @@ function T_GATES(x) {
 // 출입문(위·아래): 웨이브가 들어올 때 그 문만 잠깐 열린다
 function drawDoors(x, s, A, camX, fx) {
   if (s.carType === 'boss') return;
-  const S = A.subway, M = S.meta;
+  const S = lineParts(A, s.line), M = S.meta;
   for (const dx of SIDE_DOORS) for (const top of [true, false]) {
     const open = fx.doorOpen?.(dx, top), img = open ? S.doorOpen : S.doorClosed, w = open ? M.doorOpen.w : M.doorClosed.w;
     const X = Math.round(dx - camX - w / 2);
     if (X > VIEW_W || X + w < 0) continue;
     if (top) x.drawImage(img, X, 100 - img.height + 4);
-    else x.drawImage(img, 0, img.height - 56, img.width, 56, X, 300 - 4, img.width, 56);
+    else { const cx = Math.round(dx - camX), y0 = NEAR_Y + 16, sh = open ? 18 : 0;
+      x.fillStyle = '#14161a'; x.fillRect(cx - 24, y0, 48, VIEW_H - y0);
+      for (const sd of [-1, 1]) { const px0 = sd < 0 ? cx - 24 - sh : cx + sh; x.fillStyle = '#a9b0b8'; x.fillRect(px0, y0, 24, VIEW_H - y0); x.fillStyle = '#5a616b'; x.fillRect(sd < 0 ? px0 + 23 : px0, y0, 1, VIEW_H - y0);
+        x.fillStyle = '#1c2430'; x.fillRect(px0 + 6, y0 + 4, 12, 16); x.fillStyle = '#e0b040'; x.fillRect(px0, VIEW_H - 6, 24, 2); } }
   }
 }
 
@@ -182,7 +219,7 @@ export function createFx() {
 // 맞은 자리 효과: [색, 개수, 퍼지는 속도, 크기]
 const HIT_FX = { _: ['#ffe9a8', 4, 80, 2], slingshot: ['#a8a090', 4, 60, 2], crossbow: ['#e8dcb0', 3, 50, 2], lime: ['#f6f3ea', 8, 70, 3],
   coil: ['#9fe6ff', 6, 120, 2], net: ['#d8d0b0', 6, 60, 2], cool: ['#d8f4ff', 7, 70, 2], sprayer: ['#a8f0dc', 6, 70, 2], flash: ['#fff6b0', 8, 130, 2],
-  water: ['#9fd4ff', 7, 90, 2], baton: ['#9fe6ff', 7, 110, 2], pipe: ['#ffe9a8', 5, 90, 2] };
+  water: ['#9fd4ff', 7, 90, 2], bash: ['#ffffff', 9, 140, 2], baton: ['#9fe6ff', 7, 110, 2], pipe: ['#ffe9a8', 5, 90, 2] };
 
 // 무기마다 다른 투사체 모양(그리기만, 게임 규칙은 같음). 날아간 프레임 수는 게임 상태에 쓰지 않고 여기에만 둔다
 const SHOT_AGE = new WeakMap();
@@ -268,12 +305,22 @@ function drawProp(x, o, camX, A) {
   if (o.kind === 'crate') { R('#2a1c10', -13, -24, 26, 24); R('#9a6a3a', -12, -23, 24, 22); R('#7a5028', -12, -16, 24, 3); R('#7a5028', -12, -8, 24, 3); R('#b9844a', -10, -22, 3, 20); R('#b9844a', 7, -22, 3, 20); }
   else if (o.kind === 'bin') { R('#1c2024', -10, -22, 20, 22); R('#5a7088', -9, -21, 18, 20); R('#46586c', -9, -14, 18, 2); R('#8aa0b8', -10, -24, 20, 4); }
   else if (o.kind === 'seat') { const b = A?.subway?.bench; if (b) { x.save(); if (f) x.filter = 'brightness(3)'; x.drawImage(b, 0, 0, 58, b.height, X - 29, Y - b.height + 6, 58, b.height); x.restore(); } else R('#4a7a78', -24, -14, 48, 14); }
+  else if (o.kind === 'woodPile') { R('#2a1a0c', -16, -26, 32, 26); R('#8a5a2a', -15, -25, 14, 12); R('#9a6a34', 1, -25, 14, 12); R('#7a4c22', -12, -13, 26, 12); R('#5a3818', -12, -8, 26, 2); R('#b9844a', -14, -24, 12, 2); }
+  else if (o.kind === 'adBoard') { R('#1c1f24', -18, -22, 36, 22); R('#30394a', -16, -20, 32, 16); R('#5a7ab0', -14, -18, 12, 6); R('#e08a3a', 0, -14, 12, 6); R('#d8e4f0', -6, -20, 1, 16); R('#d8e4f0', -6, -12, 10, 1); R('#3a3e46', -16, -4, 32, 4); }
+  else if (o.kind === 'junkPile') { R('#22262a', -17, -14, 34, 14); R('#3a6a9a', -15, -18, 12, 10); R('#d8d8c8', -4, -22, 8, 12); R('#7a9a3a', 4, -16, 12, 10); R('#c84a3a', -10, -10, 8, 6); R('#e8e0a0', 8, -8, 6, 5); }
+  else if (o.kind === 'rustPanel') { R('#2a160c', -17, -30, 34, 30); R('#8a4a22', -16, -29, 32, 28); R('#a8622c', -16, -29, 32, 3); R('#5a2e14', -6, -22, 10, 14); for (const [a, b] of [[-13, -26], [11, -26], [-13, -5], [11, -5]]) R('#c8a070', a, b, 2, 2); }
+  else if (o.kind === 'vinylCurtain') { R('#5a616b', -17, -36, 2, 36); R('#5a616b', 15, -36, 2, 36); R('#5a616b', -17, -36, 34, 2); x.fillStyle = f ? '#fff' : 'rgba(210,235,245,.55)'; x.fillRect(X - 15, Y - 34, 30, 32); R('#e8c830', -15, -20, 30, 3); R('#1c1c1c', -9, -20, 4, 3); R('#1c1c1c', 1, -20, 4, 3); R('#1c1c1c', 11, -20, 4, 3); }
+  else if (o.kind === 'sandbag') { for (const [a, b] of [[-17, -10], [-5, -10], [7, -10], [-11, -19], [1, -19]]) { R('#6a5a3a', a, b, 12, 9); R('#c8ae78', a + 1, b + 1, 10, 6); R('#a88e58', a + 1, b + 5, 10, 1); } }
+  else if (o.kind === 'iceBlock') { x.fillStyle = f ? '#fff' : 'rgba(190,230,255,.85)'; x.fillRect(X - 15, Y - 26, 30, 26); R('#e8f8ff', -13, -24, 10, 3); R('#e8f8ff', -13, -24, 3, 10); x.fillStyle = 'rgba(120,180,220,.8)'; x.fillRect(X - 15, Y - 4, 30, 4); R('#ffffff', 6, -18, 2, 2); }
+  else if (o.kind === 'bush') { for (const [a, b, w] of [[-17, -16, 16], [-6, -26, 16], [3, -16, 15], [-12, -10, 26]]) { R('#1e3a16', a - 1, b - 1, w + 2, 14); R('#3f7a32', a, b, w, 12); R('#5fae48', a + 2, b + 1, w - 6, 4); } R('#c84a5a', -2, -20, 3, 3); }
+  else if (o.kind === 'tireWall') { for (const [a, b] of [[-17, -12], [-3, -12], [-10, -22], [4, -22]]) { R('#0c0c0e', a, b, 14, 11); R('#2a2a2e', a + 2, b + 2, 10, 7); R('#0c0c0e', a + 5, b + 4, 4, 3); } R('#e8c830', -18, -27, 36, 3); R('#1c1c1c', -12, -27, 5, 3); R('#1c1c1c', 2, -27, 5, 3); }
   else if (o.kind === 'pole') { R('#7a808a', -2, 100 - Y, 5, Y - 100); R('#e4e8ee', -1, 100 - Y, 1, Y - 100); R('#4a4f58', -4, -3, 9, 4); }
   else if (o.kind === 'rubble') { R('#3a3a3c', -18, -12, 36, 12); R('#6a6660', -15, -18, 14, 10); R('#7d786f', -2, -22, 16, 14); R('#55524c', 6, -10, 10, 8); R('#8a857a', -10, -14, 6, 4); R('#4a4f58', -20, -6, 8, 5); }
   else if (o.kind === 'barrel') { R('#2a1010', -11, -26, 22, 26); R('#b8382a', -10, -25, 20, 24); R('#e0c040', -10, -17, 20, 4); R('#1c1c1c', -4, -13, 8, 6); R('#e0c040', -2, -12, 4, 4); }
   if (o.hp !== undefined && o.hp < o.maxHp) { x.fillStyle = '#111'; x.fillRect(X - 12, Y - 32, 24, 4); x.fillStyle = '#e0b04a'; x.fillRect(X - 11, Y - 31, 22 * Math.max(0, o.hp) / o.maxHp, 2); }
 }
 
+export const SPRITE_SCALE = 0.85;   // 캐릭터·몬스터 크기(2026-10-21 교사 요청으로 조금 작게)
 export function cameraX(s, slide = 0) { if (CAR_W <= VIEW_W) return (CAR_W - VIEW_W) / 2 - slide * 220; return Math.max(0, Math.min(CAR_W - VIEW_W, s.player.x - VIEW_W / 2)); }
 
 export function drawCar(x, s, A, fx, t) {
@@ -291,7 +338,8 @@ export function drawCar(x, s, A, fx, t) {
   // 천장 환기구에서 떨어질 자리: 커지는 그림자와 느낌표
   for (const d of s.drops) { const k = 1 - d.t / 24, X = d.x - camX; x.fillStyle = `rgba(0,0,0,${0.2 + 0.35 * k})`; x.beginPath(); x.ellipse(X, d.y, 6 + 10 * k, 3 + 4 * k, 0, 0, 6.283); x.fill();
     x.fillStyle = '#ffd04a'; x.font = 'bold 14px sans-serif'; x.textAlign = 'center'; x.fillText('!', X, d.y - 26 - 6 * Math.sin(t * 20)); }
-  const list = [...s.props.filter(o => !o.hazard).map(o => ({ y: o.y, d: () => drawProp(x, o, camX, A) })), ...s.mons.filter(m => !m.gone).map(m => ({ y: m.y, d: () => drawMon(x, m, A, camX, s) })), { y: p.y, d: () => drawPlayer(x, p, A, t, Math.round(p.x - camX), Math.round(p.y)) }];
+  const small = (X, Y, f) => { x.save(); x.translate(X, Y); x.scale(SPRITE_SCALE, SPRITE_SCALE); x.translate(-X, -Y); f(); x.restore(); };
+  const list = [...s.props.filter(o => !o.hazard).map(o => ({ y: o.y, d: () => drawProp(x, o, camX, A) })), ...s.mons.filter(m => !m.gone).map(m => ({ y: m.y, d: () => small(Math.round(m.x - camX), Math.round(m.y), () => drawMon(x, m, A, camX, s)) })), { y: p.y, d: () => small(Math.round(p.x - camX), Math.round(p.y), () => drawPlayer(x, p, A, t, Math.round(p.x - camX), Math.round(p.y))) }];
   list.sort((a, b) => a.y - b.y).forEach(o => o.d());
   for (const a of s.allies) { const X = a.x - camX; if (a.kind === 'drone') { const f = A.mons.drone.run[Math.floor(t * 10) % 4].s; x.drawImage(f, Math.round(X - f.width / 2), Math.round(a.y - f.height / 2)); }
     else { x.fillStyle = '#5a5f66'; x.fillRect(X - 6, a.y - 4, 12, 18); x.fillStyle = '#c8783a'; x.fillRect(X - 4, a.y - 10, 8, 8); x.fillStyle = '#7fd8ff'; x.fillRect(X - 1, a.y - 8, 2, 2); } }

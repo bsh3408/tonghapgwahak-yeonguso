@@ -46,6 +46,8 @@ export function applyStatus(s, id, opts = {}) {
     case 'heatstroke': p.meters.heat = Math.min(100, p.meters.heat + (opts.amount ?? 10) * f * strength); break;
     case 'corrosion': p.maxShield = Math.max(0, p.maxShield - 1); p.shield = Math.min(p.shield, p.maxShield); break;
     case 'stolen': break;
+    // 감전 기절은 걸려 있는 동안 다시 걸리지 않고, 풀린 뒤 2초는 걸리지 않는다(감전 웅덩이에 갇혀 계속 기절하던 문제)
+    case 'shock': { if (p.status.shock || s.tick < (p.shockFreeUntil || 0)) return false; const t = dur(S.dur); p.status.shock = { t, k: 0 }; p.shockFreeUntil = s.tick + t + 2 * TICK_HZ; break; }
     case 'poison': p.status.poison = { t: dur(S.dur), variant: opts.variant || 'viper', bite: opts.variant === 'wasp' ? 0 : 2 * TICK_HZ }; break;
     default: { const t = dur(S.dur); const cur = p.status[id]; p.status[id] = { t: Math.max(t, cur?.t || 0), k: 0 }; }
   }

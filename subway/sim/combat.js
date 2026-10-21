@@ -194,7 +194,7 @@ function resolveSwing(s) {
   for (const m of alive(s)) {
     const b = monCenter(m), d = Math.hypot(b.x - c.x, b.y - c.y), a = Math.atan2(b.y - c.y, b.x - c.x);
     if (d < reach + monRadius(m) && Math.abs(angDiff(a, p.aim)) < (st.arc || 1.4)) {
-      const knock = st.knockEvery && p.swingCount % st.knockEvery === 0 ? 14 : 6;
+      const knock = st.knockEvery && p.swingCount % st.knockEvery === 0 ? 24 : 18;   // 근접 무기는 맞히면 항상 멀리 밀어낸다
       damageMon(s, m, st.dmg * (p.swingCrit ? 2 : 1), { weapon: st.id, kx: Math.cos(a) * knock, ky: Math.sin(a) * knock, stun: st.stun || 0, electric: !!st.electric, dirX: Math.cos(a) });
     }
   }

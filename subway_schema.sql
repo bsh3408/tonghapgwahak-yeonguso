@@ -180,3 +180,30 @@ end $$;
 grant execute on function public.subway_state_get(text, text), public.subway_gacha(text, text), public.subway_equip(text, text, jsonb),
   public.subway_run_finish(text, text, text, int, int, boolean, int, jsonb, jsonb), public.subway_rank(text, text) to anon, authenticated;
 revoke execute on function public.subway_row(text), public.subway_view(public.subway_state), public.subway_eval_coins(text) from public, anon, authenticated;
+
+-- ===== 막차: 교사가 정하는 호선 열림(2026-10-21) =====
+-- 수행평가 관리 페이지(teacher.html)에서 배운 단원의 호선만 열어 둔다. 게임은 열린 호선 안에서만 무작위로 3개를 보여 준다.
+create table if not exists public.subway_settings (
+  id int primary key default 1 check (id = 1),
+  open_lines int[] not null default '{1,2,3,4,5,6,7,8,9}',
+  updated_at timestamptz not null default now()
+);
+alter table public.subway_settings enable row level security;
+insert into public.subway_settings(id) values (1) on conflict (id) do nothing;
+
+create or replace function public.subway_lines_get() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('ok', true, 'open', to_jsonb(open_lines), 'updatedAt', updated_at) from subway_settings where id = 1
+$$;
+
+create or replace function public.subway_lines_set(p_teacher_password text, p_lines int[]) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not lab_teacher_check(p_teacher_password) then return jsonb_build_object('ok', false, 'error', '교사 비밀번호가 올바르지 않습니다.'); end if;
+  if coalesce(array_length(p_lines, 1), 0) < 1 then return jsonb_build_object('ok', false, 'error', '호선을 1개 이상 열어 주세요.'); end if;
+  if exists (select 1 from unnest(p_lines) x where x < 1 or x > 9) then return jsonb_build_object('ok', false, 'error', '호선 번호는 1~9만 쓸 수 있습니다.'); end if;
+  update subway_settings set open_lines = (select array_agg(distinct x order by x) from unnest(p_lines) x), updated_at = now() where id = 1;
+  return subway_lines_get();
+end $$;
+
+grant execute on function public.subway_lines_get(), public.subway_lines_set(text, int[]) to anon, authenticated;

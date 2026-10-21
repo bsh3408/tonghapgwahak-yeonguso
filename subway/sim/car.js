@@ -102,7 +102,9 @@ export function updateCar(s, rng) {
     if (s.bossSpawned && !s.bossPending && !s.mons.some(m => m.boss && !m.gone) && !s.done) { s.done = 'cleared'; s.events.push({ type: 'bossDown' }); }
     return;
   }
-  if (!s.doorOpen && s.waveIndex >= s.waves.length && alive === 0) {
+  // 웨이브가 방금 나왔을 수 있으니 남은 몬스터를 다시 센다(예전 숫자로 문이 열리던 버그)
+  const left = s.mons.filter(m => !m.dummy && !m.gone).length + s.drops.length;
+  if (!s.doorOpen && s.waveIndex >= s.waves.length && left === 0) {
     s.doorOpen = true; s.events.push({ type: 'door' });
     // 칸 보상 상자: 재료 2개와 부품 3개(무기·장비를 만들 거리)
     if (s.carType !== 'cargo' && !s.rewarded) { s.rewarded = true; s.gained.parts += 3; const mats = ['cloth', 'vinyl', 'rubber', 'glass', 'filter', 'leather', 'string', 'scrap'];

@@ -2,12 +2,13 @@
 import { CAR_W, VIEW_W, VIEW_H, Y0, Y1, DT } from '../sim/constants.js';
 import { MONSTERS } from '../sim/data/monsters.js';
 import { WEAPONS } from '../sim/data/weapons.js';
-import { SIDE_DOORS } from '../sim/car.js';
+import { SIDE_DOORS, GANGWAY_Y } from '../sim/car.js';
+import { STATUS } from '../sim/data/status.js';
 
 const SHOT_COL = { slingshot: '#9a8a70', crossbow: '#c8b88a', lime: '#f2efe6', coil: '#7fd8ff', net: '#d8d0b0', cool: '#bfe8ff', sprayer: '#8fe0cc', flash: '#fff2a0', water: '#7ec8ff' };
 const BEAM_COL = { co2: 'rgba(235,240,245,.5)', led: 'rgba(255,250,210,.32)', solar: 'rgba(255,224,120,.30)', nitrogen: 'rgba(200,240,255,.55)' };
 const ZONE_COL = { acid: 'rgba(170,210,60,.35)', cloud: 'rgba(140,190,60,.28)', gas: 'rgba(180,170,90,.3)', electric: 'rgba(120,200,255,.3)', ice: 'rgba(200,235,255,.4)', puddle: 'rgba(230,228,215,.45)', disinfect: 'rgba(190,230,200,.25)', fire: 'rgba(255,120,40,.38)',
-  heatVent: 'rgba(255,140,60,.30)', sparkBox: 'rgba(120,200,255,.30)', acidPool: 'rgba(170,210,60,.45)', sporeMold: 'rgba(150,190,90,.35)',
+  heatVent: 'rgba(255,140,60,.30)', sparkBox: 'rgba(120,200,255,.30)', acidPool: 'rgba(170,210,60,.45)', vines: 'rgba(70,150,50,.30)', sporeMold: 'rgba(150,190,90,.35)',
   sandPile: 'rgba(210,180,120,.45)', icePatch: 'rgba(210,240,255,.55)', poisonPool: 'rgba(140,80,170,.42)' };
 // 노선마다 바닥·벽 색(테마)
 const THEME = {
@@ -19,8 +20,8 @@ const bgCache = {};
 // 노선 색(실제 서울 지하철 노선 색을 따름): 벽의 띠에 칠한다
 export const LINE_COLOR = { 1: '#0052A4', 2: '#00A84D', 3: '#EF7C1C', 4: '#00A5DE', 5: '#996CAC', 6: '#CD7C2F', 7: '#747F00', 8: '#E6186C', 9: '#BDB092' };
 // 객실 배경: AI로 그린 객실 부품(벽·의자·손잡이·출입문·바닥)을 이어 붙인다. 출입문은 그 위에 따로 그려서 여닫는다
-function carBackground(line, boss, A) {
-  const key = line + (boss ? 'b' : '');
+function carBackground(line, boss, A, variant = 0, hazard = false) {
+  const key = line + (boss ? 'b' : '') + ':' + variant + (hazard ? 'h' : '');
   if (bgCache[key]) return bgCache[key];
   const S = A.subway, M = S.meta, c = document.createElement('canvas'); c.width = CAR_W; c.height = VIEW_H; const x = c.getContext('2d');
   x.fillStyle = '#1d2026'; x.fillRect(0, 0, CAR_W, VIEW_H);
@@ -38,8 +39,47 @@ function carBackground(line, boss, A) {
     x.save(); x.translate(0, 300 + M.bench.h - 6); x.scale(1, -1); for (let X = -60; X < CAR_W; X += M.bench.w) x.drawImage(S.bench, X, 0); x.restore();
     x.fillStyle = '#25282e'; x.fillRect(0, 300 + M.bench.h - 6, CAR_W, VIEW_H); x.fillStyle = LINE_COLOR[line] || '#888'; x.fillRect(0, 338, CAR_W, 3);
     x.drawImage(S.endDoor, 0, 100 - M.endDoor.h); x.drawImage(S.endDoor, CAR_W - M.endDoor.w, 100 - M.endDoor.h);
+    lineDecor(x, line, variant);
+    if (hazard) { x.fillStyle = 'rgba(200,40,30,.10)'; x.fillRect(0, 0, CAR_W, VIEW_H); x.fillStyle = '#d83a2a'; for (let X = 60; X < CAR_W; X += 120) x.fillRect(X, 4, 30, 5); }
   }
   bgCache[key] = c; return c;
+}
+// 호선마다 칸 꾸밈(코드로 찍은 도트). variant(칸 번호)로 자리를 바꿔 칸마다 조금씩 다르게
+function lineDecor(x, line, v) {
+  let r = (line * 7919 + v * 104729) >>> 0; const rnd = () => ((r = (r * 1103515245 + 12345) >>> 0) / 4294967296);
+  const px = (c, X, Y, w, h) => { x.fillStyle = c; x.fillRect(Math.round(X), Math.round(Y), w, h); };
+  switch (line) {
+    case 1: // 오래된 지상 구간·폭염: 깨진 창으로 들어오는 햇빛 줄기, 금 간 바닥
+      for (let i = 0; i < 4; i++) { const X = 40 + rnd() * (CAR_W - 120); x.fillStyle = 'rgba(255,220,120,.13)'; x.beginPath(); x.moveTo(X, 100); x.lineTo(X + 40, 100); x.lineTo(X + 90, 300); x.lineTo(X + 50, 300); x.fill(); }
+      for (let i = 0; i < 6; i++) { let X = rnd() * CAR_W, Y = 120 + rnd() * 170; x.strokeStyle = 'rgba(40,30,20,.5)'; x.lineWidth = 1; x.beginPath(); x.moveTo(X, Y); for (let k = 0; k < 4; k++) { X += 6 + rnd() * 8; Y += (rnd() - 0.5) * 10; x.lineTo(X, Y); } x.stroke(); } break;
+    case 2: // 도심 순환선·정전: 꺼진 조명, 흩어진 신문지와 깨진 형광등
+      x.fillStyle = '#1a1c20'; for (let X = 30; X < CAR_W; X += 120) if (rnd() < 0.6) x.fillRect(X, 6, 60, 3);
+      for (let i = 0; i < 7; i++) px('rgba(220,215,200,.55)', rnd() * CAR_W, 120 + rnd() * 170, 7, 5);
+      for (let i = 0; i < 3; i++) { const X = rnd() * CAR_W, Y = 130 + rnd() * 150; for (let k = 0; k < 5; k++) px('#cfe6f0', X + k * 3 + rnd() * 2, Y + rnd() * 3, 2, 1); } break;
+    case 3: // 강 건너는 구간·침수: 바닥에 고인 물과 물결
+      x.fillStyle = 'rgba(80,140,200,.22)'; x.fillRect(0, 230, CAR_W, 70);
+      for (let i = 0; i < 18; i++) px('rgba(200,230,255,.45)', rnd() * CAR_W, 236 + rnd() * 60, 6 + rnd() * 6, 1);
+      for (let i = 0; i < 4; i++) { x.fillStyle = 'rgba(80,140,200,.25)'; x.beginPath(); x.ellipse(rnd() * CAR_W, 140 + rnd() * 80, 18 + rnd() * 14, 6, 0, 0, 6.283); x.fill(); } break;
+    case 4: // 매연 구간·산성비: 녹물 자국, 바닥의 매연 얼룩
+      for (let i = 0; i < 8; i++) { const X = rnd() * CAR_W; x.fillStyle = 'rgba(150,90,40,.45)'; x.fillRect(X, 40 + rnd() * 30, 3, 20 + rnd() * 30); }
+      for (let i = 0; i < 6; i++) { x.fillStyle = 'rgba(60,70,40,.25)'; x.beginPath(); x.ellipse(rnd() * CAR_W, 130 + rnd() * 160, 20 + rnd() * 20, 8 + rnd() * 6, 0, 0, 6.283); x.fill(); } break;
+    case 5: // 깊은 지하·감염병: 곰팡이 얼룩과 출입 통제 테이프
+      for (let i = 0; i < 9; i++) { const X = rnd() * CAR_W, Y = rnd() < 0.5 ? 20 + rnd() * 70 : 120 + rnd() * 170; for (let k = 0; k < 6; k++) px(k % 2 ? 'rgba(120,160,70,.55)' : 'rgba(110,80,130,.5)', X + (rnd() - 0.5) * 14, Y + (rnd() - 0.5) * 8, 3, 3); }
+      { const X = 60 + rnd() * (CAR_W - 200); for (let k = 0; k < 24; k++) px(k % 2 ? '#1c1c1c' : '#e8c830', X + k * 5, 70 + k * 1.2, 5, 4); } break;
+    case 6: // 지상 환기구·모래 폭풍: 벽 쪽에 쌓인 모래 더미
+      for (let i = 0; i < 7; i++) { x.fillStyle = 'rgba(214,184,120,.55)'; x.beginPath(); x.ellipse(rnd() * CAR_W, rnd() < 0.5 ? 122 : 292, 30 + rnd() * 30, 10, 0, 0, 6.283); x.fill(); }
+      for (let i = 0; i < 40; i++) px('rgba(230,200,140,.5)', rnd() * CAR_W, 120 + rnd() * 175, 2, 1); break;
+    case 7: // 냉동 창고·한파: 벽에 낀 성에, 천장의 고드름, 얼어붙은 바닥
+      x.fillStyle = 'rgba(230,245,255,.35)'; x.fillRect(0, 0, CAR_W, 12);
+      for (let X = 4; X < CAR_W; X += 9 + rnd() * 10) { const h = 4 + rnd() * 14; x.fillStyle = 'rgba(220,240,255,.85)'; x.beginPath(); x.moveTo(X, 12); x.lineTo(X + 4, 12); x.lineTo(X + 2, 12 + h); x.fill(); }
+      for (let i = 0; i < 5; i++) { x.fillStyle = 'rgba(220,240,255,.28)'; x.beginPath(); x.ellipse(rnd() * CAR_W, 130 + rnd() * 160, 26 + rnd() * 20, 9, 0, 0, 6.283); x.fill(); } break;
+    case 8: // 생태 공원 연결: 벽을 타고 오르는 덩굴과 바닥의 풀
+      for (let i = 0; i < 6; i++) { let X = rnd() * CAR_W, Y = 96; x.strokeStyle = '#3f7a32'; x.lineWidth = 2; x.beginPath(); x.moveTo(X, Y); for (let k = 0; k < 7; k++) { X += (rnd() - 0.5) * 12; Y -= 10; x.lineTo(X, Y); px('#5fae48', X - 2, Y, 4, 3); } x.stroke(); }
+      for (let i = 0; i < 26; i++) { const X = rnd() * CAR_W, Y = rnd() < 0.5 ? 118 + rnd() * 10 : 286 + rnd() * 10; px('#4f9a3c', X, Y - 4, 1, 4); px('#6cc052', X + 2, Y - 6, 1, 6); } break;
+    case 9: // 급행·약탈자: 벽 낙서와 바닥에 그린 경고선
+      for (let i = 0; i < 5; i++) { const X = 20 + rnd() * (CAR_W - 60), c = ['#e0483a', '#e8c830', '#58b8e8', '#d060c0'][i % 4]; x.strokeStyle = c; x.lineWidth = 2; x.beginPath(); x.moveTo(X, 60); for (let k = 0; k < 5; k++) x.lineTo(X + k * 7, 52 + (k % 2) * 14); x.stroke(); }
+      for (let k = 0; k < 20; k++) px(k % 2 ? '#1c1c1c' : '#e8c830', 40 + k * 22, 206, 12, 3); break;
+  }
 }
 function T_GATES(x) {
   x.fillStyle = '#3a4150'; x.fillRect(0, 0, CAR_W, 100); x.fillStyle = '#2e333d'; x.fillRect(0, 300, CAR_W, 60);
@@ -54,7 +94,7 @@ function drawDoors(x, s, A, camX, fx) {
     const X = Math.round(dx - camX - w / 2);
     if (X > VIEW_W || X + w < 0) continue;
     if (top) x.drawImage(img, X, 100 - img.height + 4);
-    else { x.save(); x.translate(X, 300 - 4); x.drawImage(img, 0, 0, img.width, 60, 0, 0, img.width, 60); x.restore(); }
+    else x.drawImage(img, 0, img.height - 56, img.width, 56, X, 300 - 4, img.width, 56);
   }
 }
 
@@ -97,21 +137,28 @@ function drawMon(x, m, A, camX, s) {
   if (m.boss || m.elite) { const W = m.boss ? 80 : 40, hy = top - 8; x.fillStyle = '#1a1410'; x.fillRect(X - W / 2 - 1, hy - 1, W + 2, 5); x.fillStyle = m.boss ? '#d84a3a' : '#e0b04a'; x.fillRect(X - W / 2, hy, Math.max(0, W * m.hp / m.maxHp), 3); }
   if (s.showInflict && MONSTERS[m.id]?.inflicts) { x.font = '10px sans-serif'; x.textAlign = 'center'; x.fillText(ICON[MONSTERS[m.id].inflicts.status] || '', X, top - 12); }
 }
+const STATUS_COL = { infection: '#a8e05a', acidBurn: '#ff8a3a', poison: '#c070e0', wet: '#7ec8ff', shock: '#ffe84a', blur: '#d8c890', confusion: '#ff80c0', slip: '#bfe8ff', fear: '#ffb0a0', heatstroke: '#ff6a3a', frostbite: '#a8d8ff', corrosion: '#c8e060' };
 const ICON = { infection: '🦠', acidBurn: '🔥', poison: '☠️', wet: '💧', shock: '⚡', blur: '👁️', confusion: '😵', slip: '🧊', fear: '😨', stolen: '🎒' };
 
 // 화면 효과(불꽃·연기 등). 상태와 따로 클라이언트에서만 움직인다
 export function createFx() {
-  const parts = [], rings = [], doors = new Map(), zaps = [];
+  const parts = [], rings = [], doors = new Map(), zaps = [], nums = [], pops = [], dot = new Map();
   const puff = (x, y, col, n, sp, sz = 2) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = sp * (0.4 + Math.random() * 0.6); parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.25 + Math.random() * 0.3, col, sz: sz + (Math.random() < 0.4) }); } };
   return {
-    parts, rings, zaps,
+    parts, rings, zaps, nums, pops,
     doorOpen: (x, top) => (doors.get(x + (top ? 't' : 'b')) || 0) > 0,
     feed(s) {
       for (const e of s.events) {
-        if (e.type === 'hit') { const m = s.mons.find(o => o.uid === e.uid); if (m) { const h = HIT_FX[e.weapon] || HIT_FX._; puff(m.x, m.y - 14, h[0], h[1], h[2], h[3]); } }
+        if (e.type === 'hit') { const m = s.mons.find(o => o.uid === e.uid); if (m) {
+          // 줄기 무기처럼 틱마다 조금씩 들어가는 피해는 모았다가 1 이상이 되면 숫자로 띄운다
+          const acc = (dot.get(m.uid) || 0) + e.amount; if (acc >= 1) { const v = Math.floor(acc); dot.set(m.uid, acc - v); nums.push({ x: m.x + (Math.random() - 0.5) * 26, y: m.y - (m.fly ? 30 : 0) - 2 * (m.r || 14) - 4 - Math.random() * 10, text: String(v), col: v >= 15 ? '#ffd04a' : '#ffffff', big: v >= 15, t: 0.7, T: 0.7 }); } else dot.set(m.uid, acc);
+          if (e.amount >= 1 || Math.random() < 0.2) { const h = HIT_FX[e.weapon] || HIT_FX._; puff(m.x, m.y - 14, h[0], h[1], h[2], h[3]); } } }
         else if (e.type === 'kill') { puff(e.x, e.y - 14, '#6e5a4a', 14, 100); puff(e.x, e.y - 14, '#d9d4c4', 6, 60); this.shake = Math.max(this.shake || 0, 3); }
         else if (e.type === 'boom') { rings.push({ x: e.x, y: e.y, r: e.r, t: 0.3 }); puff(e.x, e.y, '#f2efe6', 16, 120, 3); this.shake = Math.max(this.shake || 0, 4); }
-        else if (e.type === 'hurt') this.shake = Math.max(this.shake || 0, 3);
+        else if (e.type === 'hurt') { this.shake = Math.max(this.shake || 0, 3); nums.push({ x: s.player.x, y: s.player.y - 44, text: '-' + e.amount, col: '#ff5a4a', big: true, t: 0.8, T: 0.8 }); }
+        else if (e.type === 'status' && STATUS[e.status] && e.status !== 'stolen') { if (!pops.some(q => q.key === e.status && q.t > 0.6)) pops.push({ key: e.status, text: `${STATUS[e.status].icon} ${STATUS[e.status].name}!`, col: STATUS_COL[e.status] || '#fff', t: 1.4, T: 1.4, row: pops.filter(q => q.t > 0).length % 3 }); }
+        else if (e.type === 'blizzard') this.blizzard = 0.7;
+        else if (e.type === 'freeze') { const m = s.mons.find(o => o.uid === e.uid); if (m) puff(m.x, m.y - 14, '#d8f4ff', 8, 70); }
         else if (e.type === 'zap') zaps.push({ ...e, t: 0.15 });
         else if (e.type === 'bounce') puff(e.x, e.y, '#ffffff', 3, 50);
         else if (e.type === 'wave') for (const d of e.doors || []) { if (d.kind === 'back' || d.kind === 'front') doors.set(d.kind + 't', 1.6); else if (d.kind === 'side') doors.set(d.x + (d.top ? 't' : 'b'), 1.6); }
@@ -125,6 +172,8 @@ export function createFx() {
       for (const r of rings) r.t -= dt; for (let i = rings.length - 1; i >= 0; i--) if (rings[i].t <= 0) rings.splice(i, 1);
       this.shake = Math.max(0, (this.shake || 0) - dt * 16);
       for (const [k, v] of doors) doors.set(k, v - dt);
+      for (const L of [nums, pops]) { for (const n of L) n.t -= dt; for (let i = L.length - 1; i >= 0; i--) if (L[i].t <= 0) L.splice(i, 1); }
+      this.slide = Math.max(0, (this.slide || 0) - dt / 0.55); this.blizzard = Math.max(0, (this.blizzard || 0) - dt);
       for (const z of zaps) z.t -= dt; for (let i = zaps.length - 1; i >= 0; i--) if (zaps[i].t <= 0) zaps.splice(i, 1);
     },
   };
@@ -185,13 +234,31 @@ function drawShot(x, sh, X, t) {
   }
 }
 
-// 칸 양 끝 연결 통로: 뒤(왼쪽)·앞(오른쪽)에서 몬스터가 들어올 때 문이 열린다. 앞쪽 문 불빛은 잠김(빨강)/열림(초록)
-function drawGangways(x, s, camX, fx) {
+// 칸 양 끝: 실제 전동차처럼 주름 통로(밸로스)로 옆 칸과 이어진다. 통로 너머로 옆 칸이 어둡게 보인다
+// 몬스터가 들어올 때 양 끝 문이 열리고, 앞쪽 문 불빛은 잠김(빨강)/열림(초록)
+const GAP = 52, PY0 = GANGWAY_Y[0] - 18, PY1 = GANGWAY_Y[1] + 14;
+function drawLinks(x, s, A, camX, fx, bg) {
   if (s.carType === 'boss') return;
+  for (const side of [-1, 1]) {   // 옆 칸(같은 노선, 어둡게)
+    const X = side < 0 ? -camX - GAP - CAR_W : -camX + CAR_W + GAP;
+    if (X > VIEW_W || X + CAR_W < 0) continue;
+    x.drawImage(bg, X, 0); x.fillStyle = 'rgba(8,10,14,.55)'; x.fillRect(X, 0, CAR_W, VIEW_H);
+  }
+  for (const [gx, kind] of [[-GAP, 'back'], [CAR_W, 'front']]) {
+    const X = Math.round(gx - camX); if (X > VIEW_W || X + GAP < 0) continue;
+    x.fillStyle = '#121418'; x.fillRect(X, 0, GAP, VIEW_H);
+    for (let i = 0; i < GAP; i += 4) { const c = (i / 4) % 2 ? '#3d424b' : '#2a2d34'; x.fillStyle = c; x.fillRect(X + i, 58, 4, PY0 - 58); x.fillRect(X + i, PY1, 4, 330 - PY1); }
+    x.fillStyle = '#596069'; x.fillRect(X, PY0 - 4, GAP, 4); x.fillRect(X, PY1, GAP, 4);
+    x.fillStyle = '#6b717b'; x.fillRect(X, PY0, GAP, PY1 - PY0);
+    x.fillStyle = '#545a64'; for (let y = PY0 + 4; y < PY1 - 2; y += 7) for (let k = ((y / 7) | 0) % 2 ? 3 : 0; k < GAP - 2; k += 7) x.fillRect(X + k, y, 3, 2);
+    x.fillStyle = '#c8b040'; x.fillRect(X, PY0, GAP, 2); x.fillRect(X, PY1 - 2, GAP, 2);
+  }
+  // 칸 끝 문틀: 닫히면 문짝, 열리면 통로가 보인다
   for (const [ex, kind] of [[0, 'back'], [CAR_W, 'front']]) {
-    const X = ex - camX + (kind === 'back' ? -14 : 0), open = fx.doorOpen?.(kind, true) || (kind === 'front' && s.doorOpen);
-    x.fillStyle = '#4a505c'; x.fillRect(X, 100, 14, 200); x.fillStyle = open ? '#111' : '#6f7682'; x.fillRect(X + 2, 150, 10, 110);
-    x.fillStyle = kind === 'front' ? (s.doorOpen ? '#5ad86a' : '#d85a4a') : '#c8b040'; x.fillRect(X + 4, 136, 6, 8);
+    const open = fx.doorOpen?.(kind, true) || (kind === 'front' && s.doorOpen), X = Math.round(ex - camX) + (kind === 'back' ? -6 : 0);
+    x.fillStyle = '#8a919b'; x.fillRect(X, PY0 - 22, 6, PY1 - PY0 + 26); x.fillStyle = '#2a2d33'; x.fillRect(X, PY0 - 26, 6, 4);
+    if (!open) { const dx = kind === 'back' ? X - 14 : X + 6; x.fillStyle = '#9aa1ab'; x.fillRect(dx, PY0 - 18, 14, PY1 - PY0 + 18); x.fillStyle = '#2c3440'; x.fillRect(dx + 3, PY0 - 10, 8, 26); x.fillStyle = '#4a5260'; x.fillRect(dx + 4, PY0 - 9, 3, 24); }
+    x.fillStyle = kind === 'front' ? (s.doorOpen ? '#5ad86a' : '#d85a4a') : '#c8b040'; x.fillRect(X + 1, PY0 - 34, 4, 6);
   }
 }
 // 소품(코드로 찍은 도트): 나무 상자, 쓰레기통, 부서진 의자, 폭발 드럼통
@@ -201,19 +268,22 @@ function drawProp(x, o, camX, A) {
   if (o.kind === 'crate') { R('#2a1c10', -13, -24, 26, 24); R('#9a6a3a', -12, -23, 24, 22); R('#7a5028', -12, -16, 24, 3); R('#7a5028', -12, -8, 24, 3); R('#b9844a', -10, -22, 3, 20); R('#b9844a', 7, -22, 3, 20); }
   else if (o.kind === 'bin') { R('#1c2024', -10, -22, 20, 22); R('#5a7088', -9, -21, 18, 20); R('#46586c', -9, -14, 18, 2); R('#8aa0b8', -10, -24, 20, 4); }
   else if (o.kind === 'seat') { const b = A?.subway?.bench; if (b) { x.save(); if (f) x.filter = 'brightness(3)'; x.drawImage(b, 0, 0, 58, b.height, X - 29, Y - b.height + 6, 58, b.height); x.restore(); } else R('#4a7a78', -24, -14, 48, 14); }
+  else if (o.kind === 'pole') { R('#7a808a', -2, 100 - Y, 5, Y - 100); R('#e4e8ee', -1, 100 - Y, 1, Y - 100); R('#4a4f58', -4, -3, 9, 4); }
+  else if (o.kind === 'rubble') { R('#3a3a3c', -18, -12, 36, 12); R('#6a6660', -15, -18, 14, 10); R('#7d786f', -2, -22, 16, 14); R('#55524c', 6, -10, 10, 8); R('#8a857a', -10, -14, 6, 4); R('#4a4f58', -20, -6, 8, 5); }
   else if (o.kind === 'barrel') { R('#2a1010', -11, -26, 22, 26); R('#b8382a', -10, -25, 20, 24); R('#e0c040', -10, -17, 20, 4); R('#1c1c1c', -4, -13, 8, 6); R('#e0c040', -2, -12, 4, 4); }
   if (o.hp !== undefined && o.hp < o.maxHp) { x.fillStyle = '#111'; x.fillRect(X - 12, Y - 32, 24, 4); x.fillStyle = '#e0b04a'; x.fillRect(X - 11, Y - 31, 22 * Math.max(0, o.hp) / o.maxHp, 2); }
 }
 
-export function cameraX(s) { if (CAR_W <= VIEW_W) return (CAR_W - VIEW_W) / 2; return Math.max(0, Math.min(CAR_W - VIEW_W, s.player.x - VIEW_W / 2)); }
+export function cameraX(s, slide = 0) { if (CAR_W <= VIEW_W) return (CAR_W - VIEW_W) / 2 - slide * 220; return Math.max(0, Math.min(CAR_W - VIEW_W, s.player.x - VIEW_W / 2)); }
 
 export function drawCar(x, s, A, fx, t) {
-  const camX = Math.round(cameraX(s)), p = s.player;
+  const k = fx.slide || 0, camX = Math.round(cameraX(s, k * k * (3 - 2 * k))), p = s.player;
   x.save();
   if (fx.shake > 0) x.translate(Math.round((Math.random() - 0.5) * fx.shake), Math.round((Math.random() - 0.5) * fx.shake));
   x.fillStyle = '#0d0f12'; x.fillRect(0, 0, VIEW_W, VIEW_H);
-  x.drawImage(carBackground(s.line, s.carType === 'boss', A), -camX, 0);
-  drawGangways(x, s, camX, fx);
+  const bg = carBackground(s.line, s.carType === 'boss', A, s.carIndex % 4, s.carType === 'hazard');
+  drawLinks(x, s, A, camX, fx, bg);
+  x.drawImage(bg, -camX, 0);
   drawDoors(x, s, A, camX, fx);
   // 연결문: 잠기면 빨강, 열리면 초록
   for (const z of s.zones) { x.fillStyle = ZONE_COL[z.kind] || 'rgba(200,200,200,.25)'; x.beginPath(); x.ellipse(z.x - camX, z.y, z.r, z.r * 0.55, 0, 0, 6.283); x.fill(); }
@@ -239,6 +309,13 @@ export function drawCar(x, s, A, fx, t) {
   for (const z of fx.zaps) { x.strokeStyle = '#bfefff'; x.lineWidth = 2; x.beginPath(); x.moveTo(z.x1 - camX, z.y1);
     for (let i = 1; i < 5; i++) { const k = i / 5; x.lineTo(z.x1 + (z.x2 - z.x1) * k - camX + (i % 2 ? 4 : -4), z.y1 + (z.y2 - z.y1) * k); } x.lineTo(z.x2 - camX, z.y2); x.stroke(); }
   for (const q of fx.parts) { x.globalAlpha = Math.min(1, q.life * 4); x.fillStyle = q.col; x.fillRect(Math.round(q.x - camX), Math.round(q.y), q.sz, q.sz); } x.globalAlpha = 1;
+  x.textAlign = 'center'; x.lineJoin = 'round';
+  for (const n of fx.nums) { const a = Math.min(1, n.t * 3), up = (n.T - n.t) * 26; x.globalAlpha = a; x.font = `bold ${n.big ? 13 : 10}px sans-serif`; x.lineWidth = 3; x.strokeStyle = '#000';
+    x.strokeText(n.text, Math.round(n.x - camX), Math.round(n.y - up)); x.fillStyle = n.col; x.fillText(n.text, Math.round(n.x - camX), Math.round(n.y - up)); }
+  for (const n of fx.pops) { const a = Math.min(1, n.t * 2.5), up = (n.T - n.t) * 14; x.globalAlpha = a; x.font = 'bold 16px sans-serif'; x.lineWidth = 4; x.strokeStyle = '#000';
+    const X = Math.round(p.x - camX), Y = Math.round(p.y - 62 - up - n.row * 18); x.strokeText(n.text, X, Y); x.fillStyle = n.col; x.fillText(n.text, X, Y); }
+  x.globalAlpha = 1;
+  if (fx.blizzard > 0) { x.fillStyle = `rgba(210,235,255,${fx.blizzard * 0.6})`; x.fillRect(-20, -20, VIEW_W + 40, VIEW_H + 40); }
   x.restore();
   drawEnv(x, s, camX, t);
 }

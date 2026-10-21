@@ -31,6 +31,7 @@ export function gearFactor(p, id, source = '') {
 export function applyStatus(s, id, opts = {}) {
   const p = s.player, S = STATUS[id];
   if (!S || s.done) return false;
+  if (p.immuneT > 0 && id !== 'stolen') return false;   // 의사 백신 주사: 잠깐 상태 이상 면역
   const { f, by } = gearFactor(p, id, opts.source);
   const strength = opts.strength ?? 1;
   if (f === 0) { if (by) gearBlocked(s, by, id); return false; }

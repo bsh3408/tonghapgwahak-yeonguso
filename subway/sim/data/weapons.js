@@ -1,9 +1,9 @@
 // 무기 17종 (설계서 10절). type: gun 쏘기, melee 휘두르기, throw 던지기, beam 줄기(누르고 있는 동안)
 // energy: 한 번 쓸 때 드는 에너지(beam은 energyPerSec). range: 총알이 날아가는 거리(픽셀). extra: ★2·★3에서 바뀌는 값(lifeMul은 사거리 배율)
 export const WEAPONS = {
-  pipe:        { name: '쇠파이프', type: 'melee', dmg: [5, 7, 9], rate: 1.6, energy: 0, reach: 62, extra: { 2: { reachMul: 1.3 }, 3: { reachMul: 1.3, knockEvery: 3 } } },
+  pipe:        { name: '쇠파이프', type: 'melee', dmg: [8, 11, 15], rate: 1.6, energy: 0, reach: 62, extra: { 2: { reachMul: 1.3 }, 3: { reachMul: 1.3, knockEvery: 3 } } },
   slingshot:   { name: '새총', type: 'gun', range: 300, dmg: [2, 3, 4], rate: 4, energy: 0, speed: 380, size: 3, extra: { 2: { count: 2 }, 3: { count: 2, bounce: 1 } } },
-  crossbow:    { name: '석궁', type: 'gun', range: 560, dmg: [8, 11, 15], rate: 0.8, energy: 1, speed: 520, size: 2, extra: { 2: { pierce: 2 }, 3: { pierce: 3 } } },
+  crossbow:    { name: '석궁', type: 'gun', range: 560, dmg: [11, 15, 20], rate: 1.1, energy: 1, speed: 520, size: 2, extra: { 2: { pierce: 2 }, 3: { pierce: 3 } } },
   lime:        { name: '석회 분사기', type: 'gun', range: 150, dmg: [3, 4, 5], rate: 5, energy: 1, speed: 330, size: 3, clearsAcid: true, extra: { 2: { lifeMul: 1.3 }, 3: { lifeMul: 1.3, slow: 1 } } },
   limegrenade: { name: '소석회 수류탄', type: 'throw', dmg: [12, 17, 22], rate: 0.5, energy: 5, radius: 46, clearsAcid: true, extra: { 2: { radiusMul: 1.3 }, 3: { radiusMul: 1.3, safeZone: 3 } } },
   sodabomb:    { name: '베이킹소다 폭탄', type: 'throw', dmg: [8, 11, 14], rate: 0.7, energy: 4, radius: 40, slow: 2, extra: { 2: { slow: 3 }, 3: { slow: 3, foamZone: 3 } } },

@@ -21,9 +21,10 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
 .bar span{position:absolute;inset:0;font-size:clamp(11px,1.3vw,17px);line-height:clamp(14px,1.9vw,26px);text-align:center;color:#fff;font-weight:800;text-shadow:0 0 3px #000,0 0 3px #000}
 #hpBar i{background:#d84a3a}#shBar i{background:#8aa8c8}#enBar i{background:#5ab0e0}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.chip{background:rgba(0,0,0,.6);border-radius:10px;padding:1px 7px;font-size:12px;white-space:nowrap}
+.chip{background:rgba(0,0,0,.66);border-radius:10px;padding:2px 9px;font-size:clamp(12px,1.25vw,17px);white-space:nowrap}
+#statusChips .chip{font-size:clamp(15px,1.7vw,24px);font-weight:800;padding:3px 12px;border:2px solid rgba(255,255,255,.25)}
 #right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-#tip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);max-width:min(92vw,620px);background:rgba(20,22,26,.92);border:1px solid var(--acc);border-radius:8px;padding:8px 12px;font-size:14px;pointer-events:none;opacity:0;transition:opacity .3s}
+#tip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);max-width:min(80vw,760px);background:rgba(20,22,26,.92);border:1px solid var(--acc);border-radius:8px;padding:8px 14px;font-size:clamp(14px,1.4vw,19px);pointer-events:none;opacity:0;transition:opacity .3s}
 #tip.on{opacity:1}
 #screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,11,13,.86);padding:16px;overflow:auto}
 #screen.on{display:flex}

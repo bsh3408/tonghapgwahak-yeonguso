@@ -45,7 +45,7 @@ function pool(line) {
   const out = [];
   for (const m of Object.values(MONSTERS)) {
     if (m.kind === 'elite' || m.hidden) continue;
-    if (!(m.lines === 'all' || m.lines.includes(line))) continue;
+    if (!m.lines.includes(line)) continue;
     let w = 1;
     if (LINES[line].invaders?.includes(m.id)) w = 3;
     if (line === 5 && m.weight5) w = m.weight5;
@@ -59,7 +59,7 @@ function weighted(rng, list) {
   for (const [id, w] of list) { x -= w; if (x < 0) return id; }
   return list.at(-1)[0];
 }
-const ELITES = Object.values(MONSTERS).filter(m => m.kind === 'elite').map(m => m.id);
+const elitesOf = line => Object.values(MONSTERS).filter(m => m.kind === 'elite' && m.lines.includes(line)).map(m => m.id);
 
 export function generateLine(run, line) {
   const rng = createRng(run.seed).fork('line' + line);
@@ -77,20 +77,20 @@ export function generateLine(run, line) {
       const id = weighted(rng, P);
       waves[g % waveCount].push({ monster: id, count: MONSTERS[id].swarm || 1 });
     }
-    if (rng.chance(d.eliteChance)) waves[waveCount - 1].push({ monster: rng.pick(ELITES), count: 1 });
+    const E = elitesOf(line); if (rng.chance(d.eliteChance) && E.length) waves[waveCount - 1].push({ monster: rng.pick(E), count: 1 });
     return { index, type, waves, seed: rng.int(2 ** 31) };
   });
   const b = BOSSES[line];
   return { line, cars, boss: { line, ...b, hp: Math.round(b.hp * (1 + 0.2 * run.lineIndex)), seed: rng.int(2 ** 31) } };
 }
 
-// 환승 통로에서 고르는 다음 노선 2개. 아직 안 간 노선(1~9) 중 무작위
+// 환승 통로에서 고르는 다음 노선. 첫 노선은 3개, 그 뒤로는 2개. 아직 안 간 노선(1~9) 중 무작위
 export function offerLines(run) {
   const left = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(n => !run.visited.includes(n));
-  if (left.length <= 1) return left;
-  const rng = createRng(run.seed).fork('offer' + run.visited.length);
-  const a = left.splice(rng.int(left.length), 1)[0], b = left[rng.int(left.length)];
-  return [a, b].sort((x, y) => x - y);
+  const n = Math.min(left.length, run.visited.length === 0 ? 3 : 2);
+  const rng = createRng(run.seed).fork('offer' + run.visited.length), out = [];
+  while (out.length < n) out.push(left.splice(rng.int(left.length), 1)[0]);
+  return out.sort((x, y) => x - y);
 }
 
 // ---------- 한 판의 흐름: 칸 들어가기·끝내기, 짐칸, 환승 통로(연구 노트·정비소) ----------

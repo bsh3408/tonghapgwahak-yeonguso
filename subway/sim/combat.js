@@ -62,6 +62,7 @@ export function damageMon(s, m, amount, from = {}) {
   if (from.electric && s.player.relics.includes('magnet')) a *= 1.2;
   if (m.frontShield && m.shieldOff <= 0 && from.dirX !== undefined && Math.sign(from.dirX) === -m.face) a *= 0.1;
   if (from.wetDouble && m.inWater) a *= 2;
+  if (s.player.markT > 0) a *= 1.3;   // AI 연구원 약점 분석
   m.hp -= a; m.flash = 0.08; s.stats.hits++;
   const kb = (m.boss ? 0.15 : 1) * (1 + 0.5 * modLv(s.player, 'knock'));
   if (from.kx) { m.kx += from.kx * kb; m.ky += (from.ky || 0) * kb; }
@@ -102,6 +103,8 @@ export function fire(s, rng) {
     else { p.energy -= cost; p.beam = st.id; beamTick(s, st); return; }
   }
   if (p.cool > 0) return;
+  // 상자 같은 소품에 바짝 붙어 있고 가까운 적이 없으면 총으로 후려쳐 부순다(소울나이트처럼)
+  const prop = nearProp(s); if (prop) { p.aim = Math.atan2(prop.y - prop.r - (p.y - 24), prop.x - p.x); p.face = Math.cos(p.aim) >= 0 ? 1 : -1; p.swing = SWING_TICKS; p.bash = true; p.cool = 9; return; }
   const fear = p.status.fear ? 2 : 1;
   p.cool = Math.max(1, Math.round(TICK_HZ / st.rate * fear));
   p.energy -= st.energy || 0;
@@ -135,6 +138,13 @@ export function fire(s, rng) {
   p.recoil = 4; p.flash = 2;
 }
 function nearestMonWithin(s, r) { return nearestMon(s, r); }
+const BASH_RANGE = 38;
+function nearProp(s) {
+  const p = s.player; if (nearestMon(s, 70)) return null;
+  let best = null, bd = BASH_RANGE;
+  for (const o of s.props) if (o.hp !== undefined && !o.broken) { const d = Math.hypot(o.x - p.x, o.y - p.y) - o.r; if (d < bd) { bd = d; best = o; } }
+  return best;
+}
 
 function beamTick(s, st) {
   const p = s.player, m = muzzle(p);
@@ -263,12 +273,16 @@ export function updatePlayerCombat(s, input, rng) {
   if (p.quickT > 0) p.quickT--;
   if (input & INPUT.SWAP) { if (!p.swapHeld && p.weapons.length > 1) { p.weapon = (p.weapon + 1) % p.weapons.length; if (modLv(p, 'quick')) p.quickT = 2 * TICK_HZ; } p.swapHeld = true; } else p.swapHeld = false;
   if (p.swing <= 0) autoAim(s);
-  const attacking = !!(input & INPUT.ATTACK) && !(p.status.shock) && !p.running;
+  const attacking = !!(input & INPUT.ATTACK) && !(p.status.shock);   // 달리면서도 쏠 수 있다(교사 요청)
   if (attacking) fire(s, rng);
-  if (p.swing > 0) { p.swing--; if (p.swing === SWING_TICKS / 2) { resolveSwing(s); const c = chest(p), st = weaponStat(p.swingStat, p.swingStar); hitProps(s, c.x + Math.cos(p.aim) * 30, c.y + Math.sin(p.aim) * 30, (st.reach || 60) * 0.6, st.dmg, rng); } }
-  if (!attacking) p.energy = Math.min(p.maxEnergy, p.energy + 2 * DT * (p.relics.includes('solarPanel') ? 2 : 1));
+  if (p.swing > 0 && p.bash) { p.swing--; if (p.swing === SWING_TICKS / 2) { const c = chest(p); hitProps(s, c.x + Math.cos(p.aim) * 24, c.y + Math.sin(p.aim) * 24 + 12, 22, 4, rng); s.events.push({ type: 'bash' }); } if (p.swing <= 0) p.bash = false; }
+  else if (p.swing > 0) { p.swing--; if (p.swing === SWING_TICKS / 2) { resolveSwing(s); const c = chest(p), st = weaponStat(p.swingStat, p.swingStar); hitProps(s, c.x + Math.cos(p.aim) * 30, c.y + Math.sin(p.aim) * 30, (st.reach || 60) * 0.6, st.dmg, rng); } }
+  if (!attacking || freeWeapon(p)) p.energy = Math.min(p.maxEnergy, p.energy + 2 * DT * (p.relics.includes('solarPanel') ? 2 : 1));
   p.sinceHit++;
   const regenBlocked = p.meters.heat >= 100;
-  if (p.sinceHit > REGEN_WAIT && p.shield < p.maxShield && !regenBlocked) { p.regen++; if (p.regen >= REGEN_EVERY) { p.shield++; p.regen = 0; } }
+  if (p.running) p.regen = 0;   // 달리는 동안은 방어막이 차지 않는다
+  else if (p.sinceHit > REGEN_WAIT && p.shield < p.maxShield && !regenBlocked) { p.regen++; if (p.regen >= REGEN_EVERY) { p.shield++; p.regen = 0; } }
 }
+// 에너지를 쓰지 않는 무기(새총 등)를 쏘는 동안에는 에너지가 계속 찬다
+function freeWeapon(p) { const w = p.weapons[p.weapon] || p.weapons[0], W = WEAPONS[w.id]; return !(W.energy > 0) && !(W.energyPerSec > 0); }
 export { WEAPONS };

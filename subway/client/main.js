@@ -43,12 +43,15 @@ addEventListener('blur', () => { game.mouse.attack = game.mouse.skill = false; f
 
 export function fit() {
   const wrap = document.getElementById('stage'), w = wrap.clientWidth, h = wrap.clientHeight;
-  const s = Math.max(1, Math.min(w / VIEW_W, h / VIEW_H)), si = s >= 1.5 ? Math.floor(s) : s;
-  cv.style.width = VIEW_W * si + 'px'; cv.style.height = VIEW_H * si + 'px';
+  const s = Math.min(w / VIEW_W, h / VIEW_H);   // 창(전체 화면)을 꽉 채운다. 픽셀은 CSS로 각지게 늘린다
+  cv.style.width = VIEW_W * s + 'px'; cv.style.height = VIEW_H * s + 'px';
 }
 addEventListener('resize', fit);
+document.addEventListener('fullscreenchange', fit);
+// 게임을 시작할 때 브라우저 전체 화면으로 바꾼다(클릭한 순간에만 허용됨)
+export function goFullscreen() { const d = document.documentElement; if (!document.fullscreenElement && d.requestFullscreen) d.requestFullscreen().catch(() => {}); }
 
-export function startCar(state) { game.state = state; game.inputs = []; game.acc = 0; game.paused = false; }
+export function startCar(state) { game.state = state; game.inputs = []; game.acc = 0; game.paused = false; game.fx.slide = state.carType !== 'boss' && state.carIndex > 0 ? 1 : 0; }
 
 let last = performance.now();
 function frame(now) {

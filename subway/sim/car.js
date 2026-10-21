@@ -8,6 +8,7 @@ import { spawnMon, setupBoss } from './ai.js';
 // 실제 전동차처럼 한쪽에 출입문 4개
 export const SIDE_DOORS = [110, 256, 402];   // 짧아진 칸: 한쪽에 출입문 3개
 const FIRST_WAVE_TICK = 15, WAVE_GAP = 1.5;
+export const GANGWAY_IN = 34, GANGWAY_Y = [168, 248];   // 앞 연결 통로: 문이 열리면 이만큼 걸어 들어가야 다음 칸
 
 function playerFrom(run) {
   return {
@@ -46,22 +47,18 @@ export function createCarState(run, lineData, carIndex, opts = {}) {
   return s;
 }
 
-// 몬스터가 나오는 곳: 옆 출입문(위·아래), 뒤 연결문(왼쪽 끝), 앞 연결문(오른쪽 끝), 천장 환기구(그림자로 미리 알리고 떨어짐)
-const SPAWN_KINDS = [['side', 0.45], ['back', 0.15], ['front', 0.15], ['ceiling', 0.25]];
-function pickKind(rng) { let x = rng.next(); for (const [k, w] of SPAWN_KINDS) { x -= w; if (x < 0) return k; } return 'side'; }
+// 몬스터는 문을 열고 들어온다: 옆 출입문 6곳(위·아래)과 양 끝 연결문 2곳이 한꺼번에 열리므로 어느 문에서 나올지 알 수 없다
+const ALL_DOORS = [...SIDE_DOORS.flatMap(x => [{ kind: 'side', x, top: true }, { kind: 'side', x, top: false }]), { kind: 'back', x: 16 }, { kind: 'front', x: CAR_W - 16 }];
 function spawnWave(s, rng) {
-  const wave = s.waves[s.waveIndex++], opened = [];
+  const wave = s.waves[s.waveIndex++], mid = (Y0 + Y1) / 2;
   for (const g of wave) {
-    const kind = pickKind(rng), fy = () => rng.range(Y0 + 10, Y1 - 10);
-    if (kind === 'side') { const dx = rng.pick(SIDE_DOORS), top = rng.chance(0.5);
-      for (let i = 0; i < g.count; i++) spawnMon(s, g.monster, dx + rng.range(-20, 20), top ? Y0 : Y1); opened.push({ kind, x: dx, top }); }
-    else if (kind === 'back' || kind === 'front') { const x = kind === 'back' ? 16 : CAR_W - 16, y = fy();
-      for (let i = 0; i < g.count; i++) spawnMon(s, g.monster, x, y + rng.range(-24, 24)); opened.push({ kind, x, y }); }
-    else { const x = rng.range(60, CAR_W - 60), y = fy();
-      for (let i = 0; i < g.count; i++) s.drops.push({ id: g.monster, x: x + rng.range(-20, 20), y: Math.max(Y0, Math.min(Y1, y + rng.range(-16, 16))), t: 24 });
-      opened.push({ kind, x, y }); }
+    const d = rng.pick(ALL_DOORS);
+    for (let i = 0; i < g.count; i++) {
+      if (d.kind === 'side') spawnMon(s, g.monster, d.x + rng.range(-16, 16), d.top ? Y0 : Y1);
+      else spawnMon(s, g.monster, d.x, mid + rng.range(-30, 30));
+    }
   }
-  s.events.push({ type: 'wave', index: s.waveIndex, doors: opened });
+  s.events.push({ type: 'wave', index: s.waveIndex, doors: ALL_DOORS });
 }
 
 // 노선마다 놓이는 소품: 부술 수 있는 상자·쓰레기통·의자·폭발 드럼통(파밍), 노선 재난에 맞는 위험 바닥
@@ -69,8 +66,14 @@ const HAZARD = { 1: ['heatVent', 'heatstroke'], 2: ['sparkBox', 'shock'], 3: ['p
   6: ['sandPile', 'blur'], 7: ['icePatch', 'slip'], 8: ['poisonPool', 'poison'] };
 const LOOT_PROPS = { crate: { hp: 6, r: 14 }, bin: { hp: 4, r: 11 }, seat: { hp: 8, r: 14 }, barrel: { hp: 3, r: 12 } };
 function placeProps(s, rng, line) {
-  if (s.carType === 'boss') return;
-  const n = 3 + rng.int(3), taken = [];
+  if (s.carType === 'boss') { s.layout = 'gate'; return; }
+  const n = 3 + rng.int(3), taken = [], mid = (Y0 + Y1) / 2;
+  // 칸마다 배치가 다르다: 손잡이 기둥 칸, 짐 바리케이드 칸, 천장이 무너진 칸, 평범한 객실
+  s.layout = s.carType === 'hazard' ? 'debris' : rng.pick(['seats', 'poles', 'barricade', 'debris']);
+  const add = (kind, x, y, o = {}) => { taken.push({ x, y }); s.props.push({ uid: s.nextId++, kind, x, y, solid: true, ...o }); };
+  if (s.layout === 'poles') [0.3, 0.5, 0.7].forEach((k, i) => add('pole', Math.round(CAR_W * k), mid + (i % 2 ? 34 : -34), { r: 6 }));
+  else if (s.layout === 'barricade') { const bx = Math.round(rng.range(230, 300)); for (const y of [Y0 + 24, mid + 6, Y1 - 14]) add('crate', bx + rng.range(-8, 8), y, { hp: 6, maxHp: 6, r: 14 }); }
+  else if (s.layout === 'debris') for (let i = 0; i < 2; i++) add('rubble', Math.round(rng.range(160, CAR_W - 120)), Math.round(rng.range(Y0 + 30, Y1 - 20)), { r: 18 });
   const spot = () => { for (let k = 0; k < 20; k++) { const x = rng.range(110, CAR_W - 50), y = rng.range(Y0 + 18, Y1 - 6);
     if (taken.every(t => Math.hypot(t.x - x, t.y - y) > 44)) { taken.push({ x, y }); return { x, y }; } } return { x: rng.range(110, CAR_W - 50), y: rng.range(Y0 + 18, Y1 - 6) }; };
   for (let i = 0; i < n; i++) {
@@ -106,6 +109,6 @@ export function updateCar(s, rng) {
       const got = [rng.pick(mats), rng.pick(mats)]; for (const m of got) s.gained.materials[m] = (s.gained.materials[m] || 0) + 1; s.events.push({ type: 'reward', materials: got, parts: 3 }); }
     if (s.player.jobId === 'ecologist') s.player.energy = Math.min(s.player.maxEnergy, s.player.energy + 30);
   }
-  if (s.doorOpen && s.player.x >= CAR_W - 30 && !s.done) s.done = 'cleared';
+  if (s.doorOpen && s.player.x >= CAR_W + GANGWAY_IN && !s.done) s.done = 'cleared';
 }
 export { TICK_HZ };

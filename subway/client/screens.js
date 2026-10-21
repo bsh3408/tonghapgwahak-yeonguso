@@ -1,5 +1,5 @@
 // 화면 흐름: 제목 → 직업 고르기 → 노선 고르기 → 칸 진행(짐칸) → 개찰구 보스 → 환승 통로(연구 노트·정비소) → … → 탈출/쓰러짐
-import { game, startCar } from './main.js';
+import { game, startCar, goFullscreen } from './main.js';
 import { drawPlayer } from './render.js';
 import { setHud, updateHud, showTip, pushEvents } from './hud.js';
 import { saveCheckpoint, loadCheckpoint, clearCheckpoint, mergeCodex, loadCodex, resumePlan } from './save.js';
@@ -17,6 +17,10 @@ import { lab, connectLab, equippedRelics, serverCodex, finishRunOnServer, refres
 
 const card = () => document.getElementById('screenCard'), screen = document.getElementById('screen');
 let run = null, lineData = null, notes = null;
+// 시험판 주소 뒤 ?test=boss(보스방 확인) / ?test=reward(스테이지 보상 확인). 연구소(로그인)에서는 꺼진다
+const testMode = () => lab.online ? null : new URLSearchParams(location.search).get('test');
+const TEST_NAME = { boss: '보스방 확인', reward: '스테이지 보상 확인' };
+const LAYOUT_NAME = { seats: '객실', poles: '손잡이 기둥 칸', barricade: '짐 바리케이드 칸', debris: '천장이 무너진 칸' };
 
 // 받침이 있으면 앞, 없으면 뒤 조사
 export const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1); return w + ((c - 0xac00) % 28 > 0 && c >= 0xac00 && c <= 0xd7a3 ? a : b); };
@@ -51,12 +55,13 @@ function title() {
   game.paused = true; game.state = null;
   const c = loadCheckpoint();
   show(`<h1>🚇 지하철 노선 탈출</h1><p>기후 위기로 무너진 도시. 1~9호선을 환승하며 빠져나가자. 몬스터와 재난이 일으키는 상태 이상은 <b>과학으로 대비</b>해야 막을 수 있다.</p>
-    <p>이동 WASD·방향키 · 공격 마우스 왼쪽(가까운 적 자동 조준) · 스킬 마우스 오른쪽 · 달리기 왼쪽 Shift(달리는 동안은 공격 못 함) · 무기 바꾸기 Q · 소모품 E · 멈춤 Esc · 화면 오른쪽 아래 버튼으로도 할 수 있다</p>
+    <p>이동 WASD·방향키 · 공격 마우스 왼쪽(가까운 적 자동 조준, 상자에 붙으면 총으로 후려침) · 스킬 마우스 오른쪽 · 달리기 왼쪽 Shift(달리는 동안은 방어막이 차지 않음) · 무기 바꾸기 Q · 소모품 E · 멈춤 Esc · 화면 버튼으로도 할 수 있다</p>
+    ${TEST_NAME[testMode()] ? `<p style="color:var(--acc)">🧪 시험 모드: ${TEST_NAME[testMode()]}</p>` : ''}
     ${lab.online ? `<p>👤 ${esc(lab.student.name)} · 🪙 코인 ${lab.state?.coins ?? 0} · 장착 유물: ${equippedRelics().map(r => RELICS[r]?.name).filter(Boolean).join(', ') || '없음 (역무실 「유물 뽑기」에서 장착)'}</p>` : ''}
     <div class="row">${c ? `<button class="btn" id="cont">이어 하기 (${c.phase === 'choose' ? `노선 ${c.run.lineIndex + 1}/9 고르기` : `${LINES[c.lineData.line].name} ${c.phase === 'transfer' ? '환승 통로' : c.carIndex >= c.lineData.cars.length ? '개찰구' : (c.carIndex + 1) + '칸'}`})</button>` : ''}<button class="btn ${c ? 'ghost' : ''}" id="new">새로 시작</button><button class="btn ghost" id="codex">도감</button>${lab.online ? '<button class="btn ghost" id="home">🏢 역무실로</button>' : ''}</div>`);
   on('#home', () => { location.href = '../shinjang_science.html'; });
   on('#new', () => { clearCheckpoint(); jobSelect(); });
-  on('#cont', () => resume(c));
+  on('#cont', () => { goFullscreen(); resume(c); });
   on('#codex', codexScreen);
 }
 function resume(c) {
@@ -103,7 +108,14 @@ function lineChoice() {
   on('[data-line]', el => startLine(+el.dataset.line));
 }
 function startLine(n) {
+  goFullscreen();
   run.line = n; lineData = generateLine(run, n);
+  if (testMode() === 'boss') { run.parts += 30; return playCar(lineData.cars.length); }
+  if (testMode() === 'reward') {   // 짧은 칸 하나 → 짐칸 → 환승 통로(연구 노트·강화·정비소). 재료와 부품을 넉넉히 준다
+    run.parts += 60; for (const k of Object.keys(MATERIALS)) if (k !== 'waterBottle') run.materials[k] = (run.materials[k] || 0) + 6;
+    const c0 = lineData.cars[0], g = c0.waves.flat()[0]; c0.type = 'cabin'; c0.waves = [[{ monster: g.monster, count: 1 }]];
+    lineData.cars[1] = { index: 1, type: 'cargo', waves: [], seed: c0.seed + 1 };
+  }
   const L = LINES[n];
   showTip(`🚇 ${L.name} · ${L.theme}<br><small>${L.hazardName}: 숨겨진 칸 장치를 고치면 재난이 사라진다(준비 중)</small>`, 4);
   playCar(0);
@@ -116,15 +128,17 @@ function playCar(i) {
   if (car && car.type === 'cargo') { saveCheckpoint(run, lineData, i, 'cargo'); return cargo(i); }
   saveCheckpoint(run, lineData, i, 'car');
   if (i >= lineData.cars.length) showTip(`🎫 승강장으로 나와 개찰구에 도착했다. ${lineData.boss.name}!`, 4);
-  hide(); startCar(enterCar(run, lineData, i));
+  hide(); const st = enterCar(run, lineData, i); startCar(st);
+  if (i < lineData.cars.length && i > 0) showTip(`🚃 ${i + 1}칸 · ${LAYOUT_NAME[st.layout] || '객실'}${st.carType === 'hazard' ? ' · ⚠️ 위험 칸' : ''}`, 2);
 }
 function cargo(i) {
   const loot = openCargo(run, lineData, i);
   show(`<h2>📦 짐칸: 보급 상자</h2><p>무기 2개 중 1개를 고른다(이미 가진 무기면 ★이 오른다). 재료도 챙겼다: ${matText(loot.materials)}</p>
     <div class="grid">${loot.weapons.map(id => { const w = WEAPONS[id], own = run.weapons.find(x => x.id === id); return `<button class="opt" data-w="${id}"><b>${w.name}${own ? ` ★${own.star} → ★${Math.min(3, own.star + 1)}` : ''}</b><small>${{ gun: '쏘기', melee: '휘두르기', throw: '던지기', beam: '줄기 뿜기' }[w.type]} · 피해 ${w.dmg[0]} · 에너지 ${w.energy ?? w.energyPerSec + '/초'}</small></button>`; }).join('')}</div>
     <p>무기는 2개까지 들 수 있다. 꽉 찼으면 지금 든 무기(${WEAPONS[run.weapons[run.weapon].id].name})와 바뀐다.</p><div class="row"><button class="btn ghost" id="skip">무기는 두고 가기</button></div>`);
-  on('[data-w]', el => { takeCargo(run, loot, el.dataset.w); playCar(i + 1); });
-  on('#skip', () => { takeCargo(run, loot, null); playCar(i + 1); });
+  const after = () => testMode() === 'reward' ? transfer('note') : playCar(i + 1);
+  on('[data-w]', el => { takeCargo(run, loot, el.dataset.w); after(); });
+  on('#skip', () => { takeCargo(run, loot, null); after(); });
 }
 function onCarEnd(s) {
   const wasBoss = s.carType === 'boss';
@@ -204,7 +218,8 @@ async function victory() { show(`<h1>🎉 탈출 성공!</h1><p>기록을 저장
   show(`<h1>🎉 탈출 성공!</h1><p>${josa(JOBS[run.jobId].name, '으로', '로')} 9개 노선을 모두 지나 도시를 빠져나왔다.</p><p>${summary()}</p>${msg}<div class="row"><button class="btn" id="t">처음 화면으로</button></div>`); on('#t', title); }
 function pause() {
   game.paused = true;
-  show(`<h2>⏸ 멈춤</h2><p>칸 도중에 나가면 그 칸 처음부터 다시 한다(적 구성은 같다).</p><div class="row"><button class="btn" id="c">계속하기</button><button class="btn ghost" id="q">처음 화면으로</button></div>`);
+  show(`<h2>⏸ 멈춤</h2><p>칸 도중에 나가면 그 칸 처음부터 다시 한다(적 구성은 같다).</p><div class="row"><button class="btn" id="c">계속하기</button><button class="btn ghost" id="fs">⛶ 전체 화면</button><button class="btn ghost" id="q">처음 화면으로</button></div>`);
+  on('#fs', () => goFullscreen());
   on('#c', () => { hide(); game.paused = false; });
   on('#q', title);
 }

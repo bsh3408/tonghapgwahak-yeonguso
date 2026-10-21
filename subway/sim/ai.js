@@ -97,7 +97,14 @@ function normalAI(s, m, rng) {
   let sp = m.speed * (m.slowT > 0 ? 1 - (m.slowPct || 0.5) : 1) * (m.howlT > 0 ? 1.5 : 1);
   let tx = dx / dist, ty = dy / dist;
   if (m.stun > 0) sp = 0;
-  if (m.flee) { tx = -tx; ty = -ty; sp *= 1.1; }
+  if (m.flee) {
+    m.wpT = (m.wpT ?? 0) - DT;
+    if (!m.wp || m.wpT <= 0 || Math.hypot(m.wp.x - m.x, m.wp.y - m.y) < 12) {
+      let best = null; for (let k = 0; k < 6; k++) { const c = { x: rng.range(30, CAR_W - 30), y: rng.range(Y0 + 6, Y1 - 6) }; if (Math.hypot(c.x - p.x, c.y - p.y) > 120 && Math.hypot(c.x - m.x, c.y - m.y) > 60) { best = c; break; } best ||= c; }
+      m.wp = best; m.wpT = 1.4;
+    }
+    const wx = m.wp.x - m.x, wy = m.wp.y - m.y, wl = Math.hypot(wx, wy) || 1; tx = wx / wl; ty = wy / wl; sp *= 1.1;
+  }
   else if (m.retreat > 0) { m.retreat -= DT; tx = -tx; ty = -ty; }
   else if (d.kind === 'ranged') {
     m.cd -= DT;
@@ -132,7 +139,7 @@ function normalAI(s, m, rng) {
   if (m.carrying?.weapon && s.tick - m.stoleAt > 10 * TICK_HZ) { m.gone = true; m.escaped = true; s.events.push({ type: 'escaped', uid: m.uid }); return; }
   if (d.kind !== 'ranged' && !m.flee && dist < 30) sp = 0;
   m.x = clampX(m.x + tx * sp * DT + m.kx); m.y = clampY(m.y + ty * sp * DT + m.ky); m.kx *= 0.8; m.ky *= 0.8;
-  if (Math.abs(dx) > 2) m.face = (m.flee ? -dx : dx) > 0 ? 1 : -1;
+  if (Math.abs(dx) > 2) m.face = (m.flee ? tx : dx) > 0 ? 1 : -1;
   // 몸이 닿으면 공격(몬스터마다 1초에 한 번, 칸이 진행될수록 빨라짐)
   if (d.kind !== 'ranged' || d.gas) {
     m.touchCd = (m.touchCd ?? 0) - DT;

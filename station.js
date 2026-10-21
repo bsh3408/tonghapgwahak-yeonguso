@@ -130,7 +130,30 @@ function record() {
 
 const OPEN = { notes, gacha: () => gacha(), codex, rank, record };
 document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => OPEN[b.dataset.open]());
-$('goBtn').onclick = () => { location.href = 'subway/index.html'; };
+// 첫 화면: 승강장에 선 전동차. 「출발」을 누르면 전동차가 옆으로 달려 나가고 게임이 시작된다
+const cv = $('stationCv'), cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
+const IMG = {}; let trainX = null, trainV = 0, leaving = false, t0 = performance.now(), lastT = null;
+const loadImg = n => new Promise(r => { const i = new Image(); i.onload = () => r(IMG[n] = i); i.onerror = () => r(null); i.src = `subway/assets/subway/${n}.png`; });
+Promise.all(['platform', 'platform_front', 'train'].map(loadImg)).then(() => requestAnimationFrame(drawStation));
+function drawStation(now) {
+  const t = (now - t0) / 1000, dt = Math.min(0.05, lastT === null ? 0 : (now - lastT) / 1000), P = IMG.platform, F = IMG.platform_front, T = IMG.train; lastT = now;
+  if (!P || !T) return;
+  if (trainX === null) trainX = (640 - T.width) / 2;
+  if (leaving) { trainV += 420 * dt; trainX += trainV * dt; }   // 점점 빨라지며 오른쪽으로
+  const shake = leaving ? Math.round((Math.random() - .5) * Math.min(3, trainV / 120)) : 0;
+  cx.drawImage(P, 0, 0);
+  const ty = 258 - T.height + (leaving ? 0 : Math.round(Math.sin(t * 2) * 0.5));
+  cx.drawImage(T, Math.round(trainX), ty + shake);
+  if (leaving) { cx.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 14; i++) cx.fillRect((i * 97 + t * 900) % 640, 140 + (i * 37) % 120, 30 + trainV / 20, 1); }
+  if (F) cx.drawImage(F, 0, 0);
+  cx.fillStyle = `rgba(255,236,170,${0.06 + 0.04 * Math.sin(t * 7)})`; cx.fillRect(0, 0, 640, 40);   // 깜박이는 천장 불빛
+  if (leaving && trainX > 660) { cx.fillStyle = '#000'; cx.fillRect(0, 0, 640, 360); location.href = 'subway/index.html'; return; }
+  requestAnimationFrame(drawStation);
+}
+function depart() { if (leaving) return; leaving = true; trainV = 20; $('goBtn').disabled = true; $('goBtn').textContent = '출발합니다…';
+  if (!IMG.train) location.href = 'subway/index.html';
+  setTimeout(() => { location.href = 'subway/index.html'; }, 2500); }   // 그림이 멈춰 있어도 2.5초 뒤에는 출발
+$('goBtn').onclick = depart; cv.onclick = depart;
 $('logoutBtn').onclick = logout;
 
 window.LAB_ON_LOGIN = async () => {

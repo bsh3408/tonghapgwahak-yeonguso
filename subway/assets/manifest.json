@@ -771,5 +771,58 @@
     "mons/b_looterA_3.png"
    ]
   }
+ },
+ "subway": {
+  "meta": {
+   "wall": {
+    "w": 353,
+    "h": 59,
+    "stripeY": 35
+   },
+   "bench": {
+    "w": 232,
+    "h": 45
+   },
+   "handles": {
+    "w": 216,
+    "h": 30
+   },
+   "doorClosed": {
+    "w": 78,
+    "h": 73
+   },
+   "doorOpen": {
+    "w": 87,
+    "h": 73
+   },
+   "endDoor": {
+    "w": 44,
+    "h": 76
+   },
+   "floor": {
+    "w": 58,
+    "h": 64
+   },
+   "platform": {
+    "w": 640,
+    "h": 360,
+    "trackY": 256,
+    "frontY": 270
+   },
+   "train": {
+    "w": 427,
+    "h": 102
+   }
+  },
+  "wall": "subway/wall.png",
+  "bench": "subway/bench.png",
+  "handles": "subway/handles.png",
+  "doorClosed": "subway/doorClosed.png",
+  "doorOpen": "subway/doorOpen.png",
+  "endDoor": "subway/endDoor.png",
+  "floor": "subway/floor.png",
+  "platform": "subway/platform.png",
+  "platform_front": "subway/platform_front.png",
+  "train": "subway/train.png"
  }
 }

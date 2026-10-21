@@ -9,6 +9,8 @@ import { GEAR, MATERIALS } from './data/gear.js';
 import { WEAPONS } from './data/weapons.js';
 import { createCarState } from './car.js';
 import { gainWeapon } from './combat.js';
+import { MODS, MOD_COST } from './data/mods.js';
+import { LEGENDS, LEGEND_CHANCE } from './data/legends.js';
 import { applyRelics } from './jobs.js';
 
 export function createRun({ seed, jobId, relicIds }) {
@@ -17,7 +19,7 @@ export function createRun({ seed, jobId, relicIds }) {
     seed: seed >>> 0, jobId, relics: [...relicIds],
     lineIndex: 0, visited: [], line: null, carIndex: 0,
     hp: j.hp, maxHp: j.hp, shield: j.shield, maxShield: j.shield, energy: j.energy, maxEnergy: j.energy,
-    weapons: [{ id: j.startWeapon, star: 1 }, { id: 'slingshot', star: 1 }], weapon: 0,
+    weapons: [{ id: j.startWeapon, star: 1 }, { id: 'slingshot', star: 1 }], weapon: 0, mods: {}, legends: [],
     gear: { head: null, body: null, feet: null },
     items: [], itemSlots: ITEM_SLOTS + (j.traits.includes('extraItemSlot') ? 1 : 0),
     materials: {}, parts: 0, meters: { infection: 0, heat: 0 },
@@ -100,7 +102,7 @@ export function enterCar(run, lineData, i) {
 
 export function finishCar(run, s) {
   const p = s.player;
-  Object.assign(run, { hp: p.hp, shield: p.shield, maxShield: p.maxShield, energy: p.energy, weapons: p.weapons.map(w => ({ ...w })), weapon: p.weapon,
+  Object.assign(run, { mods: { ...(p.mods || {}) }, legends: [...(p.legends || [])], hp: p.hp, shield: p.shield, maxShield: p.maxShield, energy: p.energy, weapons: p.weapons.map(w => ({ ...w })), weapon: p.weapon,
     gear: { ...p.gear }, items: [...p.items], meters: { infection: p.meters.infection, heat: 0 } });
   for (const [k, v] of Object.entries(s.gained.materials)) run.materials[k] = (run.materials[k] || 0) + v;
   run.parts = Math.max(0, run.parts + s.gained.parts);
@@ -145,9 +147,15 @@ export function researchNote(run, question, answerIndex) {
   const rng = createRng(run.seed).fork('note' + run.noteCount);
   const pool = [{ kind: 'maxHp', text: '최대 체력 +1' }, { kind: 'maxShield', text: '최대 방어막 +1' }, { kind: 'maxEnergy', text: '최대 에너지 +30' }, { kind: 'parts', text: '부품 +6' }, { kind: 'heal', text: '체력 모두 회복' }];
   for (const w of run.weapons) if (w.star < 3) pool.push({ kind: 'star', weapon: w.id, text: `${WEAPONS[w.id].name} ★${w.star + 1}` });
+  // 공통 무기 강화도 2개 섞는다(아직 최대가 아닌 것 중에서)
+  const openMods = Object.values(MODS).filter(m => ((run.mods || {})[m.id] || 0) < m.max);
+  for (let k = 0; k < 2 && openMods.length; k++) { const m = openMods.splice(rng.int(openMods.length), 1)[0], lv = ((run.mods || {})[m.id] || 0) + 1; pool.push({ kind: 'mod', mod: m.id, text: `🔧 ${m.name} ${lv}단계: ${m.text(lv)}` }); }
   const items = Object.keys(CONSUMABLES); pool.push({ kind: 'item', item: rng.pick(items) });
   const pick = []; while (pick.length < 3 && pool.length) pick.push(pool.splice(rng.int(pool.length), 1)[0]);
   for (const u of pick) if (u.kind === 'item') u.text = `${CONSUMABLES[u.item].name} 1개`;
+  // 운이 좋으면(20%) 마지막 칸에 아직 없는 전설 강화가 뜬다
+  const lf = Object.values(LEGENDS).filter(l => !(run.legends || []).includes(l.id));
+  if (lf.length && rng.chance(LEGEND_CHANCE)) { const l = rng.pick(lf); pick[pick.length - 1] = { kind: 'legend', legend: l.id, text: `🌟 전설: ${l.icon} ${l.name}: ${l.text}` }; }
   return { correct, forgiven: forgive, upgrades: pick };
 }
 export function applyUpgrade(run, u) {
@@ -159,6 +167,8 @@ export function applyUpgrade(run, u) {
     case 'heal': run.hp = run.maxHp; break;
     case 'star': { const w = run.weapons.find(x => x.id === u.weapon); if (w) w.star = Math.min(3, w.star + 1); break; }
     case 'item': if (run.items.length < run.itemSlots) run.items.push(u.item); break;
+    case 'legend': { run.legends ||= []; if (!run.legends.includes(u.legend)) run.legends.push(u.legend); break; }
+    case 'mod': { run.mods ||= {}; run.mods[u.mod] = Math.min(MODS[u.mod].max, (run.mods[u.mod] || 0) + 1); break; }
   }
 }
 
@@ -193,4 +203,12 @@ export function upgradeWeapon(run, slot) {
 // 연구 노트 문제는 판의 씨앗값과 지난 노선 수로 정한다(새로고침해도 같은 문제: 되돌려 다시 풀기 방지)
 export function pickNote(run, questions) {
   return createRng(run.seed).fork('noteQ' + run.visited.length).int(questions.length);
+}
+
+// 공통 무기 강화 올리기(정비소). 1단계 6, 2단계 12, 3단계 20 부품
+export function upgradeMod(run, id) {
+  run.mods ||= {};
+  const lv = (run.mods[id] || 0) + 1, M = MODS[id];
+  if (!M || lv > M.max || run.parts < MOD_COST[lv]) return false;
+  run.parts -= MOD_COST[lv]; run.mods[id] = lv; return true;
 }

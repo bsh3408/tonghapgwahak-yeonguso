@@ -14,7 +14,7 @@ function playerFrom(run) {
     x: 60, y: (Y0 + Y1) / 2, vx: 0, vy: 0, face: 1, aim: 0,
     jobId: run.jobId, relics: run.relics,
     hp: run.hp, maxHp: run.maxHp, shield: run.shield, maxShield: run.maxShield, energy: run.energy, maxEnergy: run.maxEnergy,
-    weapons: run.weapons.map(w => ({ ...w })), weapon: run.weapon, gear: { ...run.gear }, items: [...run.items], itemSlots: run.itemSlots,
+    weapons: run.weapons.map(w => ({ ...w })), weapon: run.weapon, mods: { ...(run.mods || {}) }, legends: [...(run.legends || [])], quickT: 0, gear: { ...run.gear }, items: [...run.items], itemSlots: run.itemSlots,
     meters: { ...run.meters }, status: {}, baseShield: run.maxShield, cool: 0, recoil: 0, swing: 0, sinceHit: 99, regen: 0, skillCd: 0, beam: false,
     attackHeld: false, swapHeld: false, itemHeld: false, skillHeld: false,
   };
@@ -46,15 +46,16 @@ export function createCarState(run, lineData, carIndex, opts = {}) {
 }
 
 function spawnWave(s, rng) {
-  const wave = s.waves[s.waveIndex++];
+  const wave = s.waves[s.waveIndex++], opened = [];
   const p = s.player;
   let doors = SIDE_DOORS.filter(x => Math.abs(x - p.x) >= 150 && Math.abs(x - p.x) <= 650);
   if (!doors.length) doors = SIDE_DOORS;
   for (const g of wave) {
     const dx = rng.pick(doors), top = rng.chance(0.5);
     for (let i = 0; i < g.count; i++) spawnMon(s, g.monster, dx + rng.range(-24, 24), top ? Y0 : Y1);
+    opened.push({ x: dx, top });
   }
-  s.events.push({ type: 'wave', index: s.waveIndex });
+  s.events.push({ type: 'wave', index: s.waveIndex, doors: opened });
 }
 
 // 웨이브와 연결문. 매 틱 step에서 부른다

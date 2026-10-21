@@ -44,6 +44,11 @@ export async function loadAssets(manifest, urlOf = p => p) {
     A.mons[k] = { run: (await Promise.all(m.run.map(L))).map(i => pair(toCanvas(i))) };
     if (m.atk) A.mons[k].atk = (await Promise.all(m.atk.map(L))).map(i => pair(toCanvas(i)));
   }));
+  // 지하철 객실·승강장·전동차
+  if (manifest.subway) {
+    const { meta, ...files } = manifest.subway; A.subway = { meta };
+    await Promise.all(Object.entries(files).map(async ([k, p]) => { A.subway[k] = toCanvas(await L(p)); }));
+  }
   // 도둑 너구리: 너구리 그림에 빛나는 테두리
   A.mons.thief = { run: A.mons.raccoon.run.map(f => pair(glowOf(f.s))) };
   return A;

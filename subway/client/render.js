@@ -14,26 +14,46 @@ const THEME = {
   7: { wall: '#3c4a56', floor: '#a9b8c4', seat: '#4a6a7a' }, 8: { wall: '#334036', floor: '#6f7f60', seat: '#4f6a3a' }, 9: { wall: '#3a4150', floor: '#8a8574', seat: '#5d7a52' },
 };
 const bgCache = {};
-function carBackground(line, boss) {
+// 노선 색(실제 서울 지하철 노선 색을 따름): 벽의 띠에 칠한다
+export const LINE_COLOR = { 1: '#0052A4', 2: '#00A84D', 3: '#EF7C1C', 4: '#00A5DE', 5: '#996CAC', 6: '#CD7C2F', 7: '#747F00', 8: '#E6186C', 9: '#BDB092' };
+// 객실 배경: AI로 그린 객실 부품(벽·의자·손잡이·출입문·바닥)을 이어 붙인다. 출입문은 그 위에 따로 그려서 여닫는다
+function carBackground(line, boss, A) {
   const key = line + (boss ? 'b' : '');
   if (bgCache[key]) return bgCache[key];
-  const T = THEME[line] || THEME[9], c = document.createElement('canvas'); c.width = CAR_W; c.height = VIEW_H; const x = c.getContext('2d');
-  let seed = line * 97; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  x.fillStyle = T.wall; x.fillRect(0, 0, CAR_W, 80); x.fillStyle = 'rgba(0,0,0,.2)'; x.fillRect(0, 0, CAR_W, 6);
+  const S = A.subway, M = S.meta, c = document.createElement('canvas'); c.width = CAR_W; c.height = VIEW_H; const x = c.getContext('2d');
+  x.fillStyle = '#1d2026'; x.fillRect(0, 0, CAR_W, VIEW_H);
+  for (let X = 0; X < CAR_W; X += M.floor.w) for (let Y = 100; Y < 300; Y += M.floor.h) x.drawImage(S.floor, X, Y);
   if (boss) { // 개찰구: 벽 대신 개찰기 줄
-    for (let i = 0; i < 16; i++) { const gx = 40 + i * 100; x.fillStyle = '#9aa1ab'; x.fillRect(gx, 30, 30, 46); x.fillStyle = '#5a6070'; x.fillRect(gx + 4, 34, 22, 10); x.fillStyle = i % 3 ? '#7fd87f' : '#d85a4a'; x.fillRect(gx + 12, 50, 6, 6); }
+    T_GATES(x);
   } else {
-    for (let i = 0; i < 16; i++) { const wx = 28 + i * 100; x.fillStyle = '#8b93a0'; x.fillRect(wx - 4, 12, 68, 44); x.fillStyle = '#1b2533'; x.fillRect(wx, 16, 60, 36); x.fillStyle = '#2c3a4d'; x.fillRect(wx + 6, 20, 3, 28); }
-    for (let i = 0; i < 31; i++) { const hx = 20 + i * 52; x.fillStyle = '#9aa1ab'; x.fillRect(hx, 60, 2, 8); x.fillRect(hx - 3, 68, 8, 2); x.fillRect(hx - 3, 68, 2, 6); x.fillRect(hx + 3, 68, 2, 6); x.fillRect(hx - 3, 72, 8, 2); }
+    const wy = 100 - 22 - M.wall.h;   // 벽 아래로 의자가 22칸 들어간다
+    x.fillStyle = '#2a2d33'; x.fillRect(0, 0, CAR_W, wy + 2); x.fillStyle = '#e8e2c8'; for (let X = 30; X < CAR_W; X += 120) x.fillRect(X, 6, 60, 3);
+    for (let X = -40; X < CAR_W; X += M.wall.w) x.drawImage(S.wall, X, wy);
+    x.fillStyle = LINE_COLOR[line] || '#888'; x.fillRect(0, wy + M.wall.stripeY - 1, CAR_W, 3);
+    for (let X = 10; X < CAR_W; X += M.handles.w + 20) x.drawImage(S.handles, X, wy - 6);
+    for (let X = 0; X < CAR_W; X += M.bench.w) x.drawImage(S.bench, X, 100 - M.bench.h + 6);
+    // 가까운 쪽(아래): 의자 등받이와 벽 아랫부분
+    x.save(); x.translate(0, 300 + M.bench.h - 6); x.scale(1, -1); for (let X = -60; X < CAR_W; X += M.bench.w) x.drawImage(S.bench, X, 0); x.restore();
+    x.fillStyle = '#25282e'; x.fillRect(0, 300 + M.bench.h - 6, CAR_W, VIEW_H); x.fillStyle = LINE_COLOR[line] || '#888'; x.fillRect(0, 338, CAR_W, 3);
+    x.drawImage(S.endDoor, 0, 100 - M.endDoor.h); x.drawImage(S.endDoor, CAR_W - M.endDoor.w, 100 - M.endDoor.h);
   }
-  x.fillStyle = T.seat; x.fillRect(0, 80, CAR_W, 20); x.fillRect(0, 300, CAR_W, 20); x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(0, 96, CAR_W, 4); x.fillRect(0, 300, CAR_W, 4);
-  x.fillStyle = T.floor; x.fillRect(0, 100, CAR_W, 200);
-  x.fillStyle = 'rgba(0,0,0,.08)'; for (let X = 0; X < CAR_W; X += 32) x.fillRect(X, 100, 1, 200); for (let Y = 100; Y < 300; Y += 32) x.fillRect(0, Y, CAR_W, 1);
-  for (let i = 0; i < 400; i++) { x.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.08)'; x.fillRect(rnd() * CAR_W | 0, 102 + rnd() * 196 | 0, 1 + rnd() * 3 | 0, 1); }
-  for (let i = 0; i < 24; i++) { const mx = rnd() * CAR_W | 0, my = 120 + rnd() * 160 | 0; x.fillStyle = 'rgba(90,110,60,.6)'; x.fillRect(mx, my, 8, 3); x.fillRect(mx + 2, my - 2, 4, 2); }
-  x.fillStyle = '#2e333d'; x.fillRect(0, 320, CAR_W, 40);
-  if (!boss) for (const dx of SIDE_DOORS) for (const y of [80, 300]) { x.fillStyle = '#6f7682'; x.fillRect(dx - 22, y, 44, 20); x.fillStyle = '#4a505c'; x.fillRect(dx - 1, y, 2, 20); x.fillStyle = '#c8b040'; x.fillRect(dx - 22, y + (y === 80 ? 17 : 0), 44, 3); }
   bgCache[key] = c; return c;
+}
+function T_GATES(x) {
+  x.fillStyle = '#3a4150'; x.fillRect(0, 0, CAR_W, 100); x.fillStyle = '#2e333d'; x.fillRect(0, 300, CAR_W, 60);
+  for (let i = 0; i < 11; i++) { const gx = 40 + i * 92; x.fillStyle = '#9aa1ab'; x.fillRect(gx, 30, 30, 70); x.fillStyle = '#5a6070'; x.fillRect(gx + 4, 34, 22, 10); x.fillStyle = i % 3 ? '#7fd87f' : '#d85a4a'; x.fillRect(gx + 12, 50, 6, 6); }
+}
+// 출입문(위·아래): 웨이브가 들어올 때 그 문만 잠깐 열린다
+function drawDoors(x, s, A, camX, fx) {
+  if (s.carType === 'boss') return;
+  const S = A.subway, M = S.meta;
+  for (const dx of SIDE_DOORS) for (const top of [true, false]) {
+    const open = fx.doorOpen?.(dx, top), img = open ? S.doorOpen : S.doorClosed, w = open ? M.doorOpen.w : M.doorClosed.w;
+    const X = Math.round(dx - camX - w / 2);
+    if (X > VIEW_W || X + w < 0) continue;
+    if (top) x.drawImage(img, X, 100 - img.height + 4);
+    else { x.save(); x.translate(X, 300 - 4); x.drawImage(img, 0, 0, img.width, 60, 0, 0, img.width, 60); x.restore(); }
+  }
 }
 
 const rot = (x, y, a) => ({ x: x * Math.cos(a) - y * Math.sin(a), y: x * Math.sin(a) + y * Math.cos(a) });
@@ -79,16 +99,20 @@ const ICON = { infection: '🦠', acidBurn: '🔥', poison: '☠️', wet: '💧
 
 // 화면 효과(불꽃·연기 등). 상태와 따로 클라이언트에서만 움직인다
 export function createFx() {
-  const parts = [], rings = [];
+  const parts = [], rings = [], doors = new Map(), zaps = [];
   const puff = (x, y, col, n, sp, sz = 2) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = sp * (0.4 + Math.random() * 0.6); parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.25 + Math.random() * 0.3, col, sz: sz + (Math.random() < 0.4) }); } };
   return {
-    parts, rings,
+    parts, rings, zaps,
+    doorOpen: (x, top) => (doors.get(x + (top ? 't' : 'b')) || 0) > 0,
     feed(s) {
       for (const e of s.events) {
         if (e.type === 'hit') { const m = s.mons.find(o => o.uid === e.uid); if (m) { const h = HIT_FX[e.weapon] || HIT_FX._; puff(m.x, m.y - 14, h[0], h[1], h[2], h[3]); } }
         else if (e.type === 'kill') { puff(e.x, e.y - 14, '#6e5a4a', 14, 100); puff(e.x, e.y - 14, '#d9d4c4', 6, 60); this.shake = Math.max(this.shake || 0, 3); }
         else if (e.type === 'boom') { rings.push({ x: e.x, y: e.y, r: e.r, t: 0.3 }); puff(e.x, e.y, '#f2efe6', 16, 120, 3); this.shake = Math.max(this.shake || 0, 4); }
         else if (e.type === 'hurt') this.shake = Math.max(this.shake || 0, 3);
+        else if (e.type === 'zap') zaps.push({ ...e, t: 0.15 });
+        else if (e.type === 'bounce') puff(e.x, e.y, '#ffffff', 3, 50);
+        else if (e.type === 'wave') for (const d of e.doors || []) doors.set(d.x + (d.top ? 't' : 'b'), 1.6);
       }
     },
     update(dt) {
@@ -96,6 +120,8 @@ export function createFx() {
       for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1);
       for (const r of rings) r.t -= dt; for (let i = rings.length - 1; i >= 0; i--) if (rings[i].t <= 0) rings.splice(i, 1);
       this.shake = Math.max(0, (this.shake || 0) - dt * 16);
+      for (const [k, v] of doors) doors.set(k, v - dt);
+      for (const z of zaps) z.t -= dt; for (let i = zaps.length - 1; i >= 0; i--) if (zaps[i].t <= 0) zaps.splice(i, 1);
     },
   };
 }
@@ -150,7 +176,8 @@ export function drawCar(x, s, A, fx, t) {
   const camX = Math.round(cameraX(s)), p = s.player;
   x.save();
   if (fx.shake > 0) x.translate(Math.round((Math.random() - 0.5) * fx.shake), Math.round((Math.random() - 0.5) * fx.shake));
-  x.drawImage(carBackground(s.line, s.carType === 'boss'), camX, 0, VIEW_W, VIEW_H, 0, 0, VIEW_W, VIEW_H);
+  x.drawImage(carBackground(s.line, s.carType === 'boss', A), camX, 0, VIEW_W, VIEW_H, 0, 0, VIEW_W, VIEW_H);
+  drawDoors(x, s, A, camX, fx);
   // 연결문: 잠기면 빨강, 열리면 초록
   if (s.carType !== 'boss') { const dx = CAR_W - camX - 12; x.fillStyle = '#6f7682'; x.fillRect(dx, 100, 12, 200); x.fillStyle = s.doorOpen ? '#5ad86a' : '#d85a4a'; x.fillRect(dx + 3, 190, 6, 20);
     x.fillStyle = '#6f7682'; x.fillRect(-camX, 100, 12, 200); }
@@ -169,6 +196,9 @@ export function drawCar(x, s, A, fx, t) {
     drawShot(x, sh, X, t);
   }
   for (const e of s.eshots) { x.fillStyle = '#2a1a14'; x.fillRect(Math.round(e.x - camX) - 3, Math.round(e.y) - 3, 6, 6); x.fillStyle = e.electric ? '#7fd8ff' : e.col || '#ddd'; x.fillRect(Math.round(e.x - camX) - 2, Math.round(e.y) - 2, 4, 4); }
+  // 연쇄 번개: 맞은 적에서 옆 적으로 튀는 지그재그 선
+  for (const z of fx.zaps) { x.strokeStyle = '#bfefff'; x.lineWidth = 2; x.beginPath(); x.moveTo(z.x1 - camX, z.y1);
+    for (let i = 1; i < 5; i++) { const k = i / 5; x.lineTo(z.x1 + (z.x2 - z.x1) * k - camX + (i % 2 ? 4 : -4), z.y1 + (z.y2 - z.y1) * k); } x.lineTo(z.x2 - camX, z.y2); x.stroke(); }
   for (const q of fx.parts) { x.globalAlpha = Math.min(1, q.life * 4); x.fillStyle = q.col; x.fillRect(Math.round(q.x - camX), Math.round(q.y), q.sz, q.sz); } x.globalAlpha = 1;
   x.restore();
   drawEnv(x, s, camX, t);

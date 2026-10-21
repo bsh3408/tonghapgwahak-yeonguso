@@ -30,7 +30,10 @@ button{font:inherit;cursor:pointer}
 .top h1{margin:0;font-size:20px}.top h1 small{color:var(--sub);font-size:13px;font-weight:600;margin-left:6px}
 .pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pill{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-size:13px;white-space:nowrap}
-.hero{margin-top:14px;border-radius:14px;padding:18px;background:linear-gradient(135deg,#2c3a52,#232833);border:1px solid #3d4a62;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.hero{margin-top:14px;border-radius:14px;overflow:hidden;background:#111;border:1px solid #3d4a62}
+#stationCv{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+.heroBar{padding:14px 16px;background:linear-gradient(135deg,#2c3a52,#232833);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.loginwrap{background:linear-gradient(rgba(12,14,18,.55),rgba(12,14,18,.75)),url(subway/assets/subway/platform.png) center/cover no-repeat;image-rendering:pixelated}
 .hero .t{flex:1;min-width:220px}.hero h2{margin:0 0 4px;font-size:21px}.hero p{margin:4px 0;color:#c8c2b2;font-size:13.5px;line-height:1.5}
 .hero .go{font-size:18px;padding:14px 26px}
 .menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:14px}
@@ -92,12 +95,15 @@ tr.me td{color:var(--acc);font-weight:700}
     <div class="pills"><span class="pill" id="who"></span><span class="pill" id="coinPill">🪙 -</span><button class="pill" id="logoutBtn">로그아웃</button></div>
   </div>
   <div class="hero">
+    <canvas id="stationCv" width="640" height="360" aria-label="승강장에 선 전동차"></canvas>
+    <div class="heroBar">
     <div class="t">
       <h2>🚇 지하철 노선 탈출</h2>
       <p>기후 위기로 무너진 도시를 1~9호선을 따라 빠져나가자. 몬스터와 재난이 일으키는 상태 이상은 과학으로 대비해야 막을 수 있다.</p>
       <p id="heroInfo"></p>
     </div>
     <button class="btn go" id="goBtn">출발</button>
+    </div>
   </div>
   <div class="menu">
     <button class="mi" data-open="notes"><b>📓 연구 노트실</b><small>2학기 단원 평가(객관식·서술형). 처음 맞히면 코인을 받는다. 2회 수행평가 점수에 들어간다.</small></button>

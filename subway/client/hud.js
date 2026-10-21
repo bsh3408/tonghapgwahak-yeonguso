@@ -6,6 +6,8 @@ import { GEAR } from '../sim/data/gear.js';
 import { CONSUMABLES } from '../sim/data/consumables.js';
 import { LINES } from '../sim/data/lines.js';
 import { TICK_HZ } from '../sim/constants.js';
+import { MODS } from '../sim/data/mods.js';
+import { LEGENDS } from '../sim/data/legends.js';
 
 const $ = id => document.getElementById(id);
 const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1); return w + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 > 0 ? a : b); };
@@ -32,7 +34,8 @@ export function updateHud(s, run, dt) {
   const L = LINES[s.line], where = s.carType === 'boss' ? `${L.name} 개찰구` : `${L.name} ${s.carIndex + 1}칸`;
   $('where').textContent = `${where} · 노선 ${run.lineIndex + 1}/9`;
   const w = p.weapons[p.weapon] || p.weapons[0];
-  $('weaponChip').textContent = `${WEAPONS[w.id].name} ★${w.star}${p.weapons.length > 1 ? ' (Q 바꾸기)' : ''}`;
+  const mods = Object.entries(p.mods || {}).filter(([, v]) => v).map(([k, v]) => `${MODS[k].name.replace(/ 강화$/, '')}${v}`).join(' ');
+  $('weaponChip').textContent = `${WEAPONS[w.id].name} ★${w.star}${p.weapons.length > 1 ? ' (Q 바꾸기)' : ''}${mods ? ' · 🔧' + mods : ''}${(p.legends || []).length ? ' · 🌟' + p.legends.map(l => LEGENDS[l].icon + LEGENDS[l].name).join(' ') : ''}`;
   const sk = JOBS[p.jobId].skill;
   $('skillChip').textContent = p.skillCd > 0 ? `${sk.name} ${Math.ceil(p.skillCd / TICK_HZ)}초` : `${sk.name} 준비 (K)`;
   $('itemChip').textContent = p.items.length ? `소모품: ${p.items.map(i => CONSUMABLES[i].name).join(', ')} (E)` : '소모품 없음';

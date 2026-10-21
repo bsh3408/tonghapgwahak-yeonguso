@@ -3,7 +3,8 @@ import { game, startCar } from './main.js';
 import { drawPlayer } from './render.js';
 import { setHud, updateHud, showTip, pushEvents } from './hud.js';
 import { saveCheckpoint, loadCheckpoint, clearCheckpoint, mergeCodex, loadCodex, resumePlan } from './save.js';
-import { createRun, generateLine, offerLines, enterCar, finishCar, finishLine, openCargo, takeCargo, researchNote, pickNote, applyUpgrade, gearCost, craftGear, craftItem, upgradeWeapon, UPGRADE_COST } from '../sim/run.js';
+import { createRun, generateLine, offerLines, enterCar, finishCar, finishLine, openCargo, takeCargo, researchNote, pickNote, applyUpgrade, gearCost, craftGear, craftItem, upgradeWeapon, UPGRADE_COST, upgradeMod } from '../sim/run.js';
+import { MODS, MOD_COST } from '../sim/data/mods.js';
 import { JOBS, JOB_ORDER, TRAIT_TEXT, SKILL_TEXT } from '../sim/data/jobs.js';
 import { WEAPONS } from '../sim/data/weapons.js';
 import { LINES } from '../sim/data/lines.js';
@@ -166,12 +167,14 @@ function upgradePick(x) {
 function shop(tab = 'gear') {
   const known = loadCodex().gear, info = id => run.showGearInfo ? gearFunction(id) : known.includes(id) ? `도감: ${gearFunction(id)}` : '무엇을 막아 줄까? 재료의 성질로 추리해 보자';
   const worn = Object.entries(run.gear).map(([sl, g]) => `${SLOT_NAME[sl]} ${g ? GEAR[g].name : '없음'}`).join(' · ');
-  const tabs = `<div class="row"><button class="btn ${tab === 'gear' ? '' : 'ghost'}" data-t="gear">장비 만들기</button><button class="btn ${tab === 'item' ? '' : 'ghost'}" data-t="item">소모품 만들기</button><button class="btn ${tab === 'weapon' ? '' : 'ghost'}" data-t="weapon">무기 강화</button></div>`;
+  const tabs = `<div class="row"><button class="btn ${tab === 'gear' ? '' : 'ghost'}" data-t="gear">장비 만들기</button><button class="btn ${tab === 'item' ? '' : 'ghost'}" data-t="item">소모품 만들기</button><button class="btn ${tab === 'weapon' ? '' : 'ghost'}" data-t="weapon">★ 등급 올리기</button><button class="btn ${tab === 'mod' ? '' : 'ghost'}" data-t="mod">🔧 무기 강화</button></div>`;
   let body = '';
   if (tab === 'gear') body = `<div class="grid">${Object.entries(GEAR).map(([id, g]) => { const cost = gearCost(run, id), ok = Object.entries(cost).every(([k, v]) => (run.materials[k] || 0) >= v);
     return `<button class="opt ${ok ? '' : 'dis'}" data-g="${id}"><b>${g.name} · ${SLOT_NAME[g.slot]}${run.gear[g.slot] === id ? ' (착용 중)' : ''}</b><small>재료: ${matText(cost)}<br>${info(id)}</small></button>`; }).join('')}</div>`;
   if (tab === 'item') body = `<p>소모품 ${run.items.length}/${run.itemSlots}: ${run.items.map(i => CONSUMABLES[i].name).join(', ') || '없음'}</p><div class="grid">${Object.entries(ITEM_RECIPES).map(([id, r]) => { const ok = run.items.length < run.itemSlots && Object.entries(r).every(([k, v]) => (run.materials[k] || 0) >= v);
     return `<button class="opt ${ok ? '' : 'dis'}" data-i="${id}"><b>${CONSUMABLES[id].name}</b><small>재료: ${matText(r)}<br>고치는 것: ${CONSUMABLES[id].cures.map(c => STATUS[c].name).join(', ')}</small></button>`; }).join('')}</div>`;
+  if (tab === 'mod') body = `<p>무기 강화는 들고 있는 <b>모든 무기에 함께</b> 적용된다. 부품 ${run.parts}개 (1단계 ${MOD_COST[1]}개, 2단계 ${MOD_COST[2]}개, 3단계 ${MOD_COST[3]}개)</p><div class="grid">${Object.values(MODS).map(m => { const lv = (run.mods || {})[m.id] || 0, max = lv >= m.max, c = MOD_COST[lv + 1], ok = !max && run.parts >= c;
+    return `<button class="opt ${ok ? '' : 'dis'}" data-mod="${m.id}"><b>🔧 ${m.name} ${'■'.repeat(lv)}${'□'.repeat(m.max - lv)}</b><small>${lv ? `지금: ${m.text(lv)}<br>` : ''}${max ? '최고 단계' : `${lv + 1}단계: ${m.text(lv + 1)} · 부품 ${c}개`}</small></button>`; }).join('')}</div>`;
   if (tab === 'weapon') body = `<p>부품 ${run.parts}개 (★2 ${UPGRADE_COST[2]}개, ★3 ${UPGRADE_COST[3]}개)</p><div class="grid">${run.weapons.map((w, i) => { const c = UPGRADE_COST[w.star + 1], ok = w.star < 3 && run.parts >= c;
     return `<button class="opt ${ok ? '' : 'dis'}" data-wu="${i}"><b>${WEAPONS[w.id].name} ★${w.star}</b><small>${w.star >= 3 ? '최고 단계' : `★${w.star + 1}로 강화: 부품 ${c}개 · 피해 ${WEAPONS[w.id].dmg[w.star - 1]} → ${WEAPONS[w.id].dmg[w.star]}`}</small></button>`; }).join('')}</div>`;
   show(`<h2>🔧 정비소 (환승 통로)</h2><p>가진 재료: ${haveText()} · 부품 ${run.parts}</p><p>지금 장비: ${worn}</p>${tabs}${body}<div class="row"><button class="btn" id="next">다음 노선 고르기</button></div>`);
@@ -179,6 +182,7 @@ function shop(tab = 'gear') {
   on('[data-g]', el => { if (craftGear(run, el.dataset.g)) showTip(`🧵 ${josa(GEAR[el.dataset.g].name, '을', '를')} 만들어 입었다`, 2); shop('gear'); });
   on('[data-i]', el => { if (craftItem(run, el.dataset.i)) showTip(`🧪 ${josa(CONSUMABLES[el.dataset.i].name, '을', '를')} 만들었다`, 2); shop('item'); });
   on('[data-wu]', el => { upgradeWeapon(run, +el.dataset.wu); shop('weapon'); });
+  on('[data-mod]', el => { if (upgradeMod(run, el.dataset.mod)) showTip(`🔧 ${MODS[el.dataset.mod].name} ${run.mods[el.dataset.mod]}단계`, 2); shop('mod'); });
   on('#next', () => transfer('choose'));
 }
 

@@ -6,7 +6,7 @@ import { saveCheckpoint, loadCheckpoint, clearCheckpoint, mergeCodex, loadCodex,
 import { createRun, generateLine, offerLines, enterCar, finishCar, finishLine, openCargo, takeCargo, researchNote, pickNote, applyUpgrade, gearCost, craftGear, craftItem, upgradeWeapon, UPGRADE_COST, upgradeMod, craftWeapon, WEAPON_RECIPES } from '../sim/run.js';
 import { MODS, MOD_COST } from '../sim/data/mods.js';
 import { JOBS, JOB_ORDER, TRAIT_TEXT, SKILL_TEXT } from '../sim/data/jobs.js';
-import { WEAPONS } from '../sim/data/weapons.js';
+import { WEAPONS, tierOf, TIER } from '../sim/data/weapons.js';
 import { LINES } from '../sim/data/lines.js';
 import { STATUS } from '../sim/data/status.js';
 import { GEAR, MATERIALS, SLOT_NAME } from '../sim/data/gear.js';
@@ -128,13 +128,18 @@ function playCar(i) {
   if (car && car.type === 'cargo') { saveCheckpoint(run, lineData, i, 'cargo'); return cargo(i); }
   saveCheckpoint(run, lineData, i, 'car');
   if (i >= lineData.cars.length) showTip(`🎫 승강장으로 나와 개찰구에 도착했다. ${lineData.boss.name}!`, 4);
-  hide(); const st = enterCar(run, lineData, i); startCar(st);
+  hide(); const st = enterCar(run, lineData, i); startCar(st); carMap(i);
   if (i < lineData.cars.length && i > 0) showTip(`🚃 ${i + 1}칸 · ${LAYOUT_NAME[st.layout] || '객실'}${st.carType === 'hazard' ? ' · ⚠️ 위험 칸' : ''}`, 2);
+}
+function carMap(i) {
+  const el = document.getElementById('carMap'); if (!el) return;
+  const icon = c => ({ cabin: '🚃', hazard: '⚠️', cargo: '📦', cab: '🚃' }[c.type] || '🚃');
+  el.innerHTML = lineData.cars.map((c, k) => `<span class="${k === i ? 'now' : k < i ? 'done' : ''}">${icon(c)}</span>`).join('') + `<span class="${i >= lineData.cars.length ? 'now' : ''}">👑</span>`;
 }
 function cargo(i) {
   const loot = openCargo(run, lineData, i);
   show(`<h2>📦 짐칸: 보급 상자</h2><p>무기 2개 중 1개를 고른다(이미 가진 무기면 ★이 오른다). 재료도 챙겼다: ${matText(loot.materials)}</p>
-    <div class="grid">${loot.weapons.map(id => { const w = WEAPONS[id], own = run.weapons.find(x => x.id === id); return `<button class="opt" data-w="${id}"><b>${w.name}${own ? ` ★${own.star} → ★${Math.min(3, own.star + 1)}` : ''}</b><small>${{ gun: '쏘기', melee: '휘두르기', throw: '던지기', beam: '줄기 뿜기' }[w.type]} · 피해 ${w.dmg[0]} · 에너지 ${w.energy ?? w.energyPerSec + '/초'}</small></button>`; }).join('')}</div>
+    <div class="grid">${loot.weapons.map(id => { const w = WEAPONS[id], own = run.weapons.find(x => x.id === id); return `<button class="opt" data-w="${id}"><b style="color:${TIER[tierOf(id)].col}">[${TIER[tierOf(id)].name}] ${w.name}${own ? ` ★${own.star} → ★${Math.min(3, own.star + 1)}` : ''}</b><small>${{ gun: '쏘기', melee: '휘두르기', throw: '던지기', beam: '줄기 뿜기' }[w.type]} · 피해 ${w.dmg[0]} · 에너지 ${w.energy ?? w.energyPerSec + '/초'}</small></button>`; }).join('')}</div>
     <p>무기는 2개까지 들 수 있다. 꽉 찼으면 지금 든 무기(${WEAPONS[run.weapons[run.weapon].id].name})와 바뀐다.</p><div class="row"><button class="btn ghost" id="skip">무기는 두고 가기</button></div>`);
   const after = () => testMode() === 'reward' ? transfer('note') : playCar(i + 1);
   on('[data-w]', el => { takeCargo(run, loot, el.dataset.w); after(); });
@@ -188,7 +193,7 @@ function shop(tab = 'gear') {
   if (tab === 'item') body = `<p>소모품 ${run.items.length}/${run.itemSlots}: ${run.items.map(i => CONSUMABLES[i].name).join(', ') || '없음'}</p><div class="grid">${Object.entries(ITEM_RECIPES).map(([id, r]) => { const ok = run.items.length < run.itemSlots && Object.entries(r).every(([k, v]) => (run.materials[k] || 0) >= v);
     return `<button class="opt ${ok ? '' : 'dis'}" data-i="${id}"><b>${CONSUMABLES[id].name}</b><small>재료: ${matText(r)}<br>고치는 것: ${CONSUMABLES[id].cures.map(c => STATUS[c].name).join(', ')}</small></button>`; }).join('')}</div>`;
   if (tab === 'make') body = `<p>무기는 2개까지 들 수 있다. 꽉 차 있으면 지금 든 무기(${WEAPONS[run.weapons[run.weapon].id].name})와 바뀐다. 부품 ${run.parts}개</p><div class="grid">${Object.entries(WEAPON_RECIPES).map(([id, r]) => { const w = WEAPONS[id], ok = run.parts >= r.parts && Object.entries(r).every(([k, v]) => k === 'parts' || (run.materials[k] || 0) >= v);
-    return `<button class="opt ${ok ? '' : 'dis'}" data-make="${id}"><b>${w.rare ? '💎 ' : ''}${w.name}</b><small>${{ gun: '쏘기', melee: '휘두르기', throw: '던지기', beam: '줄기' }[w.type]} · 피해 ${w.dmg[0]}${w.range ? ' · 사거리 ' + w.range : ''}<br>부품 ${r.parts} + ${matText(Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'parts')))}</small></button>`; }).join('')}</div>`;
+    return `<button class="opt ${ok ? '' : 'dis'}" data-make="${id}"><b style="color:${TIER[tierOf(id)].col}">[${TIER[tierOf(id)].name}] ${w.name}</b><small>${{ gun: '쏘기', melee: '휘두르기', throw: '던지기', beam: '줄기' }[w.type]} · 피해 ${w.dmg[0]}${w.range ? ' · 사거리 ' + w.range : ''}<br>부품 ${r.parts} + ${matText(Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'parts')))}</small></button>`; }).join('')}</div>`;
   if (tab === 'mod') body = `<p>무기 강화는 들고 있는 <b>모든 무기에 함께</b> 적용된다. 부품 ${run.parts}개 (1단계 ${MOD_COST[1]}개, 2단계 ${MOD_COST[2]}개, 3단계 ${MOD_COST[3]}개)</p><div class="grid">${Object.values(MODS).map(m => { const lv = (run.mods || {})[m.id] || 0, max = lv >= m.max, c = MOD_COST[lv + 1], ok = !max && run.parts >= c;
     return `<button class="opt ${ok ? '' : 'dis'}" data-mod="${m.id}"><b>🔧 ${m.name} ${'■'.repeat(lv)}${'□'.repeat(m.max - lv)}</b><small>${lv ? `지금: ${m.text(lv)}<br>` : ''}${max ? '최고 단계' : `${lv + 1}단계: ${m.text(lv + 1)} · 부품 ${c}개`}</small></button>`; }).join('')}</div>`;
   if (tab === 'weapon') body = `<p>부품 ${run.parts}개 (★2 ${UPGRADE_COST[2]}개, ★3 ${UPGRADE_COST[3]}개)</p><div class="grid">${run.weapons.map((w, i) => { const c = UPGRADE_COST[w.star + 1], ok = w.star < 3 && run.parts >= c;

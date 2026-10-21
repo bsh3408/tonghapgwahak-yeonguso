@@ -1,6 +1,6 @@
 // 화면 위 정보(체력·방어막·에너지, 상태 이상, 지금 노선·무기·스킬·소모품)와 아래 안내 한 줄
 import { STATUS } from '../sim/data/status.js';
-import { WEAPONS } from '../sim/data/weapons.js';
+import { WEAPONS, tierOf, TIER } from '../sim/data/weapons.js';
 import { JOBS } from '../sim/data/jobs.js';
 import { GEAR } from '../sim/data/gear.js';
 import { CONSUMABLES } from '../sim/data/consumables.js';
@@ -36,7 +36,7 @@ export function updateHud(s, run, dt) {
   const w = p.weapons[p.weapon] || p.weapons[0];
   const mods = Object.entries(p.mods || {}).filter(([, v]) => v).map(([k, v]) => `${MODS[k].name.replace(/ 강화$/, '')}${v}`).join(' ');
   $('weaponChip').textContent = `${WEAPONS[w.id].name} ★${w.star}${p.weapons.length > 1 ? ' (Q 바꾸기)' : ''}${mods ? ' · 🔧' + mods : ''}${(p.legends || []).length ? ' · 🌟' + p.legends.map(l => LEGENDS[l].icon + LEGENDS[l].name).join(' ') : ''}`;
-  $('wslot').innerHTML = p.weapons.map((x, i) => `${i === p.weapon ? '▶ ' : ''}${WEAPONS[x.id].name} ★${x.star}`).join('<br>');
+  $('wslot').innerHTML = p.weapons.map((x, i) => `${i === p.weapon ? '▶ ' : ''}<span style="color:${TIER[tierOf(x.id)].col}">${WEAPONS[x.id].name}</span> ★${x.star}`).join('<br>');
   const sb = $('skillBtn'); if (sb) { sb.textContent = JOBS[p.jobId].skill.name; if (p.skillCd > 0) sb.dataset.cd = Math.ceil(p.skillCd / TICK_HZ); else delete sb.dataset.cd; }
   const sk = JOBS[p.jobId].skill;
   $('skillChip').textContent = p.skillCd > 0 ? `${sk.name} ${Math.ceil(p.skillCd / TICK_HZ)}초` : `${sk.name} 준비 (K)`;
@@ -47,6 +47,7 @@ export function updateHud(s, run, dt) {
     else if (e.type === 'gearBlocked' && GEAR[e.gear]) showTip(`🛡️ ${josa(GEAR[e.gear].name, '이', '가')} ${josa(e.status === 'melee' ? '근접 피해' : STATUS[e.status]?.name || '', '을', '를')} 막았다! 도감에 기록했다`, 3);
     else if (e.type === 'door') showTip('🚪 연결문이 열렸다. 오른쪽 끝으로 가자', 3);
     else if (e.type === 'reward') showTip(`📦 칸 보상: 부품 ${e.parts}개, 재료 ${e.materials.length}개`, 3);
+    else if (e.type === 'enrage') showTip('⚠️ 보스가 격노했다! 더 빠르고 자주 공격한다', 3);
     else if (e.type === 'returned') showTip('🎒 빼앗긴 무기를 되찾았다', 3);
     else if (e.type === 'escaped') showTip('🦝 도둑 너구리가 무기를 가지고 달아났다', 3);
     else if (e.type === 'phase') showTip(`🌏 약탈자 두목이 ${STATUS[e.status].name} 재난을 불러왔다`, 3);

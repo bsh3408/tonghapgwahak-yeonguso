@@ -31,6 +31,9 @@ export const WEAPONS = {
   sticky:   { name: '점착 폭탄 발사기', type: 'gun', rare: true, range: 300, dmg: [16, 22, 28], rate: 1, energy: 3, speed: 380, size: 5, sticky: 1, blast: 44, extra: { 2: {}, 3: { blast: 54 } } },
 };
 for (const [id, w] of Object.entries(WEAPONS)) w.id = id;
+const JOB_WEAPONS = ['sprayer', 'coil', 'cool', 'lime', 'crossbow', 'flash'];
+export function tierOf(id) { const w = WEAPONS[id]; if (w.rare) return 3; if (JOB_WEAPONS.includes(id)) return 2; if (['slingshot', 'pipe', 'water'].includes(id)) return 0; return 1; }
+export const TIER = [{ name: '기본', col: '#e8e8e8' }, { name: '일반', col: '#6ad07a' }, { name: '고급', col: '#5aa8f0' }, { name: '희귀', col: '#c07af0' }];
 export const RARE_WEAPONS = Object.keys(WEAPONS).filter(k => WEAPONS[k].rare);
 // 별(★)에 맞춘 값 하나를 꺼낸다: 기본값 위에 ★2, ★3의 extra를 차례로 덮어쓴다
 export function weaponStat(id, star) {

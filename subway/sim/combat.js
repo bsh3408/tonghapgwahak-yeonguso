@@ -182,6 +182,19 @@ export function damageProp(s, o, dmg, rng) {
   else if (o.kind === 'crate') { give(r.pick(MATS)); give(r.pick(MATS)); s.gained.parts += 1; }
   else if (o.kind === 'bin') { give(r.pick(MATS)); if (r.chance(0.3)) s.gained.parts += 1; }
   else if (o.kind === 'seat') { give(r.pick(['cloth', 'vinyl'])); give(r.pick(['scrap', 'string'])); }
+  else if (o.kind === 'co2Ext') {   // 이산화 탄소 소화기: 산소를 막고 식혀서 불·열 바닥을 끄고, 차가운 가스에 적이 느려진다
+    s.events.push({ type: 'boom', x: o.x, y: o.y - o.r, r: 60, kind: 'co2' });
+    s.zones = s.zones.filter(z => z.friendly || Math.hypot(z.x - o.x, z.y - o.y) > 60 + z.r || !(z.src === 'env' || ['fire', 'acid', 'gas', 'cloud'].includes(z.kind)));
+    s.props = s.props.filter(q => !(q.hazard && Math.hypot(q.x - o.x, q.y - o.y) < 60 + q.r));
+    for (const m of alive(s)) if (Math.hypot(m.x - o.x, m.y - o.y) < 60 + monRadius(m)) { m.slowT = Math.max(m.slowT, 3); m.slowPct = Math.max(m.slowPct || 0, 0.5); } }
+  else if (o.kind === 'battery') {   // 배터리 상자: 전기가 터져 주변을 감전시킨다(젖어 있으면 더 위험)
+    s.events.push({ type: 'boom', x: o.x, y: o.y - o.r, r: 55, kind: 'electric' });
+    for (const m of alive(s)) if (Math.hypot(m.x - o.x, m.y - o.y) < 55 + monRadius(m)) damageMon(s, m, 6, { weapon: 'battery', electric: true, stun: 1.2 });
+    if (Math.hypot(s.player.x - o.x, s.player.y - o.y) < 55) (s.pending ||= []).push({ status: 'shock', source: 'battery', strength: 1, tick: s.tick }); }
+  else if (o.kind === 'coolant') {   // 냉매통: 액체가 기화하며 열을 빼앗아 주변이 얼어붙는다
+    s.events.push({ type: 'boom', x: o.x, y: o.y - o.r, r: 55, kind: 'ice' });
+    for (const m of alive(s)) if (Math.hypot(m.x - o.x, m.y - o.y) < 55 + monRadius(m)) { m.stun = Math.max(m.stun, 2); s.events.push({ type: 'freeze', uid: m.uid }); }
+    s.zones.push({ kind: 'ice', status: 'slip', x: o.x, y: o.y, r: 40, t: 4 * TICK_HZ, src: 'coolant' }); }
   else if (o.kind === 'barrel') { s.events.push({ type: 'boom', x: o.x, y: o.y - o.r, r: 50 });
     for (const m of alive(s)) if (Math.hypot(m.x - o.x, m.y - o.y) < 50 + monRadius(m)) damageMon(s, m, 10, { weapon: 'barrel', kx: Math.sign(m.x - o.x) * 8 });
     if (Math.hypot(s.player.x - o.x, s.player.y - o.y) < 50) damagePlayer(s, 1, { kind: 'barrel' }); }
@@ -191,6 +204,8 @@ export function hitProps(s, x, y, r, dmg, rng) { for (const o of [...s.props]) i
 
 function resolveSwing(s) {
   const p = s.player, st = withMods(p, weaponStat(p.swingStat, p.swingStar)), reach = st.reach * (st.reachMul || 1) * st.areaMul, c = chest(p);
+  const before = s.eshots.length; s.eshots = s.eshots.filter(e => !(Math.hypot(e.x - c.x, e.y - c.y) < reach + 10 && Math.abs(angDiff(Math.atan2(e.y - c.y, e.x - c.x), p.aim)) < (st.arc || 1.4) + 0.2));
+  if (s.eshots.length < before) s.events.push({ type: 'parry', n: before - s.eshots.length, x: c.x + Math.cos(p.aim) * 30, y: c.y + Math.sin(p.aim) * 30 });
   for (const m of alive(s)) {
     const b = monCenter(m), d = Math.hypot(b.x - c.x, b.y - c.y), a = Math.atan2(b.y - c.y, b.x - c.x);
     if (d < reach + monRadius(m) && Math.abs(angDiff(a, p.aim)) < (st.arc || 1.4)) {
@@ -240,7 +255,7 @@ export function updateShots(s, rng) {
         if (--sh.pierce <= 0) { sh.dead = true; break; }
       }
     }
-    if (!sh.dead && sh.fuse === undefined) for (const o of s.props) if (o.hp !== undefined && !o.broken && Math.hypot(sh.x - o.x, sh.y - (o.y - o.r)) < o.r + sh.size) { damageProp(s, o, sh.dmg, rng); if (--sh.pierce <= 0) { sh.dead = true; break; } }
+    if (!sh.dead && sh.fuse === undefined) for (const o of s.props) if (o.hp !== undefined && !o.broken && o.kind !== 'seat' && Math.hypot(sh.x - o.x, sh.y - (o.y - o.r)) < o.r + sh.size) { damageProp(s, o, sh.dmg, rng); if (--sh.pierce <= 0) { sh.dead = true; break; } }
     if (!sh.dead && sh.sticky && sh.life <= 1) { sh.fuse = TICK_HZ; sh.vx = 0; sh.vy = 0; sh.life = 99; continue; }
     const outX = sh.x < 12 || sh.x > CAR_W - 12, outY = sh.y < Y0 - 40 || sh.y > 320;
     if (outX || outY) {

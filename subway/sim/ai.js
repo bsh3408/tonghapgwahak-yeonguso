@@ -5,6 +5,7 @@ import { BOSSES } from './data/bosses.js';
 import { MATERIALS } from './data/gear.js';
 import { damagePlayer, damageMon, monCenter, monRadius, chest } from './combat.js';
 
+const WIND = 0.45;   // 원거리 몬스터가 쏘기 전 조준하는 시간(공격 예고)
 const clampX = x => Math.max(12, Math.min(CAR_W - 12, x)), clampY = y => Math.max(Y0, Math.min(Y1, y));
 const MATS = Object.keys(MATERIALS).filter(k => k !== 'waterBottle');
 
@@ -111,10 +112,8 @@ function normalAI(s, m, rng) {
     if (d.gas) { if (dist < d.range + 20 && m.cd <= 0) { m.cd = 3.5; addZone(s, { kind: 'gas', status: 'confusion', x: m.x, y: m.y, r: 44, t: 3 * TICK_HZ, dps: 1, src: m.id }); } }
     else {
       if (dist < d.range * 0.6) { tx = -tx; ty = -ty; } else if (dist < d.range) sp = 0;
-      if (dist < d.range + 40 && m.cd <= 0 && m.stun <= 0) {
-        if (d.shot.burst) { m.burst = d.shot.burst; m.burstT = 0; } else shoot(s, m, d, rng);
-        m.cd = 2.2 / s.diff.atkSpeedMul;
-      }
+      if (m.windT > 0) { sp = 0; m.windT -= DT; if (m.windT <= 0) { if (d.shot.burst) { m.burst = d.shot.burst; m.burstT = 0; } else shoot(s, m, d, rng); m.cd = 2.2 / s.diff.atkSpeedMul; } }
+      else if (dist < d.range + 40 && m.cd <= 0 && m.stun <= 0) { m.windT = WIND; s.events.push({ type: 'aim', uid: m.uid }); }   // 쏘기 전에 조준선으로 미리 알린다
       if (m.burst > 0 && --m.burstT <= 0) { shoot(s, m, d, rng); m.burst--; m.burstT = 4; }
     }
   } else if (d.special === 'ambush' && !m.awake) { sp = 0; if (dist < 90) { m.awake = true; m.speed *= 2; } }
@@ -123,7 +122,8 @@ function normalAI(s, m, rng) {
     m.dashCd = (m.dashCd ?? 1.5) - DT;
     if (m.dash > 0) { m.dash -= DT; sp = m.speed * 4 * (m.enraged ? 1.5 : 1); tx = Math.cos(m.dashA); ty = Math.sin(m.dashA);
       if (m.x <= 14 || m.x >= CAR_W - 14) { m.dash = 0; m.stun = 2; } }
-    else if (m.dashCd <= 0 && dist < 260) { m.dash = 0.7; m.dashA = Math.atan2(dy, dx); m.dashCd = 3; }
+    else if (m.windT > 0) { sp = 0; m.windT -= DT; if (m.windT <= 0) { m.dash = 0.7; m.dashCd = 3; } }
+    else if (m.dashCd <= 0 && dist < 260) { m.windT = 0.4; m.dashA = Math.atan2(dy, dx); s.events.push({ type: 'aim', uid: m.uid }); }   // 웅크렸다가 돌진
   } else if (d.special === 'tongue') {
     m.tongueCd = (m.tongueCd ?? 2) - DT;
     if (m.tongueCd <= 0 && dist < 150) { m.tongueCd = 3; p.x -= (dx / dist) * 40; p.y = clampY(p.y - (dy / dist) * 20); inflict(s, 'wet', { source: m.id }); s.events.push({ type: 'tongue', uid: m.uid }); }
@@ -150,6 +150,7 @@ function normalAI(s, m, rng) {
 function bossAI(s, m, rng) {
   const p = s.player, B = BOSSES[m.line], dx = p.x - m.x, dy = p.y - m.y, dist = Math.hypot(dx, dy) || 1;
   let sp = m.stun > 0 ? 0 : m.speed * (m.slowT > 0 ? 1 - (m.slowPct || 0.5) : 1);
+  if (!m.enraged2 && m.hp < m.maxHp / 2) { m.enraged2 = true; m.speed *= 1.25; s.events.push({ type: 'enrage', uid: m.uid }); }
   m.atkCd -= DT;
   if (m.dash > 0) {
     m.dash -= DT; m.x = clampX(m.x + Math.cos(m.dashA) * m.speed * 4 * DT); m.y = clampY(m.y + Math.sin(m.dashA) * m.speed * 4 * DT);
@@ -161,7 +162,7 @@ function bossAI(s, m, rng) {
   if (m.atkT > 0) {
     m.atkT--; sp = 0;
     if (!m.acted && m.atkT <= 7) { m.acted = true; bossAct(s, m, B, rng); }
-  } else if (m.atkCd <= 0 && dist < 340 && m.stun <= 0) { m.atkT = 15; m.acted = false; m.atkCd = 2.6 + rng.range(0, 0.8); }
+  } else if (m.atkCd <= 0 && dist < 340 && m.stun <= 0) { m.atkT = 15; m.acted = false; m.atkCd = (2.6 + rng.range(0, 0.8)) * (m.enraged2 ? 0.65 : 1); }
   if (dist < m.r + 20) sp = 0;
   m.x = clampX(m.x + (dx / dist) * sp * DT + m.kx); m.y = clampY(m.y + (dy / dist) * sp * DT + m.ky); m.kx *= 0.8; m.ky *= 0.8;
   if (Math.abs(dx) > 2) m.face = dx > 0 ? 1 : -1;

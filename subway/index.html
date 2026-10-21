@@ -26,6 +26,8 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
 #right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 #tip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);max-width:min(80vw,760px);background:rgba(20,22,26,.92);border:1px solid var(--acc);border-radius:8px;padding:8px 14px;font-size:clamp(14px,1.4vw,19px);pointer-events:none;opacity:0;transition:opacity .3s}
 #tip.on{opacity:1}
+#carMap{align-self:flex-start;display:flex;gap:4px;background:rgba(10,12,16,.72);border:2px solid rgba(255,255,255,.18);border-radius:12px;padding:4px 8px;font-size:clamp(14px,1.5vw,20px)}
+#carMap span{opacity:.45;padding:0 2px;border-radius:6px}#carMap span.done{opacity:.25;filter:grayscale(1)}#carMap span.now{opacity:1;background:rgba(224,176,74,.45)}
 #screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,11,13,.86);padding:16px;overflow:auto}
 #screen.on{display:flex}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:880px;width:100%;max-height:100%;overflow:auto}
@@ -65,6 +67,7 @@ canvas.pv{background:#3a4150;border-radius:6px;margin:0 auto 6px;width:96px;heig
     </div>
     <div class="chips" id="statusChips"></div>
   </div>
+  <div id="carMap"></div>
   <div id="right"><div class="chip" id="where"></div><div class="chip" id="weaponChip"></div><div class="chip" id="skillChip"></div><div class="chip" id="itemChip"></div></div>
 </div>
 <div id="tip"></div>

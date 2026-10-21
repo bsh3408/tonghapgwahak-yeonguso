@@ -76,7 +76,7 @@ export const LINE_OBSTACLE = {
   8: { kind: 'bush', name: '우거진 덤불', drops: ['string', 'leather'] },
   9: { kind: 'tireWall', name: '타이어 바리케이드', drops: ['rubber', 'scrap'] },
 };
-const LOOT_PROPS = { crate: { hp: 6, r: 14 }, bin: { hp: 4, r: 11 }, seat: { hp: 8, r: 14 }, barrel: { hp: 3, r: 12 } };
+const LOOT_PROPS = { crate: { hp: 6, r: 14 }, bin: { hp: 4, r: 11 }, seat: { hp: 8, r: 14 }, barrel: { hp: 3, r: 12 }, co2Ext: { hp: 3, r: 11 }, battery: { hp: 3, r: 11 }, coolant: { hp: 3, r: 11 } };
 function placeProps(s, rng, line) {
   if (s.carType === 'boss') { s.layout = 'gate'; return; }
   const n = 3 + rng.int(3), taken = [], mid = (Y0 + Y1) / 2;
@@ -89,7 +89,7 @@ function placeProps(s, rng, line) {
   const spot = () => { for (let k = 0; k < 20; k++) { const x = rng.range(110, CAR_W - 50), y = rng.range(Y0 + 18, Y1 - 6);
     if (taken.every(t => Math.hypot(t.x - x, t.y - y) > 44)) { taken.push({ x, y }); return { x, y }; } } return { x: rng.range(110, CAR_W - 50), y: rng.range(Y0 + 18, Y1 - 6) }; };
   for (let i = 0; i < n; i++) {
-    const kind = rng.pick(['crate', 'crate', 'bin', 'seat', 'barrel']), P = LOOT_PROPS[kind], p = spot();
+    const kind = rng.pick(['crate', 'crate', 'bin', 'seat', 'barrel', 'co2Ext', 'battery', 'coolant']), P = LOOT_PROPS[kind], p = spot();
     if (kind === 'seat') p.y = rng.chance(0.5) ? Y0 + 4 : Y1 - 2;   // 의자는 벽 쪽에 붙어 있다
     s.props.push({ uid: s.nextId++, kind, x: p.x, y: p.y, hp: P.hp, maxHp: P.hp, r: P.r, solid: true });
   }

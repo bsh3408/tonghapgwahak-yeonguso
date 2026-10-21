@@ -167,11 +167,15 @@ function drawMon(x, m, A, camX, s) {
   const atk = m.boss && m.atkT > 0 && set.atk, fr = atk ? set.atk : set.run;
   const fi = atk ? Math.min(3, Math.floor((1 - m.atkT / 15) * 4)) : m.stun > 0 ? 0 : Math.floor(m.t * (m.boss ? 7 : 10)) % fr.length;
   const F = fr[fi], img = m.flash > 0 ? F.w : F.s, X = Math.round(m.x - camX), Y = Math.round(m.y), base = set.run[0].s.width, lift = m.fly ? 22 + Math.round(Math.sin(m.t * 6) * 2) : 0;
+  if (m.elite) { const g = x.createRadialGradient(X, Y - 10, 4, X, Y - 10, base * 0.8); g.addColorStop(0, 'rgba(255,150,40,.45)'); g.addColorStop(1, 'rgba(255,120,30,0)'); x.fillStyle = g; x.fillRect(X - base, Y - 10 - base, base * 2, base * 2); }
   x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(X - base * 0.35, Y - 1, base * 0.7, 3);
   x.save(); x.translate(X, 0); if (m.face < 0) x.scale(-1, 1); x.drawImage(img, Math.round(base / 2 - img.width), Y - img.height - lift); x.restore();
   const top = Y - set.run[0].s.height - lift;
   if (m.stun > 0) { x.fillStyle = '#7fd8ff'; x.fillRect(X - 2, top - 6, 4, 4); }
+  if (m.windT > 0 || (m.boss && m.atkT > 0)) { x.font = 'bold 16px sans-serif'; x.textAlign = 'center'; x.lineWidth = 3; x.strokeStyle = '#000'; x.strokeText('!', X, top - 8); x.fillStyle = '#ff3a2a'; x.fillText('!', X, top - 8); }
   if (m.boss || m.elite) { const W = m.boss ? 80 : 40, hy = top - 8; x.fillStyle = '#1a1410'; x.fillRect(X - W / 2 - 1, hy - 1, W + 2, 5); x.fillStyle = m.boss ? '#d84a3a' : '#e0b04a'; x.fillRect(X - W / 2, hy, Math.max(0, W * m.hp / m.maxHp), 3); }
+  if (m.windT > 0 && !m.boss) { const p = s.player, a = MONSTERS[m.id]?.kind === 'ranged' ? Math.atan2(p.y - 24 - (Y - 20 - lift), p.x - camX - X) : m.dashA, L = MONSTERS[m.id]?.kind === 'ranged' ? 180 : 120;
+    x.save(); x.strokeStyle = `rgba(255,50,40,${0.35 + 0.4 * Math.abs(Math.sin(m.windT * 30))})`; x.lineWidth = 2; x.setLineDash([6, 4]); x.beginPath(); x.moveTo(X, Y - 20 - lift); x.lineTo(X + Math.cos(a) * L, Y - 20 - lift + Math.sin(a) * L); x.stroke(); x.restore(); }
   if (s.showInflict && MONSTERS[m.id]?.inflicts) { x.font = '10px sans-serif'; x.textAlign = 'center'; x.fillText(ICON[MONSTERS[m.id].inflicts.status] || '', X, top - 12); }
 }
 const STATUS_COL = { infection: '#a8e05a', acidBurn: '#ff8a3a', poison: '#c070e0', wet: '#7ec8ff', shock: '#ffe84a', blur: '#d8c890', confusion: '#ff80c0', slip: '#bfe8ff', fear: '#ffb0a0', heatstroke: '#ff6a3a', frostbite: '#a8d8ff', corrosion: '#c8e060' };
@@ -191,7 +195,9 @@ export function createFx() {
           const acc = (dot.get(m.uid) || 0) + e.amount; if (acc >= 1) { const v = Math.floor(acc); dot.set(m.uid, acc - v); nums.push({ x: m.x + (Math.random() - 0.5) * 26, y: m.y - (m.fly ? 30 : 0) - 2 * (m.r || 14) - 4 - Math.random() * 10, text: String(v), col: v >= 15 ? '#ffd04a' : '#ffffff', big: v >= 15, t: 0.7, T: 0.7 }); } else dot.set(m.uid, acc);
           if (e.amount >= 1 || Math.random() < 0.2) { const h = HIT_FX[e.weapon] || HIT_FX._; puff(m.x, m.y - 14, h[0], h[1], h[2], h[3]); } } }
         else if (e.type === 'kill') { puff(e.x, e.y - 14, '#6e5a4a', 14, 100); puff(e.x, e.y - 14, '#d9d4c4', 6, 60); this.shake = Math.max(this.shake || 0, 3); }
-        else if (e.type === 'boom') { rings.push({ x: e.x, y: e.y, r: e.r, t: 0.3 }); puff(e.x, e.y, '#f2efe6', 16, 120, 3); this.shake = Math.max(this.shake || 0, 4); }
+        else if (e.type === 'boom') { rings.push({ x: e.x, y: e.y, r: e.r, t: 0.3 }); puff(e.x, e.y, { co2: '#ffffff', electric: '#9fe6ff', ice: '#c8ecff' }[e.kind] || '#f2efe6', e.kind ? 30 : 16, 120, 3); this.shake = Math.max(this.shake || 0, 4); }
+        else if (e.type === 'parry') { puff(e.x, e.y, '#ffffff', 10 + e.n * 3, 150, 2); rings.push({ x: e.x, y: e.y + 24, r: 18, t: 0.2 }); }
+        else if (e.type === 'enrage') { this.shake = Math.max(this.shake || 0, 8); this.enrage = 1; }
         else if (e.type === 'hurt') { this.shake = Math.max(this.shake || 0, 3); nums.push({ x: s.player.x, y: s.player.y - 44, text: '-' + e.amount, col: '#ff5a4a', big: true, t: 0.8, T: 0.8 }); }
         else if (e.type === 'status' && STATUS[e.status] && e.status !== 'stolen') { if (!pops.some(q => q.key === e.status && q.t > 0.6)) pops.push({ key: e.status, text: `${STATUS[e.status].icon} ${STATUS[e.status].name}!`, col: STATUS_COL[e.status] || '#fff', t: 1.4, T: 1.4, row: pops.filter(q => q.t > 0).length % 3 }); }
         else if (e.type === 'blizzard') this.blizzard = 0.7;
@@ -210,7 +216,7 @@ export function createFx() {
       this.shake = Math.max(0, (this.shake || 0) - dt * 16);
       for (const [k, v] of doors) doors.set(k, v - dt);
       for (const L of [nums, pops]) { for (const n of L) n.t -= dt; for (let i = L.length - 1; i >= 0; i--) if (L[i].t <= 0) L.splice(i, 1); }
-      this.slide = Math.max(0, (this.slide || 0) - dt / 0.55); this.blizzard = Math.max(0, (this.blizzard || 0) - dt);
+      this.slide = Math.max(0, (this.slide || 0) - dt / 0.55); this.blizzard = Math.max(0, (this.blizzard || 0) - dt); this.enrage = Math.max(0, (this.enrage || 0) - dt);
       for (const z of zaps) z.t -= dt; for (let i = zaps.length - 1; i >= 0; i--) if (zaps[i].t <= 0) zaps.splice(i, 1);
     },
   };
@@ -316,6 +322,9 @@ function drawProp(x, o, camX, A) {
   else if (o.kind === 'tireWall') { for (const [a, b] of [[-17, -12], [-3, -12], [-10, -22], [4, -22]]) { R('#0c0c0e', a, b, 14, 11); R('#2a2a2e', a + 2, b + 2, 10, 7); R('#0c0c0e', a + 5, b + 4, 4, 3); } R('#e8c830', -18, -27, 36, 3); R('#1c1c1c', -12, -27, 5, 3); R('#1c1c1c', 2, -27, 5, 3); }
   else if (o.kind === 'pole') { R('#7a808a', -2, 100 - Y, 5, Y - 100); R('#e4e8ee', -1, 100 - Y, 1, Y - 100); R('#4a4f58', -4, -3, 9, 4); }
   else if (o.kind === 'rubble') { R('#3a3a3c', -18, -12, 36, 12); R('#6a6660', -15, -18, 14, 10); R('#7d786f', -2, -22, 16, 14); R('#55524c', 6, -10, 10, 8); R('#8a857a', -10, -14, 6, 4); R('#4a4f58', -20, -6, 8, 5); }
+  else if (o.kind === 'co2Ext') { R('#2a0c0c', -6, -28, 12, 28); R('#d8302a', -5, -26, 10, 25); R('#f06a5a', -4, -25, 3, 22); R('#1c1c1c', -3, -31, 6, 5); R('#1c1c1c', 2, -30, 6, 2); R('#e8e8e8', -4, -16, 8, 5); R('#2a5ac8', -2, -15, 4, 3); }
+  else if (o.kind === 'battery') { R('#1c1c1c', -11, -20, 22, 20); R('#e8c830', -10, -19, 20, 18); R('#1c1c1c', -10, -12, 20, 3); R('#1c1c1c', -6, -23, 4, 3); R('#1c1c1c', 2, -23, 4, 3); R('#1c1c1c', -1, -18, 3, 5); R('#1c1c1c', -3, -14, 3, 2); R('#1c1c1c', 0, -9, 3, 6); }
+  else if (o.kind === 'coolant') { R('#0c1c2a', -9, -26, 18, 26); R('#4a9ad8', -8, -25, 16, 24); R('#8ad0ff', -7, -24, 3, 22); R('#d8d8d8', -4, -29, 8, 4); R('#ffffff', -1, -18, 2, 8); R('#ffffff', -4, -15, 8, 2); R('#ffffff', -3, -17, 1, 1); R('#ffffff', 2, -13, 1, 1); }
   else if (o.kind === 'barrel') { R('#2a1010', -11, -26, 22, 26); R('#b8382a', -10, -25, 20, 24); R('#e0c040', -10, -17, 20, 4); R('#1c1c1c', -4, -13, 8, 6); R('#e0c040', -2, -12, 4, 4); }
   if (o.hp !== undefined && o.hp < o.maxHp) { x.fillStyle = '#111'; x.fillRect(X - 12, Y - 32, 24, 4); x.fillStyle = '#e0b04a'; x.fillRect(X - 11, Y - 31, 22 * Math.max(0, o.hp) / o.maxHp, 2); }
 }
@@ -338,8 +347,8 @@ export function drawCar(x, s, A, fx, t) {
   // 천장 환기구에서 떨어질 자리: 커지는 그림자와 느낌표
   for (const d of s.drops) { const k = 1 - d.t / 24, X = d.x - camX; x.fillStyle = `rgba(0,0,0,${0.2 + 0.35 * k})`; x.beginPath(); x.ellipse(X, d.y, 6 + 10 * k, 3 + 4 * k, 0, 0, 6.283); x.fill();
     x.fillStyle = '#ffd04a'; x.font = 'bold 14px sans-serif'; x.textAlign = 'center'; x.fillText('!', X, d.y - 26 - 6 * Math.sin(t * 20)); }
-  const small = (X, Y, f) => { x.save(); x.translate(X, Y); x.scale(SPRITE_SCALE, SPRITE_SCALE); x.translate(-X, -Y); f(); x.restore(); };
-  const list = [...s.props.filter(o => !o.hazard).map(o => ({ y: o.y, d: () => drawProp(x, o, camX, A) })), ...s.mons.filter(m => !m.gone).map(m => ({ y: m.y, d: () => small(Math.round(m.x - camX), Math.round(m.y), () => drawMon(x, m, A, camX, s)) })), { y: p.y, d: () => small(Math.round(p.x - camX), Math.round(p.y), () => drawPlayer(x, p, A, t, Math.round(p.x - camX), Math.round(p.y))) }];
+  const small = (X, Y, f, k = 1) => { x.save(); x.translate(X, Y); x.scale(SPRITE_SCALE * k, SPRITE_SCALE * k); x.translate(-X, -Y); f(); x.restore(); };
+  const list = [...s.props.filter(o => !o.hazard).map(o => ({ y: o.y, d: () => drawProp(x, o, camX, A) })), ...s.mons.filter(m => !m.gone).map(m => ({ y: m.y, d: () => small(Math.round(m.x - camX), Math.round(m.y), () => drawMon(x, m, A, camX, s), m.elite ? 1.3 : 1) })), { y: p.y, d: () => small(Math.round(p.x - camX), Math.round(p.y), () => drawPlayer(x, p, A, t, Math.round(p.x - camX), Math.round(p.y))) }];
   list.sort((a, b) => a.y - b.y).forEach(o => o.d());
   for (const a of s.allies) { const X = a.x - camX; if (a.kind === 'drone') { const f = A.mons.drone.run[Math.floor(t * 10) % 4].s; x.drawImage(f, Math.round(X - f.width / 2), Math.round(a.y - f.height / 2)); }
     else { x.fillStyle = '#5a5f66'; x.fillRect(X - 6, a.y - 4, 12, 18); x.fillStyle = '#c8783a'; x.fillRect(X - 4, a.y - 10, 8, 8); x.fillStyle = '#7fd8ff'; x.fillRect(X - 1, a.y - 8, 2, 2); } }
@@ -363,6 +372,7 @@ export function drawCar(x, s, A, fx, t) {
   for (const n of fx.pops) { const a = Math.min(1, n.t * 2.5), up = (n.T - n.t) * 14; x.globalAlpha = a; x.font = 'bold 16px sans-serif'; x.lineWidth = 4; x.strokeStyle = '#000';
     const X = Math.round(p.x - camX), Y = Math.round(p.y - 62 - up - n.row * 18); x.strokeText(n.text, X, Y); x.fillStyle = n.col; x.fillText(n.text, X, Y); }
   x.globalAlpha = 1;
+  if (fx.enrage > 0) { x.fillStyle = `rgba(220,30,20,${fx.enrage * 0.3})`; x.fillRect(-20, -20, VIEW_W + 40, VIEW_H + 40); }
   if (fx.blizzard > 0) { x.fillStyle = `rgba(210,235,255,${fx.blizzard * 0.6})`; x.fillRect(-20, -20, VIEW_W + 40, VIEW_H + 40); }
   x.restore();
   drawEnv(x, s, camX, t);

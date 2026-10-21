@@ -64,7 +64,7 @@ export function damageMon(s, m, amount, from = {}) {
   if (from.kx) { m.kx += from.kx * (m.boss ? 0.15 : 1); m.ky += (from.ky || 0) * (m.boss ? 0.15 : 1); }
   if (from.stun) { m.stun = Math.max(m.stun, from.stun); if (m.frontShield) m.shieldOff = 3; }
   if (from.slow) { m.slowT = Math.max(m.slowT, from.slow); m.slowPct = Math.max(m.slowPct || 0, from.slowPct || 0.5); }
-  s.events.push({ type: 'hit', uid: m.uid, amount: a });
+  s.events.push({ type: 'hit', uid: m.uid, amount: a, weapon: from.weapon || '' });
   if (m.hp <= 0 && !m.dummy) { m.gone = true; s.stats.kills++; s.events.push({ type: 'kill', uid: m.uid, id: m.id, x: m.x, y: m.y }); }
 }
 
@@ -126,7 +126,7 @@ function resolveSwing(s) {
     const b = monCenter(m), d = Math.hypot(b.x - c.x, b.y - c.y), a = Math.atan2(b.y - c.y, b.x - c.x);
     if (d < reach + monRadius(m) && Math.abs(angDiff(a, p.aim)) < 1.4) {
       const knock = st.knockEvery && p.swingCount % st.knockEvery === 0 ? 14 : 6;
-      damageMon(s, m, st.dmg, { kx: Math.cos(a) * knock, ky: Math.sin(a) * knock, stun: st.stun || 0, electric: !!st.electric, dirX: Math.cos(a) });
+      damageMon(s, m, st.dmg, { weapon: st.id, kx: Math.cos(a) * knock, ky: Math.sin(a) * knock, stun: st.stun || 0, electric: !!st.electric, dirX: Math.cos(a) });
     }
   }
 }
@@ -139,7 +139,7 @@ export function updateShots(s) {
         sh.dead = true; s.events.push({ type: 'boom', x: sh.tx, y: sh.ty, r: sh.radius, weapon: sh.weapon });
         const st = weaponStat(sh.weapon, 1);
         for (const m of alive(s)) if (Math.hypot(m.x - sh.tx, m.y - sh.ty) < sh.radius + monRadius(m))
-          damageMon(s, m, sh.dmg, { kx: (m.x - sh.tx) * 0.1, ky: (m.y - sh.ty) * 0.1, slow: st.slow || 0 });
+          damageMon(s, m, sh.dmg, { weapon: sh.weapon, kx: (m.x - sh.tx) * 0.1, ky: (m.y - sh.ty) * 0.1, slow: st.slow || 0 });
         if (st.clearsAcid) s.zones = s.zones.filter(z => !(z.acid && Math.hypot(z.x - sh.tx, z.y - sh.ty) < sh.radius + z.r));
         if (st.cloud) s.zones.push({ kind: 'disinfect', x: sh.tx, y: sh.ty, r: sh.radius, t: Math.round(st.cloud * TICK_HZ), dps: sh.dmg, friendly: true });
       }
@@ -151,7 +151,7 @@ export function updateShots(s) {
       const b = monCenter(m);
       if (Math.hypot(sh.x - b.x, sh.y - b.y) < monRadius(m) + sh.size) {
         sh.hit.push(m.uid);
-        damageMon(s, m, sh.dmg, { kx: sh.vx * 0.012 * (sh.knock ? 3 : 1), ky: sh.vy * 0.012 * (sh.knock ? 3 : 1), stun: sh.stun, electric: sh.electric, wetDouble: sh.wetDouble, dirX: sh.vx, slow: sh.slow });
+        damageMon(s, m, sh.dmg, { weapon: sh.weapon, kx: sh.vx * 0.012 * (sh.knock ? 3 : 1), ky: sh.vy * 0.012 * (sh.knock ? 3 : 1), stun: sh.stun, electric: sh.electric, wetDouble: sh.wetDouble, dirX: sh.vx, slow: sh.slow });
         if (--sh.pierce <= 0) { sh.dead = true; break; }
       }
     }

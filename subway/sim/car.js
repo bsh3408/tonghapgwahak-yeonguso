@@ -5,7 +5,8 @@ import { difficulty } from './run.js';
 import { LINES } from './data/lines.js';
 import { spawnMon, setupBoss } from './ai.js';
 
-export const SIDE_DOORS = [200, 400, 600, 800, 1000, 1200, 1400];
+// 실제 전동차처럼 한쪽에 출입문 4개
+export const SIDE_DOORS = [150, 385, 640, 875];
 const FIRST_WAVE_TICK = 15, WAVE_GAP = 1.5;
 
 function playerFrom(run) {

@@ -42,7 +42,7 @@ export function setupBoss(s, lineData) {
 function spawnBossBody(s, B) {
   const n = B.count || 1; s.bossSpawned = true;
   for (let i = 0; i < n; i++) {
-    const m = { uid: s.nextId++, id: B.id, boss: true, line: B.line, x: 1200 + i * 60, y: (Y0 + Y1) / 2 + (i - (n - 1) / 2) * 50, hp: B.hp, maxHp: B.hp, atk: B.atk, speed: B.speed * SPEED_SCALE,
+    const m = { uid: s.nextId++, id: B.id, boss: true, line: B.line, x: CAR_W - 220 + i * 50, y: (Y0 + Y1) / 2 + (i - (n - 1) / 2) * 50, hp: B.hp, maxHp: B.hp, atk: B.atk, speed: B.speed * SPEED_SCALE,
       face: -1, r: n > 1 ? 24 : 44, t: 0, cd: 1, atkCd: 2 + i * 0.7, atkT: 0, acted: false, dash: 0, dashA: 0, chargesLeft: 0, stun: 0, slowT: 0, slowPct: 0, flash: 0, kx: 0, ky: 0, status: {}, phase: 0, splitDone: 0 };
     s.mons.push(m);
   }

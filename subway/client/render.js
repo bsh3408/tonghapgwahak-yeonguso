@@ -85,7 +85,7 @@ export function createFx() {
     parts, rings,
     feed(s) {
       for (const e of s.events) {
-        if (e.type === 'hit') { const m = s.mons.find(o => o.uid === e.uid); if (m) puff(m.x, m.y - 14, '#ffe9a8', 4, 80); }
+        if (e.type === 'hit') { const m = s.mons.find(o => o.uid === e.uid); if (m) { const h = HIT_FX[e.weapon] || HIT_FX._; puff(m.x, m.y - 14, h[0], h[1], h[2], h[3]); } }
         else if (e.type === 'kill') { puff(e.x, e.y - 14, '#6e5a4a', 14, 100); puff(e.x, e.y - 14, '#d9d4c4', 6, 60); this.shake = Math.max(this.shake || 0, 3); }
         else if (e.type === 'boom') { rings.push({ x: e.x, y: e.y, r: e.r, t: 0.3 }); puff(e.x, e.y, '#f2efe6', 16, 120, 3); this.shake = Math.max(this.shake || 0, 4); }
         else if (e.type === 'hurt') this.shake = Math.max(this.shake || 0, 3);
@@ -98,6 +98,50 @@ export function createFx() {
       this.shake = Math.max(0, (this.shake || 0) - dt * 16);
     },
   };
+}
+
+// 맞은 자리 효과: [색, 개수, 퍼지는 속도, 크기]
+const HIT_FX = { _: ['#ffe9a8', 4, 80, 2], slingshot: ['#a8a090', 4, 60, 2], crossbow: ['#e8dcb0', 3, 50, 2], lime: ['#f6f3ea', 8, 70, 3],
+  coil: ['#9fe6ff', 6, 120, 2], net: ['#d8d0b0', 6, 60, 2], cool: ['#d8f4ff', 7, 70, 2], sprayer: ['#a8f0dc', 6, 70, 2], flash: ['#fff6b0', 8, 130, 2],
+  water: ['#9fd4ff', 7, 90, 2], baton: ['#9fe6ff', 7, 110, 2], pipe: ['#ffe9a8', 5, 90, 2] };
+
+// 무기마다 다른 투사체 모양(그리기만, 게임 규칙은 같음). 날아간 프레임 수는 게임 상태에 쓰지 않고 여기에만 둔다
+const SHOT_AGE = new WeakMap();
+function drawShot(x, sh, X, t) {
+  const Y = sh.y, a = Math.atan2(sh.vy, sh.vx), age = SHOT_AGE.get(sh) + 1 || 1, R = Math.round; SHOT_AGE.set(sh, age);
+  const back = k => ({ x: X - Math.cos(a) * k, y: Y - Math.sin(a) * k });
+  switch (sh.weapon) {
+    case 'slingshot': { // 돌멩이: 회색 조약돌, 흙먼지 꼬리
+      x.fillStyle = 'rgba(150,140,120,.45)'; const b = back(6); x.fillRect(R(b.x) - 1, R(b.y) - 1, 2, 2);
+      x.fillStyle = '#5a554c'; x.fillRect(R(X) - 2, R(Y) - 2, 5, 5); x.fillStyle = '#9a9384'; x.fillRect(R(X) - 2, R(Y) - 2, 3, 3); return; }
+    case 'crossbow': { x.save(); x.translate(X, Y); x.rotate(a); x.fillStyle = '#c8b88a'; x.fillRect(-10, -1, 14, 2); x.fillStyle = '#e04a3a'; x.fillRect(-11, -2, 3, 4); x.fillStyle = '#9aa0a8'; x.fillRect(4, -2, 4, 4); x.restore(); return; }
+    case 'lime': { // 석회 가루: 날아갈수록 퍼지는 하얀 가루 구름
+      const r = 2 + Math.min(6, age * 0.5); x.fillStyle = 'rgba(246,243,234,.75)';
+      for (let i = 0; i < 4; i++) { const o = (i * 2.3 + age * 0.7); x.fillRect(R(X + Math.cos(o) * r * 0.6) - 2, R(Y + Math.sin(o) * r * 0.6) - 2, 4, 4); }
+      x.fillStyle = '#ffffff'; x.fillRect(R(X) - 1, R(Y) - 1, 3, 3); return; }
+    case 'coil': { // 전기탄: 지그재그 번개 꼬리
+      x.strokeStyle = '#7fd8ff'; x.lineWidth = 2; x.beginPath(); x.moveTo(X, Y);
+      for (let i = 1; i <= 4; i++) { const b = back(i * 5), j = ((age + i) % 2 ? 3 : -3); x.lineTo(b.x - Math.sin(a) * j, b.y + Math.cos(a) * j); }
+      x.stroke(); x.fillStyle = '#ffffff'; x.fillRect(R(X) - 2, R(Y) - 2, 4, 4); return; }
+    case 'net': { // 감전 그물: 날아가며 펼쳐지는 그물, 네 귀퉁이 추
+      const h = Math.min(9, 3 + age * 0.6); x.strokeStyle = '#d8d0b0'; x.lineWidth = 1; x.strokeRect(R(X - h), R(Y - h), h * 2, h * 2);
+      x.beginPath(); x.moveTo(X - h, Y); x.lineTo(X + h, Y); x.moveTo(X, Y - h); x.lineTo(X, Y + h); x.stroke();
+      x.fillStyle = '#5a5f66'; for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) x.fillRect(R(X + dx * h) - 1, R(Y + dy * h) - 1, 3, 3);
+      if (age % 4 < 2) { x.fillStyle = '#7fd8ff'; x.fillRect(R(X) - 1, R(Y) - 1, 2, 2); } return; }
+    case 'cool': { // 냉각 스프레이: 얼음 결정, 서리 꼬리
+      x.fillStyle = 'rgba(220,245,255,.6)'; for (let i = 1; i <= 3; i++) { const b = back(i * 5); x.fillRect(R(b.x), R(b.y), 1, 1); }
+      x.save(); x.translate(X, Y); x.rotate(a + Math.PI / 4); x.fillStyle = '#bfe8ff'; x.fillRect(-3, -3, 6, 6); x.fillStyle = '#ffffff'; x.fillRect(-1, -1, 2, 2); x.restore(); return; }
+    case 'sprayer': { // 소독 분무기: 옥색 물방울과 안개
+      x.fillStyle = 'rgba(143,224,204,.35)'; for (let i = 1; i <= 2; i++) { const b = back(i * 6); x.fillRect(R(b.x) - 1, R(b.y) - 1, 3, 3); }
+      x.fillStyle = '#5ec2a8'; x.fillRect(R(X) - 2, R(Y) - 1, 4, 3); x.fillStyle = '#d8fff4'; x.fillRect(R(X) - 1, R(Y) - 2, 2, 2); return; }
+    case 'flash': { // 손전등 섬광: 빛 구슬과 둥근 빛무리
+      const g = x.createRadialGradient(X, Y, 0, X, Y, 10); g.addColorStop(0, 'rgba(255,250,200,.9)'); g.addColorStop(1, 'rgba(255,240,150,0)');
+      x.fillStyle = g; x.fillRect(X - 10, Y - 10, 20, 20); x.fillStyle = '#ffffff'; x.fillRect(R(X) - 2, R(Y) - 2, 4, 4); return; }
+    case 'water': { // 물총: 길쭉한 물줄기, 흔들리는 물방울
+      const w = Math.sin(age * 0.8) * 1.5; x.save(); x.translate(X, Y + w); x.rotate(a);
+      x.fillStyle = 'rgba(126,200,255,.5)'; x.fillRect(-9, -1, 8, 2); x.fillStyle = '#7ec8ff'; x.fillRect(-2, -2, 5, 4); x.fillStyle = '#e8f6ff'; x.fillRect(1, -1, 1, 1); x.restore(); return; }
+    default: { const z = sh.size || 3; x.fillStyle = SHOT_COL[sh.weapon] || '#fff'; x.fillRect(R(X) - z / 2, R(Y) - z / 2, z, z); }
+  }
 }
 
 export function cameraX(s) { return Math.max(0, Math.min(CAR_W - VIEW_W, s.player.x - VIEW_W / 2)); }
@@ -122,10 +166,7 @@ export function drawCar(x, s, A, fx, t) {
     const X = sh.x - camX;
     if (sh.th) { const W = A.weapons[sh.weapon].s, z = Math.sin(Math.min(1, sh.t / sh.T) * Math.PI) * 40; x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(X - 4, sh.y, 8, 2);
       x.save(); x.translate(Math.round(X), Math.round(sh.y - z)); x.rotate(sh.t * 0.4); x.drawImage(W, -W.width / 2, -W.height / 2); x.restore(); continue; }
-    const col = SHOT_COL[sh.weapon] || '#fff';
-    if (sh.weapon === 'crossbow') { x.save(); x.translate(X, sh.y); x.rotate(Math.atan2(sh.vy, sh.vx)); x.fillStyle = col; x.fillRect(-8, -1, 12, 2); x.fillStyle = '#777'; x.fillRect(3, -2, 3, 4); x.restore(); continue; }
-    if (sh.weapon === 'net') { x.strokeStyle = col; x.lineWidth = 1; x.strokeRect(Math.round(X) - 5, Math.round(sh.y) - 5, 10, 10); continue; }
-    const z = sh.size; x.fillStyle = col; x.globalAlpha = 0.5; x.fillRect(Math.round(X - sh.vx * 0.012) - z / 2, Math.round(sh.y - sh.vy * 0.012) - z / 2, z, z); x.globalAlpha = 1; x.fillRect(Math.round(X) - z / 2, Math.round(sh.y) - z / 2, z, z);
+    drawShot(x, sh, X, t);
   }
   for (const e of s.eshots) { x.fillStyle = '#2a1a14'; x.fillRect(Math.round(e.x - camX) - 3, Math.round(e.y) - 3, 6, 6); x.fillStyle = e.electric ? '#7fd8ff' : e.col || '#ddd'; x.fillRect(Math.round(e.x - camX) - 2, Math.round(e.y) - 2, 4, 4); }
   for (const q of fx.parts) { x.globalAlpha = Math.min(1, q.life * 4); x.fillStyle = q.col; x.fillRect(Math.round(q.x - camX), Math.round(q.y), q.sz, q.sz); } x.globalAlpha = 1;

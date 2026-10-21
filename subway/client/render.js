@@ -5,8 +5,10 @@ import { WEAPONS } from '../sim/data/weapons.js';
 import { SIDE_DOORS } from '../sim/car.js';
 
 const SHOT_COL = { slingshot: '#9a8a70', crossbow: '#c8b88a', lime: '#f2efe6', coil: '#7fd8ff', net: '#d8d0b0', cool: '#bfe8ff', sprayer: '#8fe0cc', flash: '#fff2a0', water: '#7ec8ff' };
-const BEAM_COL = { co2: 'rgba(235,240,245,.5)', led: 'rgba(255,250,210,.32)', solar: 'rgba(255,224,120,.30)' };
-const ZONE_COL = { acid: 'rgba(170,210,60,.35)', cloud: 'rgba(140,190,60,.28)', gas: 'rgba(180,170,90,.3)', electric: 'rgba(120,200,255,.3)', ice: 'rgba(200,235,255,.4)', puddle: 'rgba(230,228,215,.45)', disinfect: 'rgba(190,230,200,.25)' };
+const BEAM_COL = { co2: 'rgba(235,240,245,.5)', led: 'rgba(255,250,210,.32)', solar: 'rgba(255,224,120,.30)', nitrogen: 'rgba(200,240,255,.55)' };
+const ZONE_COL = { acid: 'rgba(170,210,60,.35)', cloud: 'rgba(140,190,60,.28)', gas: 'rgba(180,170,90,.3)', electric: 'rgba(120,200,255,.3)', ice: 'rgba(200,235,255,.4)', puddle: 'rgba(230,228,215,.45)', disinfect: 'rgba(190,230,200,.25)', fire: 'rgba(255,120,40,.38)',
+  heatVent: 'rgba(255,140,60,.30)', sparkBox: 'rgba(120,200,255,.30)', acidPool: 'rgba(170,210,60,.45)', sporeMold: 'rgba(150,190,90,.35)',
+  sandPile: 'rgba(210,180,120,.45)', icePatch: 'rgba(210,240,255,.55)', poisonPool: 'rgba(140,80,170,.42)' };
 // 노선마다 바닥·벽 색(테마)
 const THEME = {
   1: { wall: '#4a4440', floor: '#8f8670', seat: '#7a5a3a' }, 2: { wall: '#2e3440', floor: '#6f7178', seat: '#3d5a4a' }, 3: { wall: '#34424a', floor: '#6d7a80', seat: '#3d566a' },
@@ -112,7 +114,9 @@ export function createFx() {
         else if (e.type === 'hurt') this.shake = Math.max(this.shake || 0, 3);
         else if (e.type === 'zap') zaps.push({ ...e, t: 0.15 });
         else if (e.type === 'bounce') puff(e.x, e.y, '#ffffff', 3, 50);
-        else if (e.type === 'wave') for (const d of e.doors || []) doors.set(d.x + (d.top ? 't' : 'b'), 1.6);
+        else if (e.type === 'wave') for (const d of e.doors || []) { if (d.kind === 'back' || d.kind === 'front') doors.set(d.kind + 't', 1.6); else if (d.kind === 'side') doors.set(d.x + (d.top ? 't' : 'b'), 1.6); }
+        else if (e.type === 'propBreak') { puff(e.x, e.y - 12, '#b9844a', 12, 90, 3); this.shake = Math.max(this.shake || 0, 2); }
+        else if (e.type === 'land') puff(e.x, e.y, '#9a9384', 8, 60);
       }
     },
     update(dt) {
@@ -163,6 +167,17 @@ function drawShot(x, sh, X, t) {
     case 'flash': { // 손전등 섬광: 빛 구슬과 둥근 빛무리
       const g = x.createRadialGradient(X, Y, 0, X, Y, 10); g.addColorStop(0, 'rgba(255,250,200,.9)'); g.addColorStop(1, 'rgba(255,240,150,0)');
       x.fillStyle = g; x.fillRect(X - 10, Y - 10, 20, 20); x.fillStyle = '#ffffff'; x.fillRect(R(X) - 2, R(Y) - 2, 4, 4); return; }
+    case 'railgun': { // 레일건: 길게 늘어지는 파란 섬광
+      x.save(); x.translate(X, Y); x.rotate(a); x.fillStyle = 'rgba(120,200,255,.45)'; x.fillRect(-40, -2, 40, 4); x.fillStyle = '#e8f8ff'; x.fillRect(-14, -1, 18, 2); x.restore(); return; }
+    case 'sonic': { // 음파 대포: 퍼지는 고리
+      const r0 = 5 + Math.min(10, age * 0.8); x.strokeStyle = 'rgba(200,230,255,.8)'; x.lineWidth = 2; x.beginPath(); x.arc(X - Math.cos(a) * r0, Y - Math.sin(a) * r0, r0, a - 0.9, a + 0.9); x.stroke(); return; }
+    case 'missile': { // 미사일: 빨간 탄두와 연기
+      x.fillStyle = 'rgba(200,200,200,.5)'; for (let i = 1; i <= 3; i++) { const b = back(i * 5); x.fillRect(R(b.x) - 1, R(b.y) - 1, 3, 3); }
+      x.save(); x.translate(X, Y); x.rotate(a); x.fillStyle = '#ddd'; x.fillRect(-5, -2, 8, 4); x.fillStyle = '#d83a2a'; x.fillRect(3, -2, 3, 4); x.fillStyle = '#ffb040'; x.fillRect(-7, -1, 2, 2); x.restore(); return; }
+    case 'laser': { // 레이저: 빨간 광선 토막
+      x.save(); x.translate(X, Y); x.rotate(a); x.fillStyle = 'rgba(255,60,60,.5)'; x.fillRect(-18, -2, 20, 4); x.fillStyle = '#ffd0d0'; x.fillRect(-16, -1, 18, 2); x.restore(); return; }
+    case 'sticky': { // 점착 폭탄: 초록 젤 덩어리, 붙으면 깜박임
+      const blink = sh.fuse !== undefined && Math.floor(sh.fuse / 4) % 2; x.fillStyle = '#1c2a10'; x.fillRect(R(X) - 4, R(Y) - 4, 8, 8); x.fillStyle = blink ? '#ff5040' : '#8ad040'; x.fillRect(R(X) - 3, R(Y) - 3, 6, 6); return; }
     case 'water': { // 물총: 길쭉한 물줄기, 흔들리는 물방울
       const w = Math.sin(age * 0.8) * 1.5; x.save(); x.translate(X, Y + w); x.rotate(a);
       x.fillStyle = 'rgba(126,200,255,.5)'; x.fillRect(-9, -1, 8, 2); x.fillStyle = '#7ec8ff'; x.fillRect(-2, -2, 5, 4); x.fillStyle = '#e8f6ff'; x.fillRect(1, -1, 1, 1); x.restore(); return; }
@@ -170,20 +185,43 @@ function drawShot(x, sh, X, t) {
   }
 }
 
-export function cameraX(s) { return Math.max(0, Math.min(CAR_W - VIEW_W, s.player.x - VIEW_W / 2)); }
+// 칸 양 끝 연결 통로: 뒤(왼쪽)·앞(오른쪽)에서 몬스터가 들어올 때 문이 열린다. 앞쪽 문 불빛은 잠김(빨강)/열림(초록)
+function drawGangways(x, s, camX, fx) {
+  if (s.carType === 'boss') return;
+  for (const [ex, kind] of [[0, 'back'], [CAR_W, 'front']]) {
+    const X = ex - camX + (kind === 'back' ? -14 : 0), open = fx.doorOpen?.(kind, true) || (kind === 'front' && s.doorOpen);
+    x.fillStyle = '#4a505c'; x.fillRect(X, 100, 14, 200); x.fillStyle = open ? '#111' : '#6f7682'; x.fillRect(X + 2, 150, 10, 110);
+    x.fillStyle = kind === 'front' ? (s.doorOpen ? '#5ad86a' : '#d85a4a') : '#c8b040'; x.fillRect(X + 4, 136, 6, 8);
+  }
+}
+// 소품(코드로 찍은 도트): 나무 상자, 쓰레기통, 부서진 의자, 폭발 드럼통
+function drawProp(x, o, camX, A) {
+  const X = Math.round(o.x - camX), Y = Math.round(o.y), f = o.flash > 0, R = (c, a, b, w, h) => { x.fillStyle = f ? '#fff' : c; x.fillRect(X + a, Y + b, w, h); };
+  x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(X - o.r, Y - 1, o.r * 2, 3);
+  if (o.kind === 'crate') { R('#2a1c10', -13, -24, 26, 24); R('#9a6a3a', -12, -23, 24, 22); R('#7a5028', -12, -16, 24, 3); R('#7a5028', -12, -8, 24, 3); R('#b9844a', -10, -22, 3, 20); R('#b9844a', 7, -22, 3, 20); }
+  else if (o.kind === 'bin') { R('#1c2024', -10, -22, 20, 22); R('#5a7088', -9, -21, 18, 20); R('#46586c', -9, -14, 18, 2); R('#8aa0b8', -10, -24, 20, 4); }
+  else if (o.kind === 'seat') { const b = A?.subway?.bench; if (b) { x.save(); if (f) x.filter = 'brightness(3)'; x.drawImage(b, 0, 0, 58, b.height, X - 29, Y - b.height + 6, 58, b.height); x.restore(); } else R('#4a7a78', -24, -14, 48, 14); }
+  else if (o.kind === 'barrel') { R('#2a1010', -11, -26, 22, 26); R('#b8382a', -10, -25, 20, 24); R('#e0c040', -10, -17, 20, 4); R('#1c1c1c', -4, -13, 8, 6); R('#e0c040', -2, -12, 4, 4); }
+  if (o.hp !== undefined && o.hp < o.maxHp) { x.fillStyle = '#111'; x.fillRect(X - 12, Y - 32, 24, 4); x.fillStyle = '#e0b04a'; x.fillRect(X - 11, Y - 31, 22 * Math.max(0, o.hp) / o.maxHp, 2); }
+}
+
+export function cameraX(s) { if (CAR_W <= VIEW_W) return (CAR_W - VIEW_W) / 2; return Math.max(0, Math.min(CAR_W - VIEW_W, s.player.x - VIEW_W / 2)); }
 
 export function drawCar(x, s, A, fx, t) {
   const camX = Math.round(cameraX(s)), p = s.player;
   x.save();
   if (fx.shake > 0) x.translate(Math.round((Math.random() - 0.5) * fx.shake), Math.round((Math.random() - 0.5) * fx.shake));
-  x.drawImage(carBackground(s.line, s.carType === 'boss', A), camX, 0, VIEW_W, VIEW_H, 0, 0, VIEW_W, VIEW_H);
+  x.fillStyle = '#0d0f12'; x.fillRect(0, 0, VIEW_W, VIEW_H);
+  x.drawImage(carBackground(s.line, s.carType === 'boss', A), -camX, 0);
+  drawGangways(x, s, camX, fx);
   drawDoors(x, s, A, camX, fx);
   // 연결문: 잠기면 빨강, 열리면 초록
-  if (s.carType !== 'boss') { const dx = CAR_W - camX - 12; x.fillStyle = '#6f7682'; x.fillRect(dx, 100, 12, 200); x.fillStyle = s.doorOpen ? '#5ad86a' : '#d85a4a'; x.fillRect(dx + 3, 190, 6, 20);
-    x.fillStyle = '#6f7682'; x.fillRect(-camX, 100, 12, 200); }
   for (const z of s.zones) { x.fillStyle = ZONE_COL[z.kind] || 'rgba(200,200,200,.25)'; x.beginPath(); x.ellipse(z.x - camX, z.y, z.r, z.r * 0.55, 0, 0, 6.283); x.fill(); }
   for (const r of fx.rings) { x.strokeStyle = 'rgba(240,240,230,.8)'; x.lineWidth = 3; x.globalAlpha = r.t / 0.3; const k = 1.2 - (r.t / 0.3) * 0.6; x.beginPath(); x.ellipse(r.x - camX, r.y, r.r * k, r.r * 0.55 * k, 0, 0, 6.283); x.stroke(); x.globalAlpha = 1; }
-  const list = [...s.mons.filter(m => !m.gone).map(m => ({ y: m.y, d: () => drawMon(x, m, A, camX, s) })), { y: p.y, d: () => drawPlayer(x, p, A, t, Math.round(p.x - camX), Math.round(p.y)) }];
+  // 천장 환기구에서 떨어질 자리: 커지는 그림자와 느낌표
+  for (const d of s.drops) { const k = 1 - d.t / 24, X = d.x - camX; x.fillStyle = `rgba(0,0,0,${0.2 + 0.35 * k})`; x.beginPath(); x.ellipse(X, d.y, 6 + 10 * k, 3 + 4 * k, 0, 0, 6.283); x.fill();
+    x.fillStyle = '#ffd04a'; x.font = 'bold 14px sans-serif'; x.textAlign = 'center'; x.fillText('!', X, d.y - 26 - 6 * Math.sin(t * 20)); }
+  const list = [...s.props.filter(o => !o.hazard).map(o => ({ y: o.y, d: () => drawProp(x, o, camX, A) })), ...s.mons.filter(m => !m.gone).map(m => ({ y: m.y, d: () => drawMon(x, m, A, camX, s) })), { y: p.y, d: () => drawPlayer(x, p, A, t, Math.round(p.x - camX), Math.round(p.y)) }];
   list.sort((a, b) => a.y - b.y).forEach(o => o.d());
   for (const a of s.allies) { const X = a.x - camX; if (a.kind === 'drone') { const f = A.mons.drone.run[Math.floor(t * 10) % 4].s; x.drawImage(f, Math.round(X - f.width / 2), Math.round(a.y - f.height / 2)); }
     else { x.fillStyle = '#5a5f66'; x.fillRect(X - 6, a.y - 4, 12, 18); x.fillStyle = '#c8783a'; x.fillRect(X - 4, a.y - 10, 8, 8); x.fillStyle = '#7fd8ff'; x.fillRect(X - 1, a.y - 8, 2, 2); } }
@@ -191,7 +229,8 @@ export function drawCar(x, s, A, fx, t) {
     x.fillStyle = BEAM_COL[p.beam]; x.beginPath(); x.moveTo(ox, oy); x.lineTo(ox + Math.cos(p.aim - ang) * len, oy + Math.sin(p.aim - ang) * len); x.lineTo(ox + Math.cos(p.aim + ang) * len, oy + Math.sin(p.aim + ang) * len); x.closePath(); x.fill(); }
   for (const sh of s.shots) {
     const X = sh.x - camX;
-    if (sh.th) { const W = A.weapons[sh.weapon].s, z = Math.sin(Math.min(1, sh.t / sh.T) * Math.PI) * 40; x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(X - 4, sh.y, 8, 2);
+    if (sh.th) { const W = A.weapons[sh.weapon].s, z = Math.sin(Math.min(1, sh.t / sh.T) * Math.PI) * (sh.weapon === 'mortar' ? 110 : 40);
+      if (sh.weapon === 'mortar') { x.strokeStyle = 'rgba(255,80,60,.7)'; x.lineWidth = 1; x.beginPath(); x.ellipse(sh.tx - camX, sh.ty, sh.radius, sh.radius * 0.5, 0, 0, 6.283); x.stroke(); } x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(X - 4, sh.y, 8, 2);
       x.save(); x.translate(Math.round(X), Math.round(sh.y - z)); x.rotate(sh.t * 0.4); x.drawImage(W, -W.width / 2, -W.height / 2); x.restore(); continue; }
     drawShot(x, sh, X, t);
   }

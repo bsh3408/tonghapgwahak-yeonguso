@@ -6,7 +6,7 @@ import { BOSSES } from './data/bosses.js';
 import { LINES } from './data/lines.js';
 import { ITEM_SLOTS, CONSUMABLES, ITEM_RECIPES } from './data/consumables.js';
 import { GEAR, MATERIALS } from './data/gear.js';
-import { WEAPONS } from './data/weapons.js';
+import { WEAPONS, RARE_WEAPONS } from './data/weapons.js';
 import { createCarState } from './car.js';
 import { gainWeapon } from './combat.js';
 import { MODS, MOD_COST } from './data/mods.js';
@@ -127,8 +127,10 @@ const MAT_IDS = Object.keys(MATERIALS).filter(k => k !== 'waterBottle');
 export function openCargo(run, lineData, i) {
   const rng = createRng(lineData.cars[i].seed).fork('cargo');
   const owned = run.weapons.map(w => w.id);
-  const pool = WEAPON_IDS.filter(id => id !== 'slingshot');
-  const a = rng.pick(pool); let b; do { b = rng.pick(pool); } while (b === a);
+  const pool = WEAPON_IDS.filter(id => id !== 'slingshot' && !WEAPONS[id].rare);
+  // 3번째 노선부터는 칸마다 15% 확률로 희귀 무기가 섞인다
+  const draw = () => run.lineIndex >= 2 && rng.chance(0.15) ? rng.pick(RARE_WEAPONS) : rng.pick(pool);
+  const a = draw(); let b; do { b = draw(); } while (b === a);
   const materials = {}; for (let k = 2 + rng.int(2); k > 0; k--) { const m = rng.pick(MAT_IDS); materials[m] = (materials[m] || 0) + 1; }
   return { weapons: [a, b], materials, owned };
 }
@@ -211,4 +213,14 @@ export function upgradeMod(run, id) {
   const lv = (run.mods[id] || 0) + 1, M = MODS[id];
   if (!M || lv > M.max || run.parts < MOD_COST[lv]) return false;
   run.parts -= MOD_COST[lv]; run.mods[id] = lv; return true;
+}
+
+// 정비소 무기 만들기: 보통 무기는 부품 6 + 고철 1 + 끈 1, 희귀 무기는 부품 15 + 고철 2 + 유리 1 + 고무 1
+export const WEAPON_RECIPES = Object.fromEntries(Object.values(WEAPONS).filter(w => w.id !== 'slingshot').map(w =>
+  [w.id, w.rare ? { parts: 15, scrap: 2, glass: 1, rubber: 1 } : { parts: 6, scrap: 1, string: 1 }]));
+export function craftWeapon(run, id) {
+  const r = WEAPON_RECIPES[id]; if (!r) return false;
+  if (run.parts < r.parts || Object.entries(r).some(([k, v]) => k !== 'parts' && (run.materials[k] || 0) < v)) return false;
+  run.parts -= r.parts; for (const [k, v] of Object.entries(r)) if (k !== 'parts') run.materials[k] -= v;
+  gainWeapon(run, id); return true;
 }

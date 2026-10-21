@@ -5,7 +5,7 @@ import { encodeInput, frameTicks, KEY_CODES } from './input.js';
 import { loadAssets } from './assets.js';
 import { drawCar, createFx } from './render.js';
 
-export const game = { assets: null, state: null, fx: createFx(), keys: new Set(), touch: null, buttons: {}, acc: 0, t: 0, paused: true, onCarEnd: null, onFrame: null, inputs: [] };
+export const game = { assets: null, state: null, fx: createFx(), keys: new Set(), touch: null, buttons: {}, mouse: {}, acc: 0, t: 0, paused: true, onCarEnd: null, onFrame: null, inputs: [] };
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
@@ -34,6 +34,13 @@ for (const b of document.querySelectorAll('[data-btn]')) {
   b.addEventListener('mousedown', on); b.addEventListener('mouseup', off); b.addEventListener('mouseleave', off);
 }
 
+// 마우스: 왼쪽 버튼을 누르고 있으면 공격, 오른쪽 버튼은 스킬(소울나이트처럼)
+const stage = document.getElementById('stage');
+stage.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('mousedown', e => { if (e.button === 0) game.mouse.attack = true; if (e.button === 2) game.mouse.skill = true; });
+addEventListener('mouseup', e => { if (e.button === 0) game.mouse.attack = false; if (e.button === 2) game.mouse.skill = false; });
+addEventListener('blur', () => { game.mouse.attack = game.mouse.skill = false; for (const k in game.buttons) game.buttons[k] = false; });
+
 export function fit() {
   const wrap = document.getElementById('stage'), w = wrap.clientWidth, h = wrap.clientHeight;
   const s = Math.max(1, Math.min(w / VIEW_W, h / VIEW_H)), si = s >= 1.5 ? Math.floor(s) : s;
@@ -50,7 +57,7 @@ function frame(now) {
   if (s && !game.paused) {
     const { ticks, rest } = frameTicks(game.acc + dt); game.acc = rest;
     for (let i = 0; i < ticks && !s.done; i++) {
-      const inp = encodeInput(game.keys, game.touch, game.buttons);
+      const b = game.buttons, m = game.mouse, inp = encodeInput(game.keys, game.touch, { attack: b.attack || m.attack, skill: b.skill || m.skill, swap: b.swap, item: b.item, run: b.run });
       game.inputs.push(inp); step(s, inp); game.fx.feed(s); game.onTick?.(s);
     }
     if (s.done && game.onCarEnd) { game.paused = true; const cb = game.onCarEnd; setTimeout(() => cb(s), s.done === 'dead' ? 900 : 200); }

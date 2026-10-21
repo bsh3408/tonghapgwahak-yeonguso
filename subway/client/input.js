@@ -4,7 +4,7 @@ import { INPUT, DT } from '../sim/constants.js';
 const KEYS = {
   KeyW: INPUT.UP, ArrowUp: INPUT.UP, KeyS: INPUT.DOWN, ArrowDown: INPUT.DOWN,
   KeyA: INPUT.LEFT, ArrowLeft: INPUT.LEFT, KeyD: INPUT.RIGHT, ArrowRight: INPUT.RIGHT,
-  KeyJ: INPUT.ATTACK, Space: INPUT.ATTACK, KeyK: INPUT.SKILL, KeyQ: INPUT.SWAP, KeyE: INPUT.ITEM,
+  KeyJ: INPUT.ATTACK, KeyK: INPUT.SKILL, KeyQ: INPUT.SWAP, KeyE: INPUT.ITEM, ShiftLeft: INPUT.RUN, ShiftRight: INPUT.RUN,
 };
 const MAX_TICKS = 5;
 
@@ -25,6 +25,7 @@ export function encodeInput(keys, touch = null, buttons = {}) {
   if (buttons.skill) b |= INPUT.SKILL;
   if (buttons.swap) b |= INPUT.SWAP;
   if (buttons.item) b |= INPUT.ITEM;
+  if (buttons.run) b |= INPUT.RUN;
   if ((b & INPUT.LEFT) && (b & INPUT.RIGHT)) b &= ~(INPUT.LEFT | INPUT.RIGHT);
   if ((b & INPUT.UP) && (b & INPUT.DOWN)) b &= ~(INPUT.UP | INPUT.DOWN);
   return b;

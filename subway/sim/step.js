@@ -17,10 +17,13 @@ function movePlayer(s, input) {
   if (rule.reverse) { mx = -mx; my = -my; }
   const l = Math.hypot(mx, my); if (l > 1) { mx /= l; my /= l; }
   if (rule.frozen) { p.vx = 0; p.vy = 0; }
-  else if (!(rule.slip && (p.vx || p.vy))) { p.vx = mx * PLAYER_SPEED * rule.mul; p.vy = my * PLAYER_SPEED * rule.mul; }
+  p.running = !!(input & INPUT.RUN) && l > 0;
+  const run = p.running ? 1.45 : 1;   // 달리기(왼쪽 Shift): 빨라지지만 그동안은 공격할 수 없다
+  if (rule.frozen) {} else if (!(rule.slip && (p.vx || p.vy))) { p.vx = mx * PLAYER_SPEED * rule.mul * run; p.vy = my * PLAYER_SPEED * rule.mul * run; }
   p.x += p.vx * DT; p.y += p.vy * DT;
   const right = s.doorOpen ? CAR_W : CAR_W - 12;
   p.x = Math.max(12, Math.min(right, p.x)); p.y = Math.max(Y0, Math.min(Y1, p.y));
+  for (const o of s.props) if (o.solid) { const dx = p.x - o.x, dy = p.y - o.y, d = Math.hypot(dx, dy), min = o.r + 8; if (d < min) { const k = (min - d) / (d || 1); p.x += dx * k || -min; p.y += dy * k; } }
   p.moving = !rule.frozen && (l > 0 || (rule.slip && (p.vx || p.vy)));
 }
 
@@ -31,7 +34,7 @@ export function step(s, input) {
   movePlayer(s, input);
   updatePlayerCombat(s, input, rng);
   updateJobs(s, input);
-  updateShots(s);
+  updateShots(s, rng);
   updateMons(s, rng);
   statusTick(s, input);
   updateCar(s, rng);

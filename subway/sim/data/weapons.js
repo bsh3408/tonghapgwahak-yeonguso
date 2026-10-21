@@ -18,8 +18,20 @@ export const WEAPONS = {
   led:         { name: 'LED 탐조등', type: 'beam', dmg: [8, 11, 15], energyPerSec: 4, len: 150, ang: 0.28, lights: true, repels: ['bat', 'roach'], extra: { 2: { lenMul: 1.2 }, 3: { lenMul: 1.2, angMul: 1.4 } } },
   solar:       { name: '태양광 반사판', type: 'beam', dmg: [10, 14, 18], energyPerSec: 0, len: 130, ang: 0.22, undergroundMul: 0.5, extra: { 2: { lenMul: 1.3 }, 3: { lenMul: 1.3, undergroundMul: 0.75 } } },
   water:       { name: '물총', type: 'gun', range: 200, dmg: [1, 1, 2], rate: 6, energy: 0, speed: 400, size: 3, washesAcid: true, extra: { 2: { knock: true }, 3: { knock: true, pierce: 99 } } },
+  // 희귀 무기 10종(3번째 노선부터 짐칸에서 가끔, 정비소에서 만들 수도 있음)
+  railgun:  { name: '레일건', type: 'gun', rare: true, range: 640, dmg: [24, 32, 42], rate: 0.6, energy: 4, speed: 900, size: 3, pierce: 99, electric: true, extra: { 2: {}, 3: {} } },
+  tesla:    { name: '테슬라 코일 발사기', type: 'gun', rare: true, instant: 'tesla', range: 240, targets: 3, dmg: [6, 8, 11], rate: 1.5, energy: 3, speed: 1, electric: true, extra: { 2: {}, 3: { targets: 4 } } },
+  nitrogen: { name: '액체 질소 분사기', type: 'beam', rare: true, dmg: [6, 9, 12], energyPerSec: 5, len: 110, ang: 0.5, freezeAfter: 2, slowPct: 0.4, extra: { 2: {}, 3: { angMul: 1.2 } } },
+  plasma:   { name: '플라스마 절단기', type: 'melee', rare: true, dmg: [14, 19, 25], rate: 1.2, energy: 2, reach: 80, arc: 2.0, extra: { 2: {}, 3: { reachMul: 1.2 } } },
+  thermite: { name: '테르밋 폭탄', type: 'throw', rare: true, dmg: [20, 28, 36], rate: 0.4, energy: 6, radius: 56, fire: 3, fireDps: 6, extra: { 2: {}, 3: { fire: 4 } } },
+  sonic:    { name: '음파 대포', type: 'gun', rare: true, range: 240, dmg: [5, 7, 9], rate: 1.2, energy: 2, speed: 300, size: 10, pierce: 99, knockMul: 4, extra: { 2: {}, 3: {} } },
+  missile:  { name: '추적 미사일 발사기', type: 'gun', rare: true, range: 400, dmg: [7, 9, 12], rate: 1.5, energy: 3, speed: 260, size: 4, count: 2, homing: true, extra: { 2: {}, 3: { count: 3 } } },
+  laser:    { name: '레이저 반사총', type: 'gun', rare: true, range: 700, dmg: [8, 11, 14], rate: 3, energy: 2, speed: 700, size: 2, walls: 2, extra: { 2: {}, 3: { walls: 3 } } },
+  mortar:   { name: '박격포', type: 'throw', rare: true, lob: 420, flight: 0.9, dmg: [26, 34, 44], rate: 0.5, energy: 5, radius: 62, extra: { 2: {}, 3: { radiusMul: 1.2 } } },
+  sticky:   { name: '점착 폭탄 발사기', type: 'gun', rare: true, range: 300, dmg: [16, 22, 28], rate: 1, energy: 3, speed: 380, size: 5, sticky: 1, blast: 44, extra: { 2: {}, 3: { blast: 54 } } },
 };
 for (const [id, w] of Object.entries(WEAPONS)) w.id = id;
+export const RARE_WEAPONS = Object.keys(WEAPONS).filter(k => WEAPONS[k].rare);
 // 별(★)에 맞춘 값 하나를 꺼낸다: 기본값 위에 ★2, ★3의 extra를 차례로 덮어쓴다
 export function weaponStat(id, star) {
   const w = WEAPONS[id], out = { ...w, dmg: w.dmg[star - 1] };

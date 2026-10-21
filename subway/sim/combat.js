@@ -32,7 +32,7 @@ export function gainWeapon(p, id) {
   const own = p.weapons.find(w => w.id === id);
   if (own) { own.star = Math.min(3, own.star + 1); return own; }
   const w = { id, star: 1 };
-  if (p.weapons.length < 3) p.weapons.push(w); else p.weapons[p.weapon] = w;
+  if (p.weapons.length < 2) p.weapons.push(w); else p.weapons[p.weapon] = w;   // 무기는 2개까지(교사 요청)
   return w;
 }
 
@@ -110,11 +110,16 @@ export function fire(s, rng) {
   const crit = st.crit && rng.chance(st.crit);
   if (st.type === 'melee') { p.swing = SWING_TICKS; p.swingStat = st.id; p.swingStar = (p.weapons[p.weapon] || {}).star || 1; p.swingCount = (p.swingCount || 0) + 1; p.swingCrit = crit; return; }
   if (st.type === 'throw') {
-    const t = alive(s).length ? s.mons.find(x => x === nearestMonWithin(s, 260)) : null;
-    const tx = t ? t.x : p.x + Math.cos(p.aim) * 150, ty = t ? t.y : p.y + Math.sin(p.aim) * 150;
+    const t = alive(s).length ? s.mons.find(x => x === nearestMonWithin(s, st.lob || 260)) : null, far = st.lob ? 300 : 150;
+    const tx = t ? t.x : p.x + Math.cos(p.aim) * far, ty = t ? t.y : p.y + Math.sin(p.aim) * far;
     const offs = hasLegend(p, 'twin') ? [-22, 22] : [0];   // 한방에 두 놈: 두 개를 나란히 던진다
-    for (const o of offs) s.shots.push({ th: true, weapon: st.id, sx: m.x, sy: m.y, x: m.x, y: m.y, tx: tx - Math.sin(p.aim) * o, ty: Math.max(Y0, ty + Math.cos(p.aim) * o), t: 0, T: Math.round(0.55 * TICK_HZ), dmg: st.dmg * (crit ? 2 : 1), crit, radius: st.radius * (st.radiusMul || 1) * st.areaMul });
+    for (const o of offs) s.shots.push({ th: true, weapon: st.id, sx: m.x, sy: m.y, x: m.x, y: m.y, tx: tx - Math.sin(p.aim) * o, ty: Math.max(Y0, ty + Math.cos(p.aim) * o), t: 0, T: Math.round((st.flight || 0.55) * TICK_HZ), dmg: st.dmg * (crit ? 2 : 1), crit, radius: st.radius * (st.radiusMul || 1) * st.areaMul });
     p.recoil = 3; return;
+  }
+  if (st.instant === 'tesla') {
+    const c = chest(p), tg = alive(s).map(o => ({ o, d: Math.hypot(monCenter(o).x - c.x, monCenter(o).y - c.y) })).filter(x => x.d < st.range).sort((a, b) => a.d - b.d).slice(0, (st.targets || 3) * (hasLegend(p, 'twin') ? 2 : 1));
+    for (const { o } of tg) { const b = monCenter(o); s.events.push({ type: 'zap', x1: m.x, y1: m.y, x2: b.x, y2: b.y }); damageMon(s, o, st.dmg * (crit ? 2 : 1), { weapon: st.id, electric: true, stun: 0.2 }); }
+    p.recoil = 3; p.flash = 2; return;
   }
   const n = (st.count || 1) * (hasLegend(p, 'twin') ? 2 : 1);
   const giant = hasLegend(p, 'giant'), bouncy = hasLegend(p, 'bouncy');
@@ -124,7 +129,7 @@ export function fire(s, rng) {
     // 사거리(픽셀)를 속도로 나눠 날아가는 틱 수를 정한다. 탱탱볼은 벽까지 끝까지 날아간다
     const life = bouncy ? 30 * TICK_HZ : Math.round(st.range * (st.lifeMul || 1) * st.rangeMul / sp * TICK_HZ);
     s.shots.push({ weapon: st.id, x: m.x, y: m.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life,
-      walls: bouncy ? 3 : 0, homing: hasLegend(p, 'homing'), split: hasLegend(p, 'split'), boom: hasLegend(p, 'boom'), zap: hasLegend(p, 'chain'),
+      walls: bouncy ? 3 : (st.walls || 0), homing: hasLegend(p, 'homing') || !!st.homing, sticky: !!st.sticky, blast: st.blast || 0, knockMul: st.knockMul || 1, split: hasLegend(p, 'split'), boom: hasLegend(p, 'boom'), zap: hasLegend(p, 'chain'),
       dmg: st.dmg * (crit ? 2 : 1) * (giant ? 1.3 : 1), crit, size: (st.size || 3) * (giant ? 2 : 1), pierce: st.pierce, hit: [], electric: !!st.electric, stun: st.stun || st.freeze || 0, slow: st.slow || 0, bounce: st.bounce || 0, wetDouble: !!st.wetDouble, knock: !!st.knock, chain: st.chain || 0 });
   }
   p.recoil = 4; p.flash = 2;
@@ -139,24 +144,43 @@ function beamTick(s, st) {
   for (const mo of alive(s)) {
     const b = monCenter(mo), d = Math.hypot(b.x - m.x, b.y - m.y), a = Math.atan2(b.y - m.y, b.x - m.x);
     if (d < len + monRadius(mo) && Math.abs(angDiff(a, p.aim)) < ang + 0.1) {
-      damageMon(s, mo, dps * DT, { slow: st.slowPct ? 0.3 : 0, slowPct: st.slowPct });
+      damageMon(s, mo, dps * DT, { slow: st.slowPct ? 0.3 : 0, slowPct: st.slowPct, weapon: st.id });
+      if (st.freezeAfter) { mo.cold = (mo.cold || 0) + DT; if (mo.cold >= st.freezeAfter) { mo.cold = 0; mo.stun = Math.max(mo.stun, 1.5); s.events.push({ type: 'freeze', uid: mo.uid }); } }
     }
   }
   if (st.coolsHeat) p.meters.heat = Math.max(0, p.meters.heat - 20 * DT);
 }
 
+// 소품 부수기: 상자·쓰레기통·의자는 재료·부품을, 드럼통은 폭발을 남긴다
+const MATS = ['cloth', 'vinyl', 'rubber', 'glass', 'filter', 'leather', 'string', 'scrap'];
+export function damageProp(s, o, dmg, rng) {
+  o.hp -= dmg; o.flash = 0.08; s.events.push({ type: 'propHit', uid: o.uid });
+  if (o.hp > 0) return;
+  o.broken = true; s.props = s.props.filter(x => x !== o);
+  const give = m => { s.gained.materials[m] = (s.gained.materials[m] || 0) + 1; };
+  const r = rng || { pick: a => a[(o.uid * 7) % a.length], chance: p => ((o.uid * 37) % 100) / 100 < p };
+  if (o.kind === 'crate') { give(r.pick(MATS)); give(r.pick(MATS)); s.gained.parts += 1; }
+  else if (o.kind === 'bin') { give(r.pick(MATS)); if (r.chance(0.3)) s.gained.parts += 1; }
+  else if (o.kind === 'seat') { give(r.pick(['cloth', 'vinyl'])); give(r.pick(['scrap', 'string'])); }
+  else if (o.kind === 'barrel') { s.events.push({ type: 'boom', x: o.x, y: o.y - o.r, r: 50 });
+    for (const m of alive(s)) if (Math.hypot(m.x - o.x, m.y - o.y) < 50 + monRadius(m)) damageMon(s, m, 10, { weapon: 'barrel', kx: Math.sign(m.x - o.x) * 8 });
+    if (Math.hypot(s.player.x - o.x, s.player.y - o.y) < 50) damagePlayer(s, 1, { kind: 'barrel' }); }
+  s.events.push({ type: 'propBreak', kind: o.kind, x: o.x, y: o.y });
+}
+export function hitProps(s, x, y, r, dmg, rng) { for (const o of [...s.props]) if (o.hp !== undefined && Math.hypot(o.x - x, o.y - y) < r + o.r) damageProp(s, o, dmg, rng); }
+
 function resolveSwing(s) {
   const p = s.player, st = withMods(p, weaponStat(p.swingStat, p.swingStar)), reach = st.reach * (st.reachMul || 1) * st.areaMul, c = chest(p);
   for (const m of alive(s)) {
     const b = monCenter(m), d = Math.hypot(b.x - c.x, b.y - c.y), a = Math.atan2(b.y - c.y, b.x - c.x);
-    if (d < reach + monRadius(m) && Math.abs(angDiff(a, p.aim)) < 1.4) {
+    if (d < reach + monRadius(m) && Math.abs(angDiff(a, p.aim)) < (st.arc || 1.4)) {
       const knock = st.knockEvery && p.swingCount % st.knockEvery === 0 ? 14 : 6;
       damageMon(s, m, st.dmg * (p.swingCrit ? 2 : 1), { weapon: st.id, kx: Math.cos(a) * knock, ky: Math.sin(a) * knock, stun: st.stun || 0, electric: !!st.electric, dirX: Math.cos(a) });
     }
   }
 }
 
-export function updateShots(s) {
+export function updateShots(s, rng) {
   for (const sh of s.shots) {
     if (sh.th) {
       sh.t++; const k = Math.min(1, sh.t / sh.T); sh.x = sh.sx + (sh.tx - sh.sx) * k; sh.y = sh.sy + (sh.ty - sh.sy) * k;
@@ -166,8 +190,17 @@ export function updateShots(s) {
         for (const m of alive(s)) if (Math.hypot(m.x - sh.tx, m.y - sh.ty) < sh.radius + monRadius(m))
           damageMon(s, m, sh.dmg, { weapon: sh.weapon, kx: (m.x - sh.tx) * 0.1, ky: (m.y - sh.ty) * 0.1, slow: st.slow || 0 });
         if (st.clearsAcid) s.zones = s.zones.filter(z => !(z.acid && Math.hypot(z.x - sh.tx, z.y - sh.ty) < sh.radius + z.r));
+        if (st.fire) s.zones.push({ kind: 'fire', x: sh.tx, y: sh.ty, r: sh.radius, t: Math.round(st.fire * TICK_HZ), dps: st.fireDps, friendly: true });
+        hitProps(s, sh.tx, sh.ty, sh.radius, sh.dmg, rng);
         if (st.cloud) s.zones.push({ kind: 'disinfect', x: sh.tx, y: sh.ty, r: sh.radius, t: Math.round(st.cloud * TICK_HZ), dps: sh.dmg, friendly: true });
       }
+      continue;
+    }
+    if (sh.fuse !== undefined) {   // 점착 폭탄이 붙은 상태: 붙은 적을 따라가다 1초 뒤 폭발
+      const host = sh.stuckTo && s.mons.find(o => o.uid === sh.stuckTo && !o.gone); if (host) { const b = monCenter(host); sh.x = b.x; sh.y = b.y; }
+      if (--sh.fuse <= 0) { sh.dead = true; s.events.push({ type: 'boom', x: sh.x, y: sh.y, r: sh.blast });
+        for (const o of alive(s)) if (Math.hypot(monCenter(o).x - sh.x, monCenter(o).y - sh.y) < sh.blast + monRadius(o)) damageMon(s, o, sh.dmg, { weapon: sh.weapon, kx: Math.sign(o.x - sh.x) * 6 });
+        hitProps(s, sh.x, sh.y, sh.blast, sh.dmg, rng); }
       continue;
     }
     if (sh.homing) {   // 유도탄: 가까운 적 쪽으로 한 틱에 최대 0.15라디안씩 휜다
@@ -181,11 +214,14 @@ export function updateShots(s) {
       const b = monCenter(m);
       if (Math.hypot(sh.x - b.x, sh.y - b.y) < monRadius(m) + sh.size) {
         sh.hit.push(m.uid);
-        damageMon(s, m, sh.dmg, { weapon: sh.weapon, kx: sh.vx * 0.012 * (sh.knock ? 3 : 1), ky: sh.vy * 0.012 * (sh.knock ? 3 : 1), stun: sh.stun, electric: sh.electric, wetDouble: sh.wetDouble, dirX: sh.vx, slow: sh.slow });
+        if (sh.sticky) { sh.stuckTo = m.uid; sh.fuse = TICK_HZ; sh.vx = 0; sh.vy = 0; s.events.push({ type: 'stick', uid: m.uid }); break; }
+        damageMon(s, m, sh.dmg, { weapon: sh.weapon, kx: sh.vx * 0.012 * (sh.knock ? 3 : 1) * (sh.knockMul || 1), ky: sh.vy * 0.012 * (sh.knock ? 3 : 1) * (sh.knockMul || 1), stun: sh.stun, electric: sh.electric, wetDouble: sh.wetDouble, dirX: sh.vx, slow: sh.slow });
         onLegendHit(s, sh, m, b);
         if (--sh.pierce <= 0) { sh.dead = true; break; }
       }
     }
+    if (!sh.dead && sh.fuse === undefined) for (const o of s.props) if (o.hp !== undefined && !o.broken && Math.hypot(sh.x - o.x, sh.y - (o.y - o.r)) < o.r + sh.size) { damageProp(s, o, sh.dmg, rng); if (--sh.pierce <= 0) { sh.dead = true; break; } }
+    if (!sh.dead && sh.sticky && sh.life <= 1) { sh.fuse = TICK_HZ; sh.vx = 0; sh.vy = 0; sh.life = 99; continue; }
     const outX = sh.x < 12 || sh.x > CAR_W - 12, outY = sh.y < Y0 - 40 || sh.y > 320;
     if (outX || outY) {
       if (sh.walls > 0) { sh.walls--; if (outX) { sh.vx = -sh.vx; sh.x = Math.max(12, Math.min(CAR_W - 12, sh.x)); } if (outY) { sh.vy = -sh.vy; sh.y = Math.max(Y0 - 40, Math.min(320, sh.y)); } s.events.push({ type: 'bounce', x: sh.x, y: sh.y }); }
@@ -227,9 +263,9 @@ export function updatePlayerCombat(s, input, rng) {
   if (p.quickT > 0) p.quickT--;
   if (input & INPUT.SWAP) { if (!p.swapHeld && p.weapons.length > 1) { p.weapon = (p.weapon + 1) % p.weapons.length; if (modLv(p, 'quick')) p.quickT = 2 * TICK_HZ; } p.swapHeld = true; } else p.swapHeld = false;
   if (p.swing <= 0) autoAim(s);
-  const attacking = !!(input & INPUT.ATTACK) && !(p.status.shock);
+  const attacking = !!(input & INPUT.ATTACK) && !(p.status.shock) && !p.running;
   if (attacking) fire(s, rng);
-  if (p.swing > 0) { p.swing--; if (p.swing === SWING_TICKS / 2) resolveSwing(s); }
+  if (p.swing > 0) { p.swing--; if (p.swing === SWING_TICKS / 2) { resolveSwing(s); const c = chest(p), st = weaponStat(p.swingStat, p.swingStar); hitProps(s, c.x + Math.cos(p.aim) * 30, c.y + Math.sin(p.aim) * 30, (st.reach || 60) * 0.6, st.dmg, rng); } }
   if (!attacking) p.energy = Math.min(p.maxEnergy, p.energy + 2 * DT * (p.relics.includes('solarPanel') ? 2 : 1));
   p.sinceHit++;
   const regenBlocked = p.meters.heat >= 100;

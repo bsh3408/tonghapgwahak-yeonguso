@@ -241,6 +241,7 @@ export function updateMons(s, rng) {
   const vinesSlow = s.player.forecastT > 0 ? 0.5 : 1;
   for (const m of s.mons) {
     if (m.dummy || m.gone) continue;
+    if (m.hp <= 0) { m.gone = true; continue; }
     m.t += DT; m.flash = Math.max(0, m.flash - DT); m.stun = Math.max(0, m.stun - DT); m.slowT = Math.max(0, m.slowT - DT); m.shieldOff = Math.max(0, (m.shieldOff || 0) - DT);
     if (vinesSlow < 1) { m.slowT = Math.max(m.slowT, DT); m.slowPct = Math.max(m.slowPct, 0.5); }
     if (m.boss) {

@@ -196,7 +196,7 @@ input[type=text]{width:100%;font:inherit;padding:11px;border-radius:6px;border:1
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
-<div class="top"><b>딸깍 독재자</b><span class="file">통치일지.xlsx</span><span class="note" id="topnote">시연용 프로토타입</span><span id="sndbtns" class="sndbtns"></span></div>
+<div class="top"><b>딸깍 독재자</b><span class="file">통치일지.xlsx</span><span class="note" id="topnote">시연용 프로토타입</span><span id="sndbtns" class="sndbtns"></span><a id="backsel" href="../shinjang_science.html" class="snd" style="text-decoration:none" hidden>게임 고르기</a></div>
 <div class="wrap" id="app"></div>
 
 <script src="../supabase-config.js"></script>
@@ -1176,6 +1176,7 @@ function dexHTML(){
 function renderStart(){
   clearTimers();
   SND.music(null); SND.drawButtons();
+  const bs = document.getElementById('backsel'); if (bs) bs.hidden = !NET_OK;
   document.getElementById('topnote').textContent = '시연용 프로토타입 · 가상 학급 23명';
   app.innerHTML = `<div class="screen">
     <h1>딸깍 독재자</h1>

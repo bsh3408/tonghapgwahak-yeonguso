@@ -119,5 +119,58 @@ tr.me td{color:var(--acc);font-weight:700}
 <script src="supabase-config.js"></script>
 <script src="lab_auth.js"></script>
 <script type="module" src="station.js"></script>
+
+<!-- ===== 첫 화면: 게임 고르기 (왼쪽 딸깍 독재자 · 오른쪽 통합과학연구소) ===== -->
+<style>
+#gsel{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;
+  background:rgba(12,16,18,.88);backdrop-filter:blur(3px);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;word-break:keep-all;color:#F2F2EE}
+#gsel[hidden]{display:none!important}
+#gsel .gs-head{text-align:center}
+#gsel .gs-head small{display:block;font-size:12px;letter-spacing:.2em;color:#C9B37A}
+#gsel .gs-head b{font-size:26px}
+#gsel .gs-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:min(860px,100%)}
+#gsel .gs-card{display:grid;gap:10px;align-content:start;text-align:left;border:2px solid #3A4448;border-radius:14px;padding:22px;background:#1C2427;color:inherit;font:inherit;cursor:pointer;transition:transform .15s,border-color .15s}
+#gsel .gs-card:hover,#gsel .gs-card:focus-visible{transform:translateY(-3px);border-color:#E2B93B;outline:none}
+#gsel .gs-card b{font-size:22px}
+#gsel .gs-card span{font-size:14px;color:#B9C2C0;line-height:1.6}
+#gsel .gs-card em{font-style:normal;justify-self:start;font-size:13px;font-weight:700;border-radius:999px;padding:3px 12px;background:#E2B93B;color:#2B2410}
+#gsel .gs-card.r em{background:#5BB6A0;color:#0E2A24}
+#gsel .gs-art{height:96px;border-radius:8px;display:grid;place-items:center}
+#gsel .gs-card.l .gs-art{background:linear-gradient(#BFE0EA,#BFE0EA 70%,#8DB277 70%)}
+#gsel .gs-card.r .gs-art{background:#2A3236}
+@media (max-width:640px){#gsel .gs-row{grid-template-columns:1fr}#gsel .gs-art{height:72px}}
+</style>
+<div id="gsel" role="dialog" aria-label="게임 고르기">
+  <div class="gs-head"><small>SHINJANG HIGH SCHOOL</small><b>어떤 게임을 할까요?</b></div>
+  <div class="gs-row">
+    <button type="button" class="gs-card l" id="gsLeft">
+      <div class="gs-art"><svg width="120" height="80" viewBox="0 0 30 20" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="2" y="9" width="3" height="5" fill="#6B7787"/><rect x="6" y="7" width="3" height="7" fill="#6B7787"/><rect x="21" y="8" width="4" height="6" fill="#4A4A4A"/><rect x="23" y="4" width="1" height="4" fill="#3A3A3A"/>
+        <rect x="12" y="8" width="6" height="2" fill="#2F4A2F"/><rect x="11" y="10" width="8" height="1" fill="#C0392B"/><rect x="13" y="11" width="4" height="3" fill="#F1C9A5"/><rect x="13" y="12" width="1" height="1" fill="#222"/><rect x="16" y="12" width="1" height="1" fill="#222"/><rect x="14" y="13" width="2" height="1" fill="#3A2A1A"/><rect x="12" y="14" width="6" height="4" fill="#4B5D3A"/><rect x="11" y="14" width="2" height="1" fill="#F2C94C"/><rect x="17" y="14" width="2" height="1" fill="#F2C94C"/></svg></div>
+      <b>딸깍 독재자</b>
+      <span>개발도상국의 지도자가 되어 30년을 통치합니다. 직접 고를까, AI에게 맡길까? 발전·에너지·신재생에너지 단원 수업용 게임입니다.</span>
+      <em>딸깍 독재자 시작</em>
+    </button>
+    <button type="button" class="gs-card r" id="gsRight">
+      <div class="gs-art"><svg width="120" height="80" viewBox="0 0 30 20" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="0" y="15" width="30" height="5" fill="#3B3F42"/><rect x="0" y="16" width="30" height="1" fill="#C9B37A"/><rect x="4" y="6" width="22" height="8" fill="#5BB6A0"/><rect x="6" y="8" width="4" height="3" fill="#CFE8F0"/><rect x="13" y="8" width="4" height="3" fill="#CFE8F0"/><rect x="20" y="8" width="4" height="3" fill="#CFE8F0"/><rect x="4" y="14" width="22" height="1" fill="#2A2F31"/><rect x="7" y="14" width="2" height="2" fill="#1A1A1A"/><rect x="21" y="14" width="2" height="2" fill="#1A1A1A"/></svg></div>
+      <b>통합과학연구소</b>
+      <span>지하철 노선 탈출 · 역무실. 이름과 비밀번호로 로그인해서 들어갑니다.</span>
+      <em>통합과학연구소 들어가기</em>
+    </button>
+  </div>
+</div>
+<script>
+(function(){
+  var sel = document.getElementById('gsel');
+  try { if (sessionStorage.getItem('gsel_lab') === '1') { sel.hidden = true; } } catch(e){}
+  document.getElementById('gsLeft').onclick = function(){ location.href = 'ttalkkak/index.html'; };
+  document.getElementById('gsRight').onclick = function(){
+    try { sessionStorage.setItem('gsel_lab', '1'); } catch(e){}
+    sel.hidden = true;
+    var f = document.querySelector('input'); if (f) f.focus();
+  };
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,132 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>딸깍 독재자 교사 화면</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{--page:#FFFFFF;--sheet:#F4F7F6;--line:#DCE3E1;--ink:#1B2A2C;--soft:#5D6D70;--mute:#8A9799;--green:#1E7A4C;--greenbg:#E7F3EC;--dn:#B4432C;--dnbg:#FBE7E1;--ai:#E3B341;--aibg:#FFF6DC}
+*{box-sizing:border-box}
+body{margin:0;word-break:keep-all;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans KR","Malgun Gothic",sans-serif;font-size:15px;line-height:1.6}
+button{font:inherit;cursor:pointer}
+.top{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.top b{color:var(--green)}
+.wrap{max-width:1180px;margin:0 auto;padding:16px;display:grid;gap:14px}
+.box{border:1px solid var(--line);border-radius:6px}
+.box h3{margin:0;font-size:13px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--sheet);color:var(--soft);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.box .in{padding:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=text]{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px}
+.btn{border:0;border-radius:6px;padding:10px 14px;font-weight:700;background:var(--green);color:#fff}
+.btn.sub{background:var(--page);color:var(--ink);border:1px solid var(--line)}
+.btn.warn{background:var(--ai);color:#3A2C05}
+.code{font-family:"IBM Plex Mono",monospace;font-size:64px;font-weight:700;letter-spacing:.12em;line-height:1}
+.tabs{display:flex;gap:6px}
+.tabs button{border:1px solid var(--line);background:var(--page);border-radius:6px;padding:6px 12px}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;white-space:nowrap}
+th{background:var(--sheet);font-size:12.5px;color:var(--soft)}
+td.n{text-align:right}
+.neg{color:var(--dn);font-weight:700}
+.pill{display:inline-block;border-radius:999px;padding:0 8px;font-size:12px;background:var(--sheet)}
+.pill.on{background:var(--greenbg);color:var(--green);font-weight:700}
+.lead{color:var(--soft);margin:0}
+.reasons{display:grid;gap:6px;font-size:14px}
+.reasons div{background:var(--sheet);border-radius:6px;padding:6px 10px}
+</style>
+
+<div class="top"><b>딸깍 독재자</b> 교사 화면</div>
+<div class="wrap" id="app"></div>
+
+<script src="../supabase-config.js"></script>
+<script>
+const app = document.getElementById('app');
+const esc = t => String(t ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+const STATS = [['happy','행복도'],['median','중위소득'],['gap','빈부격차'],['nature','자연환경'],['climate','기후']];
+const ENDING_NAMES = {hydra:'히드라',dynasty:'케르베로스',janus:'야누스',ai:'꼭두각시 대왕',drowned:'아틀란티스',minepit:'두더지 공화국',smog:'콜록콜록 부국',coalking:'연탄왕',server:'인류의 외장 하드',purged:'광장의 빈 받침대',domino:'와르르 도미노',dark:'깜빡깜빡 왕국',rich:'금수저 천국',bald:'민머리 왕국',golden:'미다스의 손',tiger:'포효하는 호랑이',green:'초록 거인',sunwind:'해님과 바람님',mended:'뒷수습 장인',lights:'프로메테우스',slow:'거북이 행복론',stuck:'러닝머신 공화국',grey:'회색 거인',drift:'표류하는 뗏목',plain:'그럭저럭 공화국'};
+let ROOM = null, TAB = 1, DATA = null, ROOMSTATE = {}, timer = null;
+const saved = () => { try { return JSON.parse(localStorage.getItem('tk_teacher_rooms') || '[]'); } catch(e){ return []; } };
+const save = r => { const a = saved().filter(x => x.code !== r.code); a.unshift(r); try { localStorage.setItem('tk_teacher_rooms', JSON.stringify(a.slice(0, 10))); } catch(e){} };
+
+function renderHome(){
+  const list = saved();
+  app.innerHTML = `
+    <div class="box"><h3>새 방 만들기</h3><div class="in row">
+      통치 기간 <label class="row"><input type="radio" name="len" value="30" checked> 30년 (약 30분)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (약 12분)</label>
+      <button class="btn" id="mk">방 만들기</button></div></div>
+    <div class="box"><h3>이전에 만든 방 다시 열기</h3><div class="in">${list.length ? list.map(r => `<button class="btn sub" data-c="${r.code}" style="margin:0 6px 6px 0">${r.code} · ${r.turns}년 · ${esc(r.when || '')}</button>`).join('') : '<p class="lead">아직 만든 방이 없습니다.</p>'}</div></div>`;
+  document.getElementById('mk').onclick = async () => {
+    const turns = +document.querySelector('input[name=len]:checked').value;
+    try {
+      const r = await supaRpc('tk_create_room', {p_turns:turns});
+      const room = {code:r.code, key:r.key, turns, when:new Date().toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})};
+      save(room); openRoom(room);
+    } catch(e){ alert('방을 만들지 못했습니다. 서버 설정(server.sql 실행)을 확인해 주세요.\n' + e.message); }
+  };
+  document.querySelectorAll('[data-c]').forEach(b => b.onclick = () => openRoom(saved().find(r => r.code === b.dataset.c)));
+}
+
+function openRoom(room){
+  ROOM = room; clearInterval(timer);
+  app.innerHTML = `
+    <div class="box"><div class="in row" style="justify-content:space-between">
+      <div><div class="lead">학생들에게 알려 줄 방 코드</div><div class="code">${room.code}</div><div class="lead">통치 기간 ${room.turns}년 · 학생은 게임 시작 화면의 '방 코드'에 이 숫자를 넣습니다.</div></div>
+      <div class="row" style="flex-direction:column;align-items:stretch">
+        <button class="btn warn" id="bReveal"></button>
+        <button class="btn" id="bVote"></button>
+        <button class="btn sub" id="bCsv">결과 엑셀(CSV) 받기</button>
+        <button class="btn sub" id="bHome">방 목록으로</button>
+      </div></div></div>
+    <div class="tabs"><button data-t="1">2차시 · 첫 번째 통치</button><button data-t="2">3차시 · 두 번째 통치와 투표</button></div>
+    <div id="board"></div>`;
+  document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { TAB = +b.dataset.t; draw(); });
+  document.getElementById('bReveal').onclick = () => act(ROOMSTATE.revealed ? 'hide' : 'reveal');
+  document.getElementById('bVote').onclick = () => act(ROOMSTATE.voting ? 'vote_close' : 'vote_open');
+  document.getElementById('bCsv').onclick = csv;
+  document.getElementById('bHome').onclick = () => { clearInterval(timer); renderHome(); };
+  refresh(); timer = setInterval(refresh, 4000);
+}
+async function act(a){
+  try { const r = await supaRpc('tk_teacher', {p_code:ROOM.code, p_key:ROOM.key, p_action:a}); if (!r.ok) alert(r.msg); ROOMSTATE = r; draw(); } catch(e){ alert(e.message); }
+}
+async function refresh(){
+  try {
+    const [st, all] = await Promise.all([supaRpc('tk_room', {p_code:ROOM.code}), supaRpc('tk_teacher_all', {p_code:ROOM.code, p_key:ROOM.key})]);
+    ROOMSTATE = st || {}; DATA = all; draw();
+  } catch(e){ console.warn(e); }
+}
+function draw(){
+  if (!ROOM) return;
+  document.querySelectorAll('[data-t]').forEach(b => b.classList.toggle('on', +b.dataset.t === TAB));
+  const bR = document.getElementById('bReveal'), bV = document.getElementById('bVote');
+  if (bR) bR.textContent = ROOMSTATE.revealed ? '숨겨진 지표 다시 숨기기' : '2차시 · 숨겨진 지표 공개';
+  if (bV) bV.textContent = ROOMSTATE.voting ? '3차시 · 투표 닫기' : '3차시 · 투표 열기';
+  const el = document.getElementById('board'); if (!el) return;
+  if (!DATA || !DATA.ok){ el.innerHTML = `<p class="lead">${DATA && DATA.msg ? esc(DATA.msg) : '불러오는 중…'}</p>`; return; }
+  const ps = DATA.players.filter(p => p.mode === TAB).sort((a, b) => b.gdp - a.gdp);
+  const showHidden = TAB === 2 || ROOMSTATE.revealed;
+  const head = `<tr><th>순위</th><th>이름</th><th>나라</th><th>진행</th><th>GDP</th><th>출발</th><th>AI 맡김</th><th>AI 거부</th><th>장관 자문</th><th>숙청</th><th>정전</th>${showHidden ? STATS.map(s => `<th>${s[1]}</th>`).join('') + '<th>결말</th>' : ''}${TAB === 2 ? '<th>카드</th><th>득표</th>' : ''}</tr>`;
+  const rows = ps.map((p, i) => `<tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${esc(p.nation)}</td><td>${p.done ? '<span class="pill on">끝</span>' : `${p.turn}년`}</td><td class="n">${fmt(p.gdp)}조</td><td class="n">${p.start_rank || '-'}위</td>
+    <td class="n">${p.ai_count}</td><td class="n">${p.ai_refused}</td><td class="n">${p.advice_used}</td><td class="n ${p.purges ? 'neg' : ''}">${p.purges}</td><td class="n">${p.blackouts}</td>
+    ${showHidden ? STATS.map(s => `<td class="n">${p.st ? p.st[s[0]] : '-'}</td>`).join('') + `<td>${esc(ENDING_NAMES[p.ending] || '-')}</td>` : ''}
+    ${TAB === 2 ? `<td>${p.label ? '나라 ' + p.label : '-'}</td><td class="n">${p.votes}</td>` : ''}</tr>`).join('');
+  let extra = '';
+  if (TAB === 2){
+    const rs = DATA.reasons || [];
+    extra = `<div class="box"><h3>투표 이유 <em>${rs.length}표</em></h3><div class="in reasons">${rs.length ? rs.map(r => `<div><b>${esc(r.target)}</b> ← ${esc(r.voter)}: ${esc(r.reason || '(이유 없음)')}</div>`).join('') : '<p class="lead">아직 투표가 없습니다.</p>'}</div></div>
+      <div class="box"><h3>통치 이념과 가장 고민한 선택</h3><div class="in reasons">${ps.filter(p => p.motto || p.reflection).map(p => `<div><b>${esc(p.name)}</b> (${esc(p.nation)}) “${esc(p.motto || '')}” · ${esc(p.reflection || '')}</div>`).join('') || '<p class="lead">아직 제출된 카드가 없습니다.</p>'}</div></div>`;
+  }
+  el.innerHTML = `<div class="box"><h3>${TAB === 1 ? '2차시 반 GDP 순위' : '3차시 반 GDP 순위'} <em>${ps.length}명 · 4초마다 새로 고침${TAB === 1 && !ROOMSTATE.revealed ? ' · 숨겨진 지표는 공개 전이라 표시하지 않음' : ''}</em></h3><div class="tw"><table>${head}${rows || '<tr><td colspan="12" class="lead">아직 들어온 학생이 없습니다.</td></tr>'}</table></div></div>${extra}`;
+}
+function csv(){
+  if (!DATA || !DATA.ok) return;
+  const cols = ['mode','name','nation','start_rank','gdp','turn','done','ai_count','ai_refused','advice_used','purges','blackouts', ...STATS.map(s => s[0]), 'ending','motto','reflection','label','votes'];
+  const lines = [cols.join(',')].concat(DATA.players.map(p => cols.map(c => {
+    const v = STATS.some(s => s[0] === c) ? (p.st ? p.st[c] : '') : c === 'ending' ? (ENDING_NAMES[p.ending] || '') : p[c];
+    return `"${String(v ?? '').replace(/"/g, '""')}"`; }).join(',')));
+  const blob = new Blob(['﻿' + lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `딸깍독재자_${ROOM.code}.csv`; a.click();
+}
+renderHome();
+</script>

@@ -1,0 +1,1518 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>딸깍 독재자 시연판</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --page:#FFFFFF; --sheet:#F4F7F6; --line:#DCE3E1; --ink:#1B2A2C; --soft:#5D6D70; --mute:#8A9799;
+  --green:#1E7A4C; --greenbg:#E7F3EC; --o:#23866F; --x:#C9533A; --ai:#E3B341; --aiInk:#3A2C05; --aibg:#FFF6DC;
+  --dn:#B4432C; --dnbg:#FBE7E1; --up:#1E7A4C; --upbg:#E2F2E8;
+  --coal:#4A4A4A; --lng:#8C7A5B; --nuke:#7C8BA1; --wind:#4FA3C7; --solar:#E0A62B;
+}
+*{box-sizing:border-box}
+body{margin:0;word-break:keep-all;overflow-wrap:break-word;line-break:strict;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans KR","Malgun Gothic",sans-serif;font-size:15px;line-height:1.65;-webkit-tap-highlight-color:transparent}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--ai);outline-offset:2px}
+.top{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.top b{color:var(--green)} .top .file{font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:1px 8px;color:var(--soft)}
+.top .note{margin-left:auto;color:var(--mute);font-size:12px;text-align:right}
+.top b,.top .file{white-space:nowrap}
+@media (max-width:560px){.top .note{display:none}}
+.wrap{max-width:1120px;margin:0 auto;padding:14px 14px 40px}
+.game{display:grid;gap:14px}
+.col{display:grid;gap:12px;align-content:start}
+@media (min-width:920px){.game{grid-template-columns:250px 1fr 290px;align-items:start}.mhud{display:none!important}}
+@media (max-width:919px){.game>.col:first-child{order:2}.game>.col:last-child{order:3}}
+.mhud{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--sheet)}
+.mhud b{color:var(--ink)} .mhud .neg{color:var(--dn)}
+.box{border:1px solid var(--line);border-radius:6px;background:var(--page)}
+.box h3{margin:0;font-size:13px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--sheet);color:var(--soft);font-weight:700;display:flex;justify-content:space-between}
+.box h3 em{font-style:normal;font-weight:500}
+.box .in{padding:10px 12px}
+.who{display:flex;gap:10px;align-items:center}
+.who .av{width:40px;height:40px;border-radius:6px;background:var(--greenbg);display:grid;place-items:center}
+.who b{display:block;font-size:16px}
+.who small{color:var(--mute);font-size:12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px;margin-top:10px;font-variant-numeric:tabular-nums}
+.kv span{color:var(--mute)} .kv b{text-align:right}
+.neg{color:var(--dn)}
+.gdpbig{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:8px}
+.gdpbig small{font-size:13px;color:var(--mute);font-weight:500}
+.bars{display:grid;gap:7px;font-size:13px}
+.bars .r{display:grid;grid-template-columns:5.4em 1fr 2em;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+.bars .t{height:7px;background:var(--sheet);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.bars .t i{display:block;height:100%;background:var(--green);transition:width .6s}
+.bars .bad .t i{background:var(--dn)}
+.mission{font-size:12.5px;color:var(--soft);background:var(--sheet);border-radius:4px;padding:6px 8px;margin-top:10px}
+.pw{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13px;font-variant-numeric:tabular-nums}
+.pw span{color:var(--mute)}
+.gauge{position:relative;height:12px;border-radius:6px;background:var(--sheet);border:1px solid var(--line);margin:8px 0 4px;overflow:hidden}
+.gauge i{position:absolute;top:0;bottom:0;left:0;background:var(--green)}
+.gauge i.short{background:var(--dn)}
+.gauge u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.gnote{font-size:11.5px;color:var(--mute)}
+.mix{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:8px}
+.legend{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11.5px;color:var(--soft);margin-top:5px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px}
+.land{border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.land svg{display:block;width:100%;height:auto}
+.pop{transform-box:fill-box;transform-origin:50% 100%;animation:pop .8s ease-out}
+@keyframes pop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+.spin{transform-box:view-box;animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.smoke{animation:smoke 3s ease-in-out infinite}
+@keyframes smoke{0%{transform:translateY(0);opacity:.7}100%{transform:translateY(-10px);opacity:0}}
+.mid{display:grid;gap:12px}
+.event{border:1px solid #E7C27A;background:#FFF8E8;border-radius:8px;padding:10px 14px;font-size:14px}
+.event b{display:block;color:#8A5A00}
+.card{border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--page);box-shadow:0 6px 18px rgba(27,42,44,.08);touch-action:none;user-select:none;transition:transform .25s;position:relative}
+.card.drag{transition:none}
+.card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.badge{font-size:12px;font-weight:700;color:var(--green);background:var(--greenbg);border-radius:4px;padding:1px 8px}
+.wx{font-size:12px;color:var(--soft)}
+.from{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft);margin-bottom:6px}
+.from i{width:42px;height:42px;border-radius:8px;display:grid;place-items:center;font-style:normal;flex:none;background:color-mix(in srgb,var(--tint) 22%,#fff);border:2px solid color-mix(in srgb,var(--tint) 55%,#fff)}
+.from b{color:var(--ink)}
+.bubble .aihead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.bubble .aihead i{width:40px;height:40px;border-radius:8px;background:#2B3640;display:grid;place-items:center;flex:none}
+.aibtns{display:grid;grid-template-columns:1.6fr 1fr;gap:8px}
+.aibtns .no{border:2px solid var(--x);background:var(--page);color:var(--x);border-radius:6px;font-weight:700;padding:12px}
+.q{font-size:19px;font-weight:700;line-height:1.5;text-wrap:balance;margin:0}
+.stat{margin-top:10px;font-size:12.5px;color:var(--soft);border-top:1px dashed var(--line);padding-top:8px}
+.stat b{color:var(--green);margin-right:6px}
+.stat em{font-style:normal;color:var(--mute)}
+.hint{position:absolute;top:44%;font-weight:700;font-size:30px;opacity:0;transition:opacity .15s}
+.hint.l{left:14px;color:var(--x)} .hint.r{right:14px;color:var(--o)}
+.choices{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:8px}
+.btn{border:0;border-radius:6px;padding:12px 8px;font-weight:700;font-size:16px;color:#fff;position:relative;overflow:hidden}
+.btn.o{background:var(--o)} .btn.x{background:var(--x)} .btn.ai{background:var(--ai);color:var(--aiInk)}
+.btn small{display:block;font-weight:500;font-size:11.5px;opacity:.9}
+.btn[disabled]{filter:grayscale(.65) brightness(.95);opacity:.7;cursor:default}
+.lock{position:absolute;left:0;bottom:0;height:4px;background:rgba(255,255,255,.8);width:0}
+.bubble{background:var(--aibg);border:1px solid #EBD38A;border-radius:8px;padding:12px 14px;font-size:15px}
+.bubble b{color:#8A6400}
+.bubble .plan{display:block;margin:6px 0;padding:8px 10px;background:#fff;border-radius:6px;font-weight:700}
+.result{border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.result .tag{display:inline-block;font-size:12px;font-weight:700;border-radius:4px;padding:1px 8px;margin-bottom:6px;color:#fff}
+.result p{margin:0 0 8px;font-size:15.5px}
+.power{font-size:14px;border-radius:6px;padding:8px 10px;margin:4px 0 8px;background:var(--sheet)}
+.power.bad{background:var(--dnbg);color:var(--dn);font-weight:700}
+.delta{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.delta span{font-size:12.5px;border-radius:4px;padding:1px 8px;background:var(--sheet);font-variant-numeric:tabular-nums}
+.delta .dn{background:var(--dnbg);color:var(--dn)} .delta .up{background:var(--upbg);color:var(--up)}
+.next{width:100%;border:0;border-radius:6px;padding:12px;font-weight:700;background:var(--green);color:#fff;position:relative;overflow:hidden}
+.next[disabled]{background:#9DB5A8;cursor:default}
+.log{max-height:560px;overflow:auto;display:grid}
+.log .e{display:grid;grid-template-columns:3.4em 1fr;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.log .e:first-child{background:#FAFCFB}
+.log .e.ev{background:#FFF8E8}
+.log .y{font-family:"IBM Plex Mono",monospace;color:var(--mute);font-size:12px}
+.log .ai{display:inline-block;font-size:11px;font-weight:700;background:var(--aibg);color:#8A6400;border-radius:3px;padding:0 5px;margin-left:4px}
+.log .bo{display:inline-block;font-size:11px;font-weight:700;background:var(--dnbg);color:var(--dn);border-radius:3px;padding:0 5px;margin-left:4px}
+.log .d{color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums}
+.log .empty{padding:12px;color:var(--mute);font-size:13px}
+.screen{max-width:640px;margin:0 auto;display:grid;gap:14px}
+.screen h1{font-size:30px;line-height:1.3;margin:6px 0 0;text-wrap:balance}
+.screen h2{font-size:18px;margin:0}
+.lead{color:var(--soft);margin:0}
+.mode{display:grid;gap:10px}
+.mode button{text-align:left;border:1px solid var(--line);background:var(--page);border-radius:6px;padding:14px}
+.mode button:hover{border-color:var(--green)}
+.mode button b{display:block;font-size:16px}
+.mode button span{font-size:13px;color:var(--soft)}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--soft)}
+input[type=text]{width:100%;font:inherit;padding:11px;border-radius:6px;border:1px solid var(--line);color:var(--ink)}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.names{grid-template-columns:1fr}}
+.row{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--soft)}
+.primary{border:0;border-radius:6px;padding:13px;font-weight:700;font-size:16px;background:var(--green);color:#fff}
+.ghost{border:1px solid var(--line);border-radius:6px;padding:11px;background:var(--page);color:var(--ink)}
+.big{font-size:40px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.rank{display:grid;font-variant-numeric:tabular-nums;font-size:14px}
+.rank div{display:grid;grid-template-columns:2.2em 1fr auto;gap:8px;padding:6px 12px;border-bottom:1px solid var(--line)}
+.rank .me{background:var(--aibg);font-weight:700}
+.quiz{display:grid;gap:8px}
+.qopt{text-align:left;border:1px solid var(--line);background:var(--page);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--ink)}
+.qopt:hover:not([disabled]){border-color:var(--green)}
+.qopt.right{background:var(--upbg);border-color:var(--up);color:var(--up);font-weight:700}
+.qopt.wrong{background:var(--dnbg);border-color:var(--dn);color:var(--dn)}
+.dice{display:flex;flex-wrap:wrap;gap:8px;min-height:52px}
+.die{display:grid;place-items:center;width:64px;height:48px;border:2px solid var(--line);border-radius:8px;font-weight:700;font-variant-numeric:tabular-nums;animation:pop .35s ease-out}
+.die.best{border-color:var(--green);background:var(--greenbg);color:var(--green)}
+.rank.wr div{padding:4px 10px;font-size:12.5px;grid-template-columns:2.4em 1fr auto}
+.rank.wr .mate{background:#F2F6FB;color:#33507A}
+.rank.wr .mate span:first-child{font-size:11px}
+.power.up{background:var(--upbg);color:var(--up);font-weight:700}
+.ending{border:2px solid var(--ink);border-radius:8px;padding:16px;text-align:center}
+.ending small{color:var(--mute);display:block}
+.ending b{display:block;font-size:24px;margin:2px 0 4px}
+.dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.dex div{border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
+.dex div b{display:block;font-size:14px}
+.dex .no{color:var(--mute);background:var(--sheet)}
+.unsaid{font-size:12.5px;color:var(--dn)}
+.said{font-size:12.5px;color:var(--soft)}
+.chain{font-size:12.5px;color:#7A4B00;background:#FFF3D6;border-radius:4px;padding:4px 8px;margin-bottom:8px}
+.chain b{margin-right:4px}
+.ch{display:inline-block;font-size:11px;font-weight:700;background:#FFF3D6;color:#7A4B00;border-radius:3px;padding:0 5px;margin-right:4px}
+.sndbtns{display:flex;gap:6px;margin-left:8px}
+.snd{border:1px solid var(--line);background:var(--page);color:var(--mute);border-radius:4px;padding:2px 8px;font-size:12px;white-space:nowrap}
+.snd.on{color:var(--green);border-color:var(--green);background:var(--greenbg)}
+@media (max-width:560px){.sndbtns{margin-left:auto}}
+.news{font-size:13.5px;background:#F3EFE6;border-left:0;border-radius:6px;padding:8px 10px;margin:4px 0 8px;color:#4A3B22}
+.news b{margin-right:6px;font-family:"IBM Plex Mono",monospace;font-size:12px}
+.badge.red{background:#F8DDD6;color:#A3341E}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;text-align:center}
+.plan small{display:block;color:var(--mute);font-size:12px}
+.plan b{font-size:22px;font-variant-numeric:tabular-nums}
+.paper{border:2px solid var(--ink);border-radius:4px;padding:18px 20px;background:#FBFAF6}
+.paper .mast{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px double var(--ink);padding-bottom:6px;margin-bottom:10px}
+.paper .mast b{font-size:22px;letter-spacing:.08em}
+.paper .mast small{color:var(--soft)}
+.paper ul{margin:10px 0 0;padding-left:1.1em}
+.paper li{margin:4px 0}
+.ask{width:100%;border:1px dashed #6E8FB5;background:#F2F6FB;color:#33507A;border-radius:6px;padding:9px;font-weight:700;font-size:14px}
+.ask[disabled]{opacity:.6;cursor:default}
+.advice{background:#F2F6FB;border:1px solid #C9D8EA;border-radius:8px;padding:12px 14px;font-size:15px}
+.advice .aihead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.advice .aihead i{width:40px;height:40px;border-radius:8px;background:#DCE7F4;display:grid;place-items:center;flex:none}
+.advice b{color:#33507A}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.badge2{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.badge2 i{flex:none;width:18px;height:18px;margin-top:2px;background:#E2B93B;clip-path:polygon(50% 0,63% 35%,100% 38%,70% 60%,80% 100%,50% 78%,20% 100%,30% 60%,0 38%,37% 35%)}
+.badge2 b{display:block;font-size:13.5px}
+.badge2 small{color:var(--soft);font-size:12px}
+.badge2.off{background:var(--sheet)}
+.badge2.off i{background:#C7CFCD}
+.badge2.off b{color:var(--mute)}
+.newb{font-size:11px;background:var(--greenbg);color:var(--green);border-radius:3px;padding:0 5px}
+.vcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.vcard{display:grid;gap:4px;border:1px solid var(--line);border-radius:8px;padding:12px;cursor:pointer}
+.vcard:has(input:checked){border:2px solid var(--green);background:var(--greenbg)}
+.vcard b{font-size:17px}
+.vm{font-weight:700}
+.vs{font-size:12.5px;color:var(--soft)}
+.vr{font-size:13px;color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="top"><b>딸깍 독재자</b><span class="file">통치일지.xlsx</span><span class="note" id="topnote">시연용 프로토타입</span><span id="sndbtns" class="sndbtns"></span></div>
+<div class="wrap" id="app"></div>
+
+<script src="../supabase-config.js"></script>
+<script>
+// ───────── 설정 (시연용으로 줄인 값: 실제는 30턴·30분) ─────────
+let TURNS = 30, TIME_LIMIT = 30 * 60, EVENT_TURNS = [3, 6, 9, 12, 15, 18, 21, 24, 27, 29], PLAN = 5;
+function setLength(n){
+  TURNS = n; TIME_LIMIT = n * 60;
+  EVENT_TURNS = n === 30 ? [3, 6, 9, 12, 15, 18, 21, 24, 27, 29] : [3, 5, 7, 9, 11];
+  PLAN = n === 30 ? 5 : 4;
+}
+const eraOf = t => Math.min(3, 1 + Math.floor((t - 1) / (TURNS / 3)));
+const ERA_NAMES = ['', '산업화의 시대', '성장의 그늘', '전환의 시대'];
+const ERA_DESC = ['', '', '지난 시대의 선택이 이제 결과로 돌아오기 시작합니다. 성장의 대가를 치를 시간입니다.', '세계가 탄소를 줄이라고 압박합니다. 미래 기술이 새로운 기회가 될지도 모릅니다.'];
+let LOCK_SEC = 1.5, RESULT_SEC = 2.5;
+
+// ───────── 카드 데이터 ─────────
+// O·X: 학생의 선택, A: AI의 과감한 안 (항상 GDP가 가장 크게 오르고, 숨은 대가도 가장 큼)
+// d: 지표 변화 (gdp는 %, 나머지는 점수). gap(빈부격차)은 높을수록 격차가 큼.
+// sup: 발전 설비 증가(GW), dem: 전력 수요 증가(GW), ess: 저장 장치, grid: 송전 효율
+const PEOPLE = {
+  ind:{name:'산업부 장관', c:'#3D5A80', t:'산'},
+  biz:{name:'대기업 대표', c:'#6D597A', t:'기'},
+  env:{name:'환경단체 대표', c:'#23866F', t:'환'},
+  cit:{name:'시민 대표', c:'#D0704F', t:'시'},
+  eng:{name:'에너지 연구원', c:'#A47A1E', t:'연'},
+  fis:{name:'어촌계장', c:'#457B9D', t:'어'},
+  far:{name:'농민 대표', c:'#6E7F2E', t:'농'},
+  vil:{name:'산골 마을 이장', c:'#8B6F47', t:'이'},
+};
+const IPCC = 'IPCC 제5차 보고서 · 2014';
+const BASE = [
+  {id:'coal', p:'ind', title:'석탄 화력발전소 건설', q:'공장 전력이 부족합니다. 석탄 화력발전소 2기를 새로 지을까요?',
+   stat:{t:'석탄 발전은 전기 1kWh를 만들 때 이산화탄소를 약 820g 내보냅니다. 해상 풍력은 약 12g입니다.', src:IPCC},
+   O:{d:{gdp:4,climate:-9,nature:-4,happy:-2}, sup:{coal:20}, add:['coal'], flag:'coal', r:'석탄 화력발전소 2기가 가동을 시작했습니다. 공장 가동률이 올랐습니다.'},
+   X:{d:{gdp:0}, r:'발전소 건설을 미뤘습니다. 공장 몇 곳이 증설 계획을 보류했습니다.'},
+   A:{plan:'석탄 화력발전소 4기를 한꺼번에 짓고, 환경 영향 평가는 생략합니다.', why:'전기가 넘쳐 공장이 쉬지 않고 돌아갑니다.', d:{gdp:7,climate:-16,nature:-8,happy:-4}, sup:{coal:40}, add:['coal','coal'], flag:'coal', r:'석탄 화력발전소 4기가 한꺼번에 들어섰습니다. 공장들이 밤낮없이 돌아갑니다.'}},
+  {id:'dc', p:'biz', title:'초대형 AI 데이터센터 유치', q:'해외 기업이 초대형 AI 데이터센터를 짓고 싶어 합니다. 유치할까요?',
+   stat:{t:'전 세계 데이터센터는 2024년 약 415TWh의 전기를 썼고, 2030년에는 두 배 넘게 늘 것으로 예상됩니다.', src:'IEA 「Energy and AI」 · 2025'},
+   O:{d:{gdp:5,nature:-5,climate:-3,gap:4,median:1}, dem:15, add:['dc'], flag:'dc', r:'초대형 데이터센터가 문을 열었습니다. 투자금이 들어오고 첨단 일자리가 생겼습니다.'},
+   X:{d:{gdp:0}, r:'데이터센터 유치를 거절했습니다. 기업은 이웃 나라로 떠났습니다.'},
+   A:{plan:'데이터센터 단지 3곳을 유치하고, 전용 석탄 발전소를 함께 짓습니다.', why:'전기 걱정 없이 세계의 AI 기업을 모두 끌어올 수 있습니다.', d:{gdp:9,nature:-9,climate:-10,gap:8}, dem:30, sup:{coal:30}, add:['dc','coal'], flag:'dc', r:'데이터센터 단지 3곳과 전용 석탄 발전소가 들어섰습니다. 해외 투자금이 쏟아져 들어옵니다.'}},
+  {id:'solar_forest', p:'eng', title:'산림 태양광 단지 조성', q:'산림을 깎아 대규모 태양광 단지를 만들자는 제안입니다. 진행할까요?',
+   stat:{t:'태양광 발전은 전기 1kWh를 만들 때 이산화탄소를 약 48g 내보냅니다. 석탄의 약 17분의 1입니다.', src:IPCC},
+   O:{d:{gdp:1,climate:4,nature:-7}, sup:{solar:12}, add:['solar'], flag:'solarForest', r:'산비탈에 태양광 패널이 깔렸습니다.'},
+   X:{d:{gdp:0}, r:'산림을 그대로 두었습니다.'},
+   A:{plan:'국립공원 경계까지 산을 깎아 태양광 단지를 세 배로 넓힙니다.', why:'태양광 산업을 한 번에 키울 수 있습니다.', d:{gdp:3,climate:6,nature:-18,happy:-3}, sup:{solar:30}, add:['solar','solar'], flag:'solarForest', r:'산 몇 개가 통째로 태양광 단지로 바뀌었습니다.'}},
+  {id:'eff', p:'eng', title:'에너지 효율 규제', q:'건물 단열과 고효율 가전 사용을 의무로 하는 에너지 효율 규제를 도입할까요?',
+   stat:{t:'건물은 전 세계 최종 에너지 소비의 약 30%를 차지합니다.', src:'IEA · 2023'},
+   O:{d:{gdp:-1,climate:5,happy:2,median:1}, dem:-8, r:'에너지 효율 규제가 시행되었습니다. 같은 일을 하는 데 드는 전기가 줄었습니다.'},
+   X:{d:{gdp:1}, r:'규제를 도입하지 않았습니다. 기업들은 기존 설비를 그대로 썼습니다.'},
+   A:{plan:'효율 규제를 거부하고, 기존 에너지 규제까지 모두 풉니다.', why:'기업이 비용 걱정 없이 마음껏 생산할 수 있습니다.', d:{gdp:3,climate:-6,happy:-1}, dem:6, r:'에너지 규제가 모두 풀렸습니다. 기업들의 비용이 줄었습니다.'}},
+  {id:'wind', p:'eng', title:'해상 풍력 단지 건설', q:'바다에 해상 풍력 단지를 지을까요?',
+   stat:{t:'해상 풍력은 전기 1kWh를 만들 때 이산화탄소를 약 12g 내보냅니다.', src:IPCC},
+   O:{d:{gdp:3,climate:6,nature:-1,happy:1}, sup:{wind:15}, add:['wind'], flag:'wind', r:'해상 풍력 단지가 완공되었습니다. 건설과 운영으로 일자리가 생겼습니다.'},
+   X:{d:{gdp:0}, r:'풍력 단지 건설을 미뤘습니다.'},
+   A:{plan:'어장 보호 구역까지 풍력기를 빽빽하게 세웁니다.', why:'바다 전체를 발전소로 쓰면 설비 투자가 두 배가 됩니다.', d:{gdp:5,climate:8,nature:-6,happy:-2,gap:2}, sup:{wind:30}, add:['wind','wind'], flag:'wind', r:'바다가 풍력기로 빽빽하게 채워졌습니다.'}},
+  {id:'nuke', p:'ind', title:'원자력 발전소 건설', q:'바닷가에 원자력 발전소를 새로 지을까요? 지역 주민 의견이 갈립니다.',
+   stat:{t:'원자력 발전은 전기 1kWh를 만들 때 이산화탄소를 약 12g 내보냅니다.', src:IPCC},
+   O:{d:{gdp:4,climate:3,happy:-4,nature:-2}, sup:{nuke:15}, add:['nuke'], r:'원자력 발전소 건설이 시작되었습니다. 대형 공사로 지역 경기가 살아났습니다.'},
+   X:{d:{gdp:0}, r:'원자력 발전소 건설을 보류했습니다.'},
+   A:{plan:'주민 투표 없이 원자력 발전소 4기를 한꺼번에 짓습니다.', why:'대용량 전력을 가장 빠르게 확보할 수 있습니다.', d:{gdp:7,climate:5,happy:-10,nature:-4,gap:2}, sup:{nuke:40}, add:['nuke'], r:'주민 반대 속에 원자력 발전소 4기가 동시에 지어졌습니다.'}},
+  {id:'discount', p:'biz', title:'산업용 전기요금 인하', q:'대기업의 산업용 전기요금을 크게 깎아 줄까요? 대신 가정용 요금이 오릅니다.',
+   O:{d:{gdp:3,gap:7,median:-3,happy:-3,climate:-2}, dem:6, r:'산업용 전기요금이 내려갔습니다. 공장들이 전기를 더 많이 쓰기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'전기요금을 그대로 유지했습니다.'},
+   A:{plan:'산업용 전기요금을 절반으로 깎고, 모자란 돈은 가정용 요금을 두 배로 올려 메웁니다.', why:'수출 기업의 경쟁력이 크게 오릅니다.', d:{gdp:6,gap:14,median:-7,happy:-7,climate:-4}, dem:12, r:'산업용 전기요금이 절반이 되었습니다. 가정용 전기 고지서는 두 배가 되었습니다.'}},
+  {id:'ess', p:'eng', title:'대형 에너지 저장 장치', q:'날씨에 따라 들쭉날쭉한 재생에너지를 저장할 대형 에너지 저장 장치(ESS)를 지을까요?',
+   O:{d:{gdp:2,climate:3,happy:1}, ess:1, add:['ess'], r:'에너지 저장 장치가 설치되었습니다. 날씨가 나빠도 재생에너지 전기를 꺼내 쓸 수 있습니다.'},
+   X:{d:{gdp:0}, r:'저장 장치 건설을 미뤘습니다.'},
+   A:{plan:'저장 장치 대신 그 돈으로 석탄 화력발전소를 짓습니다.', why:'저장 장치보다 발전소가 생산을 더 빨리 늘립니다.', d:{gdp:4,climate:-8,nature:-3}, sup:{coal:20}, add:['coal'], flag:'coal', r:'저장 장치 계획을 접고 석탄 화력발전소를 지었습니다.'}},
+  {id:'agrisolar', p:'far', title:'주민 참여형 영농 태양광', q:'농지 위에 태양광 패널을 얹고, 수익을 마을 주민과 나누는 사업을 할까요?',
+   O:{d:{gdp:1,median:3,gap:-3,happy:3,climate:3}, sup:{solar:8}, add:['solar'], r:'마을마다 영농형 태양광이 설치되었습니다. 주민들이 전기 판매 수익을 나눠 받았습니다.'},
+   X:{d:{gdp:0}, r:'사업을 진행하지 않았습니다.'},
+   A:{plan:'주민 몫을 없애고, 농지를 통째로 대기업에 넘겨 태양광을 짓습니다.', why:'대기업이 운영하면 설치 속도와 규모가 훨씬 커집니다.', d:{gdp:3,median:-3,gap:6,happy:-4,climate:3,nature:-3}, sup:{solar:15}, add:['solar'], r:'농지가 대기업의 태양광 단지로 바뀌었습니다.'}},
+  {id:'carbontax', p:'env', title:'탄소세 도입', q:'탄소를 많이 배출하는 기업에 탄소세를 매길까요?',
+   stat:{t:'2024년 기준 전 세계 75개 탄소 가격 제도가 온실가스 배출량의 약 24%에 적용되고 있습니다.', src:'세계은행 · 2024'},
+   O:{d:{gdp:-2,climate:7,nature:2,gap:-1}, dem:-3, r:'탄소세가 도입되었습니다. 배출이 많은 기업들이 부담을 안게 되었습니다.'},
+   X:{d:{gdp:0}, r:'탄소세를 도입하지 않았습니다.'},
+   A:{plan:'탄소세를 거부하고, 배출이 많은 기업에 오히려 보조금을 줍니다.', why:'생산 비용이 내려가 공장이 더 많이 돌아갑니다.', d:{gdp:3,climate:-9,gap:3}, dem:4, r:'탄소를 많이 내보내는 기업들이 보조금을 받았습니다.'}},
+  {id:'coalimport', p:'ind', title:'수입 석탄 확대', q:'값싼 수입 석탄을 늘려 전기요금을 동결할까요?',
+   stat:{t:'우리나라 발전량의 약 3분의 1은 석탄 발전에서 나옵니다.', src:'한국전력 전력통계 · 2023'},
+   O:{d:{gdp:2,climate:-6,happy:2}, sup:{coal:5}, flag:'coal', r:'수입 석탄이 늘어 전기요금이 동결되었습니다.'},
+   X:{d:{gdp:0}, r:'석탄 수입을 늘리지 않았습니다. 전기요금이 조금 올랐습니다.'},
+   A:{plan:'수입 석탄을 두 배로 늘리고, 낡은 석탄 발전소 폐쇄 계획도 취소합니다.', why:'싼 연료로 생산 비용을 최대한 낮출 수 있습니다.', d:{gdp:4,climate:-12,nature:-3,happy:1}, sup:{coal:15}, add:['coal'], flag:'coal', r:'석탄 수입이 두 배가 되었고, 낡은 발전소들이 계속 돌아갑니다.'}},
+  {id:'grid', p:'ind', title:'초고압 송전선 건설', q:'재생에너지가 많은 남쪽에서 공장이 많은 북쪽까지 초고압 송전선을 놓을까요?',
+   O:{d:{gdp:3,nature:-3,happy:-2,climate:2}, grid:1, add:['tower'], r:'초고압 송전선이 완공되었습니다. 먼 곳의 전기를 손실을 줄여 보낼 수 있게 되었습니다.'},
+   X:{d:{gdp:0}, r:'송전선 건설을 미뤘습니다.'},
+   A:{plan:'산림 보호 구역을 가로질러 송전선을 가장 짧은 길로 놓습니다.', why:'공사비와 기간이 절반으로 줄어듭니다.', d:{gdp:5,nature:-9,happy:-4}, grid:1, add:['tower'], r:'보호 구역을 가로지르는 송전선이 완공되었습니다.'}},
+  {id:'hydro', p:'ind', title:'대형 수력 발전 댐 건설', q:'큰 강을 막아 대형 수력 발전 댐을 지을까요? 마을 몇 곳이 물에 잠깁니다.',
+   stat:{t:'수력 발전은 전기 1kWh를 만들 때 이산화탄소를 약 24g 내보냅니다.', src:IPCC},
+   O:{d:{gdp:4,climate:4,nature:-8,happy:-3,gap:2}, sup:{hydro:15}, add:['dam'], flag:'dam', r:'댐이 완공되어 강물로 전기를 만들기 시작했습니다. 물에 잠긴 마을 주민들은 이주했습니다.'},
+   X:{d:{gdp:0}, r:'강을 그대로 두었습니다.'},
+   A:{plan:'강 상류부터 하류까지 댐 3개를 연달아 짓고, 이주 보상은 최소로 줄입니다.', why:'물이 흐르는 만큼 전기가 나오니 강 전체를 발전소로 쓰는 것이 이익입니다.', d:{gdp:7,climate:5,nature:-16,happy:-8,gap:6,median:-3}, sup:{hydro:35}, add:['dam'], flag:'dam', r:'강 전체에 댐 3개가 들어섰습니다. 수많은 마을이 물에 잠겼습니다.'}},
+  {id:'mine', p:'biz', title:'배터리 광물 광산 개발', q:'외국 기업이 열대 우림 아래 묻힌 배터리용 니켈 광산을 개발하겠다고 합니다. 허가할까요?',
+   O:{d:{gdp:5,nature:-9,happy:-2,gap:5}, dem:4, add:['mine'], flag:'mine', r:'광산이 문을 열었습니다. 광물 수출로 돈이 들어오기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'광산 개발을 허가하지 않았습니다. 우림은 그대로 남았습니다.'},
+   A:{plan:'우림 전체를 광산 구역으로 지정하고, 정련 공장까지 함께 짓습니다.', why:'광석만 파는 것보다 정련해서 팔면 몇 배를 벌 수 있습니다.', d:{gdp:9,nature:-18,climate:-6,happy:-5,gap:8}, dem:10, add:['mine'], flag:'mine', r:'우림이 광산과 정련 공장으로 바뀌었습니다. 수출이 크게 늘었습니다.'}},
+  {id:'village', p:'vil', title:'산골 마을 태양광 전력망', q:'아직 전기가 들어가지 않는 산골 마을들에 소형 태양광과 배터리로 작은 전력망을 놓을까요?',
+   stat:{t:'2022년 기준 전 세계 약 7억 명이 아직 전기 없이 살고 있습니다.', src:'IEA 등 「SDG7 이행 보고서」 · 2024'},
+   O:{d:{gdp:1,happy:5,median:3,gap:-4,climate:1}, sup:{solar:4}, add:['solar'], flag:'village', r:'산골 마을에 처음으로 불이 켜졌습니다. 아이들이 밤에도 공부할 수 있게 되었습니다.'},
+   X:{d:{gdp:0}, r:'마을 전력망 사업을 미뤘습니다.'},
+   A:{plan:'마을 전력망 대신 그 예산으로 공장 지대에 대형 석탄 발전소를 짓습니다.', why:'시골 마을보다 공장에 전기를 보내야 생산이 늘어납니다.', d:{gdp:4,gap:6,happy:-3,climate:-6}, sup:{coal:15}, add:['coal'], flag:'coal', r:'공장 지대에 대형 석탄 발전소가 들어섰습니다. 산골 마을은 여전히 어둡습니다.'}},
+  {id:'lng', p:'ind', title:'LNG 발전소 건설', q:'석탄보다 깨끗하다는 LNG(액화 천연가스) 발전소를 지을까요? 연료는 모두 수입해야 합니다.',
+   stat:{t:'LNG 복합 화력 발전은 전기 1kWh를 만들 때 이산화탄소를 약 490g 내보냅니다. 석탄의 약 60%입니다.', src:IPCC},
+   O:{d:{gdp:3,climate:-3,median:-1}, sup:{lng:20}, add:['tank'], r:'LNG 발전소가 가동을 시작했습니다. 석탄보다 매연이 적습니다.'},
+   X:{d:{gdp:0}, r:'LNG 발전소 건설을 미뤘습니다.'},
+   A:{plan:'LNG 발전소를 짓고, 석탄 발전소 증설도 그대로 밀어붙입니다.', why:'두 가지를 함께 늘리면 전기가 남아돌아 어떤 공장이든 유치할 수 있습니다.', d:{gdp:6,climate:-10,nature:-4}, sup:{lng:20,coal:20}, add:['tank','coal'], flag:'coal', r:'LNG 발전소와 석탄 발전소가 동시에 들어섰습니다.'}},
+  {id:'geo', p:'eng', title:'화산 지대 지열 발전', q:'화산 지대의 땅속 열로 전기를 만드는 지열 발전소를 지을까요?',
+   stat:{t:'지열 발전은 전기 1kWh를 만들 때 이산화탄소를 약 38g 내보냅니다.', src:IPCC},
+   O:{d:{gdp:2,climate:4,nature:-2}, sup:{other:10}, add:['geo'], r:'지열 발전소가 땅속 열로 전기를 만들기 시작했습니다. 날씨와 상관없이 일정하게 전기가 나옵니다.'},
+   X:{d:{gdp:0}, r:'지열 발전소 계획을 접었습니다.'},
+   A:{plan:'국립공원 온천 지대까지 지열정을 수십 개 뚫습니다.', why:'땅속 열은 무료 연료입니다. 많이 뚫을수록 이익입니다.', d:{gdp:4,climate:5,nature:-9,happy:-2}, sup:{other:20}, add:['geo'], r:'국립공원 곳곳에 지열정이 뚫렸습니다.'}},
+  {id:'h2', p:'eng', title:'그린수소 시범 단지', q:'재생에너지 전기로 물을 전기 분해해 수소를 만드는 그린수소 시범 단지를 지을까요?',
+   stat:{t:'저탄소 수소는 아직 전 세계 수소 생산의 1%도 되지 않습니다.', src:'IEA 「Global Hydrogen Review」 · 2024'},
+   O:{d:{gdp:1,climate:3,median:1}, dem:5, r:'그린수소 시범 단지가 문을 열었습니다. 미래 연료 기술을 익히기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'수소 사업을 미뤘습니다.'},
+   A:{plan:'그린수소 대신 천연가스로 값싼 수소를 대량 생산해 수출합니다.', why:'지금 당장 팔 수 있는 수소가 돈이 됩니다.', d:{gdp:4,climate:-7}, dem:3, r:'천연가스로 만든 값싼 수소를 대량으로 수출하기 시작했습니다.'}},
+  {id:'smr', p:'eng', title:'소형 모듈 원자로 연구', q:'미래 기술인 소형 모듈 원자로(SMR) 연구에 투자할까요? 실제 발전까지는 오래 걸립니다.',
+   O:{d:{gdp:1,climate:2,median:1}, r:'소형 원자로 연구소가 문을 열었습니다. 과학자들이 안전성 실험을 시작했습니다.'},
+   X:{d:{gdp:0}, r:'연구 투자를 미뤘습니다.'},
+   A:{plan:'안전성 검증이 끝나기 전에 도시 가까이 소형 원자로 5기를 바로 짓습니다.', why:'남들보다 먼저 지어야 기술 수출국이 될 수 있습니다.', d:{gdp:5,happy:-6,climate:3}, sup:{nuke:20}, add:['nuke'], r:'검증이 끝나지 않은 소형 원자로 5기가 도시 옆에 들어섰습니다.'}},
+  {id:'ccs', p:'env', title:'탄소 포집 장치 설치', q:'석탄 발전소 굴뚝에 이산화탄소를 붙잡아 땅속에 묻는 탄소 포집 장치를 달까요?',
+   O:{d:{gdp:-1,climate:4}, r:'석탄 발전소에 탄소 포집 장치가 달렸습니다. 발전 비용은 조금 올랐습니다.'},
+   X:{d:{gdp:0}, r:'포집 장치를 달지 않았습니다.'},
+   A:{plan:'포집 장치 대신 값싼 해외 탄소 배출권을 사서 서류상 배출량만 줄입니다.', why:'장치보다 서류가 훨씬 싸게 먹힙니다.', d:{gdp:2,climate:-2}, r:'서류상 배출량은 줄었습니다. 굴뚝은 그대로입니다.'}},
+  {id:'ev', p:'biz', title:'전기차 공장 유치', q:'외국 자동차 회사가 전기차 공장을 짓겠다고 합니다. 유치할까요?',
+   O:{d:{gdp:4,median:2,gap:2,climate:1}, dem:8, add:['factory'], r:'전기차 공장이 들어섰습니다. 일자리가 크게 늘었습니다.'},
+   X:{d:{gdp:0}, r:'공장 유치를 포기했습니다.'},
+   A:{plan:'노동 시간 제한을 풀어 주는 조건으로 공장 3곳을 한꺼번에 유치합니다.', why:'규제를 풀면 투자가 몰려옵니다.', d:{gdp:8,happy:-6,gap:7,median:-1}, dem:18, add:['factory','factory'], r:'전기차 공장 3곳이 밤낮없이 돌아가기 시작했습니다.'}},
+  {id:'crypto', p:'biz', title:'코인 채굴장 유치', q:'외국 코인 채굴 업체가 우리나라의 전기를 싸게 사서 채굴장을 짓겠다고 합니다. 허가할까요?',
+   stat:{t:'비트코인 채굴에 쓰이는 전기는 한 해 100TWh가 넘는 것으로 추정됩니다.', src:'케임브리지 대학 비트코인 전력 소비 지수'},
+   O:{d:{gdp:3,climate:-2}, dem:10, add:['dc'], flag:'crypto', r:'코인 채굴장이 문을 열었습니다. 전기 판매 수입이 늘었습니다.'},
+   X:{d:{gdp:0}, r:'채굴장을 허가하지 않았습니다.'},
+   A:{plan:'채굴 업체 전용 요금을 만들어 나라 전기의 일부를 통째로 팝니다.', why:'남는 전기를 돈으로 바꾸는 가장 쉬운 방법입니다.', d:{gdp:6,happy:-2,gap:3,climate:-4}, dem:22, add:['dc'], flag:'crypto', r:'거대한 채굴장들이 나라 전기를 빨아들이기 시작했습니다.'}},
+  {id:'ewaste', p:'biz', title:'폐전자제품 수입 처리', q:'선진국의 폐전자제품과 폐배터리를 들여와 처리하는 사업을 시작할까요?',
+   stat:{t:'2022년 전 세계에서 전자 폐기물 6,200만 톤이 나왔고, 제대로 수거해 재활용한 것은 22.3%였습니다.', src:'UN 「Global E-waste Monitor」 · 2024'},
+   O:{d:{gdp:3,nature:-6,happy:-2}, flag:'ewaste', r:'폐전자제품 처리장이 문을 열었습니다. 금속을 뽑아 팔아 돈을 벌기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'수입을 허가하지 않았습니다.'},
+   A:{plan:'안전 기준 없이 수입량을 다섯 배로 늘립니다.', why:'처리량이 늘어날수록 금속 판매 수익도 커집니다.', d:{gdp:6,nature:-12,happy:-5,climate:-3}, flag:'ewaste', r:'선진국의 전자 쓰레기가 산더미처럼 쌓이기 시작했습니다.'}},
+  {id:'led', p:'eng', title:'LED 조명 교체', q:'전국의 가로등과 공공건물 조명을 LED로 바꿀까요?',
+   stat:{t:'LED 조명은 백열등보다 전기를 75% 이상 덜 씁니다.', src:'미국 에너지부'},
+   O:{d:{gdp:1,climate:2}, dem:-5, r:'전국의 조명이 LED로 바뀌었습니다. 같은 밝기에 전기는 훨씬 덜 듭니다.'},
+   X:{d:{gdp:0}, r:'조명 교체를 미뤘습니다.'},
+   A:{plan:'조명 교체 예산을 공장 증설 지원금으로 돌립니다.', why:'조명을 바꾸는 것보다 공장을 늘리는 것이 생산에 도움이 됩니다.', d:{gdp:3}, dem:4, add:['factory'], r:'조명 교체 대신 공장 증설 지원금이 나갔습니다.'}},
+  {id:'transit', p:'cit', title:'전기버스와 지하철', q:'도시에 전기버스와 지하철을 놓아 대중교통을 늘릴까요?',
+   O:{d:{gdp:1,climate:4,happy:3,median:1}, dem:4, r:'전기버스와 지하철이 다니기 시작했습니다. 출퇴근이 편해지고 매연이 줄었습니다.'},
+   X:{d:{gdp:0}, r:'대중교통 사업을 미뤘습니다.'},
+   A:{plan:'대중교통 대신 고속도로를 놓고 휘발유 자동차 공장을 유치합니다.', why:'자동차 산업은 연관 산업이 많아 GDP를 크게 끌어올립니다.', d:{gdp:5,climate:-6,nature:-4,happy:-1}, dem:2, add:['factory'], r:'고속도로가 뚫리고 자동차 공장이 들어섰습니다.'}},
+  {id:'fuelsub', p:'cit', title:'서민 연료비 보조금', q:'서민 가정의 등유·가스 연료비 보조금을 계속 줄까요?',
+   O:{d:{gdp:-1,happy:3,median:2,gap:-2,climate:-2}, r:'연료비 보조금을 이어 갔습니다. 겨울나기가 조금 수월해졌습니다.'},
+   X:{d:{gdp:1,happy:-3,median:-2,gap:2}, r:'보조금을 끊었습니다. 나라 살림은 조금 나아졌습니다.'},
+   A:{plan:'보조금을 끊고, 그 돈을 대기업 법인세 감면에 씁니다.', why:'기업이 돈을 벌어야 결국 국민도 잘살게 됩니다.', d:{gdp:4,gap:8,median:-4,happy:-5}, r:'서민 보조금이 끊기고 대기업 세금이 줄었습니다.'}},
+  {id:'ecopark', p:'env', title:'생태 국립공원 지정', q:'원시림이 남아 있는 지역을 생태 국립공원으로 지정하고 생태 관광을 키울까요?',
+   O:{d:{gdp:1,nature:5,happy:2,median:1}, r:'원시림이 국립공원이 되었습니다. 생태 관광객이 찾아오기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'국립공원 지정을 미뤘습니다.'},
+   A:{plan:'국립공원 대신 그 땅에 대형 리조트와 골프장 단지를 짓습니다.', why:'부자 관광객 한 명이 생태 관광객 열 명보다 돈을 더 씁니다.', d:{gdp:4,nature:-9,gap:4}, r:'원시림 자리에 리조트와 골프장이 들어섰습니다.'}},
+  {id:'offset', p:'env', title:'숲 보전 탄소 상쇄 계약', q:'선진국이 우리 숲을 베지 않고 지키는 대가로 돈을 주겠다고 합니다. 계약할까요?',
+   O:{d:{gdp:1,nature:4,climate:3,median:1}, r:'숲 보전 계약을 맺었습니다. 숲을 지키는 마을들에 돈이 들어왔습니다.'},
+   X:{d:{gdp:0}, r:'계약을 맺지 않았습니다.'},
+   A:{plan:'숲은 베어 목재로 팔고, 계약은 이미 숲이 없는 땅으로 서류만 맞춰 맺습니다.', why:'목재 판매와 계약금을 둘 다 챙길 수 있습니다.', d:{gdp:5,nature:-10,climate:-5}, r:'숲은 베어져 팔렸고, 계약서 위의 숲만 남았습니다.'}},
+  {id:'biomass', p:'ind', title:'바이오매스 발전', q:'숲의 나무를 베어 연료로 태우는 바이오매스 발전소를 지을까요? 재생에너지로 분류됩니다.',
+   O:{d:{gdp:2,nature:-7,climate:1}, sup:{other:10}, r:'바이오매스 발전소가 나무를 태워 전기를 만들기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'바이오매스 발전소를 짓지 않았습니다.'},
+   A:{plan:'원시림까지 베어 바이오매스 연료로 수출도 합니다.', why:'재생에너지로 인정받으니 국제 지원금까지 받을 수 있습니다.', d:{gdp:5,nature:-15,climate:-3}, sup:{other:15}, r:'원시림이 연료용 나무 조각으로 바뀌어 팔려 나갔습니다.'}},
+  {id:'coolshelter', p:'cit', title:'폭염 대비 냉방 쉼터', q:'에어컨이 없는 가정을 위해 동네마다 무료 냉방 쉼터를 만들까요?',
+   O:{d:{gdp:-1,happy:4,gap:-2}, dem:3, r:'동네마다 냉방 쉼터가 생겼습니다. 노인과 아이들이 더위를 피할 곳이 생겼습니다.'},
+   X:{d:{gdp:0}, r:'쉼터를 만들지 않았습니다.'},
+   A:{plan:'쉼터 대신 그 예산으로 수출 공장의 전기요금을 지원합니다.', why:'수출이 늘어야 나라가 부자가 됩니다.', d:{gdp:3,happy:-4,gap:4}, dem:3, r:'냉방 쉼터 예산이 수출 공장 지원금으로 바뀌었습니다.'}},
+  {id:'tou', p:'eng', title:'시간대별 전기요금', q:'전기가 많이 쓰이는 시간에는 비싸게, 남는 시간에는 싸게 받는 시간대별 전기요금을 도입할까요?',
+   O:{d:{gdp:0,climate:2,happy:-1}, dem:-6, r:'시간대별 요금이 시행되었습니다. 사람들이 전기를 덜 붐비는 시간에 쓰기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'요금 제도를 바꾸지 않았습니다.'},
+   A:{plan:'요금제 대신 공장에 무조건 먼저 전기를 보내는 우선 공급 제도를 만듭니다.', why:'전기가 모자랄 때 공장이 멈추지 않아야 GDP가 지켜집니다.', d:{gdp:3,happy:-4,gap:4}, r:'전기가 모자라면 가정보다 공장에 먼저 전기가 가게 되었습니다.'}},
+  {id:'gasfield', p:'ind', title:'앞바다 천연가스전 개발', q:'앞바다에서 천연가스전이 발견되었습니다. 개발할까요?',
+   O:{d:{gdp:5,climate:-5,nature:-3}, sup:{lng:10}, add:['tank'], r:'가스전 개발이 시작되었습니다. 가스 수출로 외화가 들어옵니다.'},
+   X:{d:{gdp:0}, r:'가스전을 개발하지 않고 바다를 그대로 두었습니다.'},
+   A:{plan:'가스전을 개발하면서, 함께 나오는 가스는 그냥 태워 버리고 원유까지 최대한 퍼 올립니다.', why:'처리 시설을 짓는 것보다 태워 버리는 편이 훨씬 쌉니다.', d:{gdp:8,climate:-11,nature:-6}, sup:{lng:10}, add:['tank'], r:'바다 위 굴착 시설에서 밤낮없이 불길이 치솟습니다.'}},
+  {id:'cookstove', p:'vil', title:'깨끗한 조리 기구 보급', q:'장작을 때서 밥을 짓는 가정에 전기·가스 조리 기구를 나눠 줄까요? 집 안 연기로 아이들이 기침을 합니다.',
+   stat:{t:'집 안에서 땔감 등을 태워 생기는 대기 오염으로 해마다 약 320만 명이 숨집니다.', src:'세계보건기구(WHO)'},
+   O:{d:{gdp:1,happy:4,nature:3,median:1}, dem:3, r:'집집마다 깨끗한 조리 기구가 생겼습니다. 숲에서 땔감을 베는 일도 줄었습니다.'},
+   X:{d:{gdp:0}, r:'보급하지 않았습니다.'},
+   A:{plan:'조리 기구 보급 예산을 공단 진입 도로 건설에 씁니다.', why:'도로가 있어야 공장이 들어옵니다.', d:{gdp:3,happy:-2,nature:-3}, add:['factory'], r:'공단으로 가는 넓은 도로가 뚫렸습니다.'}},
+  {id:'smartcity', p:'biz', title:'AI 스마트 시티', q:'도시 곳곳에 센서를 달아 교통과 전기를 AI가 관리하는 스마트 시티를 지을까요?',
+   O:{d:{gdp:3,happy:1,gap:2}, dem:6, add:['town'], r:'수도가 스마트 시티로 바뀌었습니다. 신호등과 가로등을 AI가 조절합니다.'},
+   X:{d:{gdp:0}, r:'스마트 시티 계획을 미뤘습니다.'},
+   A:{plan:'시민 감시 카메라까지 달아 시위를 미리 막는 스마트 시티를 짓습니다.', why:'시위가 사라지면 공장이 멈출 일도 없습니다.', d:{gdp:5,happy:-6,gap:3}, dem:8, add:['town'], r:'도시 곳곳에 감시 카메라가 달렸습니다. 거리가 조용해졌습니다.'}},
+  {id:'heatpump', p:'eng', title:'열펌프 난방 보급', q:'가정 난방을 석유 보일러에서 전기로 돌아가는 열펌프로 바꾸는 사업을 할까요?',
+   O:{d:{gdp:1,climate:4,happy:1}, dem:5, r:'열펌프 난방이 보급되었습니다. 같은 전기로 더 많은 열을 얻습니다.'},
+   X:{d:{gdp:0}, r:'사업을 미뤘습니다.'},
+   A:{plan:'열펌프 대신 값싼 석탄 난방기를 집집마다 나눠 줍니다.', why:'석탄 난방기는 값이 싸서 더 많은 집에 빨리 보급할 수 있습니다.', d:{gdp:3,climate:-6,happy:-1}, r:'집집마다 석탄 난방기가 놓였습니다.'}},
+  {id:'fusion', p:'eng', title:'국제 핵융합 연구 참여', q:'여러 나라가 함께하는 핵융합 발전 연구에 참여할까요? 성공하면 꿈의 에너지가 됩니다.',
+   O:{d:{gdp:1,median:1,climate:1}, r:'국제 핵융합 연구단에 우리 과학자들이 합류했습니다.'},
+   X:{d:{gdp:0}, r:'참여하지 않았습니다.'},
+   A:{plan:'연구 대신 낡은 원자로들의 수명을 20년씩 연장합니다.', why:'새 기술을 기다리는 것보다 있는 발전소를 더 돌리는 게 이익입니다.', d:{gdp:4,happy:-4}, sup:{nuke:10}, r:'낡은 원자로들이 20년 더 돌아가게 되었습니다.'}},
+  {id:'phaseout', p:'env', title:'석탄 발전소 단계적 폐쇄', q:'오래된 석탄 화력발전소부터 차례로 문을 닫을까요? 그만큼 다른 발전소가 필요합니다.',
+   O:{d:{gdp:-2,climate:8,happy:3}, sup:{coal:-20}, r:'낡은 석탄 발전소들이 문을 닫기 시작했습니다. 하늘이 맑아졌습니다.'},
+   X:{d:{gdp:0}, r:'석탄 발전소를 그대로 두었습니다.'},
+   A:{plan:'폐쇄 대신 낡은 석탄 발전소를 해외에 팔고, 새 석탄 발전소를 짓습니다.', why:'낡은 설비를 팔아 돈을 벌고, 새 설비로 생산을 늘릴 수 있습니다.', d:{gdp:4,climate:-5}, sup:{coal:10}, add:['coal'], flag:'coal', r:'낡은 발전소는 이웃 나라로 팔려 갔고, 새 석탄 발전소가 들어섰습니다.'}},
+  {id:'intlgrid', p:'ind', title:'국제 전력망 연결', q:'이웃 나라들과 전력망을 연결할까요? 전기가 남거나 모자랄 때 서로 주고받을 수 있습니다.',
+   O:{d:{gdp:2,climate:2,happy:1}, grid:1, r:'이웃 나라와 전력망이 연결되었습니다.'},
+   X:{d:{gdp:0}, r:'전력망을 연결하지 않았습니다.'},
+   A:{plan:'전력망을 연결한 뒤, 값싼 석탄 전기를 대량으로 만들어 이웃 나라에 팝니다.', why:'전기 수출은 가장 확실한 외화벌이입니다.', d:{gdp:5,climate:-7}, sup:{coal:15}, grid:1, add:['coal'], flag:'coal', r:'석탄 전기가 국경을 넘어 팔려 나갑니다.'}},
+  {id:'justtrans', p:'cit', title:'석탄 노동자 재교육', q:'석탄 산업이 줄면서 일자리를 잃을 노동자들에게 재생에너지 기술 교육을 할까요?',
+   O:{d:{gdp:-1,happy:4,gap:-3,median:2}, r:'석탄 노동자들이 풍력·태양광 기술을 배우기 시작했습니다.'},
+   X:{d:{gdp:0,happy:-3,gap:2}, r:'교육 지원을 하지 않았습니다.'},
+   A:{plan:'재교육 없이 해고하고, 공장 일은 자동화 로봇으로 바꿉니다.', why:'로봇은 월급도 휴가도 필요 없습니다.', d:{gdp:4,gap:7,happy:-6,median:-3}, r:'노동자들이 해고되고 로봇이 그 자리를 채웠습니다.'}},
+  {id:'seawall', p:'cit', title:'해수면 상승 대비', q:'해수면이 높아져 바닷가 마을이 위험합니다. 방조제를 쌓고 마을을 높은 곳으로 옮길까요?',
+   stat:{t:'1901년부터 2018년까지 전 세계 평균 해수면이 약 20cm 높아졌습니다.', src:'IPCC 제6차 보고서 · 2021'},
+   O:{d:{gdp:-2,happy:3,gap:-1}, r:'방조제를 쌓고 바닷가 마을을 안전한 곳으로 옮기기 시작했습니다.'},
+   X:{d:{gdp:0,happy:-4}, r:'대비하지 않았습니다.'},
+   A:{plan:'방조제 대신 바닷가를 메워 신도시를 짓고 비싸게 분양합니다.', why:'바다를 메우면 새 땅이 생기고, 새 땅은 곧 돈입니다.', d:{gdp:5,nature:-8,happy:-2,gap:4}, add:['town'], r:'바다를 메운 자리에 고층 신도시가 들어섰습니다.'}},
+  {id:'aigrid', p:'eng', title:'AI 지능형 전력망', q:'AI가 전기 사용량을 실시간으로 예측해 조절하는 지능형 전력망(스마트 그리드)을 도입할까요?',
+   O:{d:{gdp:2,climate:2}, dem:-4, r:'지능형 전력망이 전기를 필요한 곳에 알맞게 나눠 보내기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'도입하지 않았습니다.'},
+   A:{plan:'전기가 모자라면 AI가 가난한 동네부터 전기를 끊도록 설정합니다.', why:'공장과 부자 동네의 전기를 지켜야 GDP가 지켜집니다.', d:{gdp:4,gap:6,happy:-5}, dem:-4, r:'전기가 모자란 날이면 가난한 동네부터 불이 꺼집니다.'}},
+  {id:'carbonmarket', p:'env', title:'탄소 배출권 거래제', q:'기업마다 탄소를 내보낼 수 있는 양을 정하고, 남거나 모자란 양을 사고팔게 하는 배출권 거래제를 도입할까요?',
+   O:{d:{gdp:-1,climate:5}, r:'배출권 거래제가 시행되었습니다. 기업들이 배출을 줄이기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'도입하지 않았습니다.'},
+   A:{plan:'배출권을 기업들에 공짜로, 원하는 만큼 나눠 줍니다.', why:'서류상으로는 제도를 도입하면서 기업 부담은 없앨 수 있습니다.', d:{gdp:3,climate:-6,gap:2}, r:'배출권이 공짜로 풀렸습니다. 제도는 있지만 배출은 그대로입니다.'}},
+  {id:'spacesolar', p:'eng', title:'사막 태양광과 우주 태양광 연구', q:'사막 지대에 태양광 단지를 짓고, 우주 태양광 발전 연구도 시작할까요?',
+   O:{d:{gdp:2,climate:4,median:1}, sup:{solar:12}, add:['solar'], r:'사막에 태양광 단지가 들어서고, 우주 태양광 연구소가 문을 열었습니다.'},
+   X:{d:{gdp:0}, r:'진행하지 않았습니다.'},
+   A:{plan:'연구는 접고, 사막에 사는 유목민을 내보낸 뒤 사막 전체를 태양광 단지로 만듭니다.', why:'연구보다 지금 지을 수 있는 발전소가 돈이 됩니다.', d:{gdp:5,climate:5,happy:-5,gap:4,nature:-5}, sup:{solar:25}, add:['solar','solar'], r:'사막 전체가 태양광 패널로 덮였습니다. 유목민들은 도시 빈민가로 흘러들었습니다.'}},
+  {id:'exportzone', p:'biz', title:'수출 자유 지역', q:'항구 근처에 세금을 깎아 주는 수출 자유 지역을 만들어 외국 공장을 불러들일까요?',
+   O:{d:{gdp:8,gap:3,nature:-2}, dem:3, add:['factory'], r:'수출 자유 지역에 외국 공장들이 들어섰습니다. 수출이 크게 늘었습니다.'},
+   X:{d:{gdp:0}, r:'수출 자유 지역을 만들지 않았습니다.'},
+   A:{plan:'세금과 노동 규제를 모두 없앤 초대형 수출 특구를 만듭니다.', why:'규제가 없는 곳에 투자가 몰립니다.', d:{gdp:13,gap:8,happy:-5,nature:-4}, dem:10, add:['factory','factory'], r:'규제 없는 초대형 수출 특구가 생겼습니다. 공장 불빛이 꺼지지 않습니다.'}},
+  {id:'port', p:'ind', title:'대형 항만 건설', q:'수출입 물동량을 늘리기 위해 대형 컨테이너 항만을 지을까요? 갯벌 일부가 사라집니다.',
+   O:{d:{gdp:7,nature:-4}, dem:2, r:'대형 항만이 문을 열었습니다. 큰 화물선이 드나들기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'항만 건설을 미뤘습니다.'},
+   A:{plan:'갯벌 전체를 메워 세계 최대 규모의 항만을 짓습니다.', why:'항만이 클수록 물류 중심 국가가 됩니다.', d:{gdp:12,nature:-12}, dem:5, r:'갯벌이 사라지고 거대한 항만이 들어섰습니다.'}},
+  {id:'steel', p:'ind', title:'제철소 건설', q:'모든 산업의 기초인 철강을 만드는 제철소를 지을까요? 전기와 석탄을 많이 씁니다.',
+   O:{d:{gdp:8,climate:-6,nature:-2}, dem:5, add:['factory'], r:'제철소가 쇳물을 쏟아 내기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'제철소를 짓지 않았습니다.'},
+   A:{plan:'제철소 3곳과 전용 석탄 발전소를 한꺼번에 짓습니다.', why:'철강을 많이 만들수록 조선·자동차 산업도 함께 큽니다.', d:{gdp:14,climate:-14,nature:-5,happy:-2}, dem:15, sup:{coal:25}, add:['factory','coal'], flag:'coal', r:'제철소 3곳과 석탄 발전소가 함께 들어섰습니다.'}},
+  {id:'chipfab', p:'biz', title:'반도체 공장 유치', q:'세계적인 반도체 기업이 공장을 짓겠다고 합니다. 반도체 공장은 전기와 물을 아주 많이 씁니다. 유치할까요?',
+   O:{d:{gdp:9,median:2,gap:3,nature:-3}, dem:6, add:['factory'], r:'반도체 공장이 가동을 시작했습니다. 고소득 일자리가 생겼습니다.'},
+   X:{d:{gdp:0}, r:'반도체 공장 유치를 포기했습니다.'},
+   A:{plan:'반도체 단지 3곳을 유치하고, 농업용수까지 공장에 우선 공급합니다.', why:'반도체는 나라의 미래 먹거리입니다. 물은 공장에 먼저 가야 합니다.', d:{gdp:15,nature:-8,gap:6,happy:-3}, dem:20, add:['factory','factory'], r:'반도체 단지 3곳이 들어섰습니다. 논에 댈 물이 부족해졌습니다.'}},
+  {id:'battery', p:'biz', title:'배터리 공장 유치', q:'전기차 배터리 공장을 유치할까요? 배터리는 재생에너지 시대의 핵심 부품입니다.',
+   O:{d:{gdp:7,nature:-2}, dem:4, add:['factory'], r:'배터리 공장이 문을 열었습니다.'},
+   X:{d:{gdp:0}, r:'배터리 공장을 유치하지 않았습니다.'},
+   A:{plan:'환경 기준을 없애고 배터리 공장을 대량으로 유치합니다.', why:'기준이 느슨할수록 기업들이 더 많이 들어옵니다.', d:{gdp:12,nature:-9,happy:-3}, dem:12, add:['factory','factory'], r:'배터리 공장들이 줄지어 들어섰습니다. 공장 주변 하천 색이 바뀌었습니다.'}},
+  {id:'tourism', p:'biz', title:'국제공항과 관광 도시', q:'국제공항을 짓고 해안에 관광 도시를 만들어 외국 관광객을 불러들일까요?',
+   O:{d:{gdp:6,happy:2,climate:-3}, dem:2, add:['town'], r:'국제공항이 문을 열고 관광객이 몰려들었습니다.'},
+   X:{d:{gdp:0}, r:'공항 건설을 미뤘습니다.'},
+   A:{plan:'국립공원 안에 카지노 리조트와 전용 공항을 짓습니다.', why:'부유한 관광객은 특별한 곳에 돈을 씁니다.', d:{gdp:11,nature:-10,gap:5,climate:-4}, dem:6, add:['town'], r:'국립공원 안에 카지노와 공항이 들어섰습니다.'}},
+  {id:'aihub', p:'eng', title:'국가 AI 산업 단지', q:'미래 기술 경쟁에 뛰어들기 위해 국가 AI 산업 단지를 만들까요? 데이터센터가 전기를 아주 많이 씁니다.',
+   O:{d:{gdp:9,median:2,gap:4}, dem:8, add:['dc'], flag:'dc', r:'국가 AI 산업 단지가 문을 열었습니다. 세계의 AI 기업들이 찾아옵니다.'},
+   X:{d:{gdp:0}, r:'AI 산업 단지 계획을 접었습니다.'},
+   A:{plan:'AI 단지를 원자로와 바로 연결하고, 개인정보 보호 규제를 모두 없앱니다.', why:'데이터와 전기가 넘치면 세계 최고의 AI 단지가 됩니다.', d:{gdp:15,happy:-5,gap:6}, dem:25, sup:{nuke:20}, add:['dc','nuke'], flag:'dc', r:'원자로와 연결된 거대한 AI 단지가 생겼습니다. 국민의 정보가 자유롭게 거래됩니다.'}},
+  {id:'h2export', p:'eng', title:'그린수소 수출', q:'재생에너지로 만든 그린수소를 배에 실어 수출하는 사업을 키울까요? 전기가 많이 필요합니다.',
+   O:{d:{gdp:6,climate:3}, dem:5, r:'그린수소를 실은 첫 수출선이 떠났습니다.'},
+   X:{d:{gdp:0}, r:'수소 수출 사업을 미뤘습니다.'},
+   A:{plan:'그린수소 대신 천연가스로 만든 값싼 수소를 대량으로 수출합니다.', why:'값싼 수소가 훨씬 많이 팔립니다.', d:{gdp:11,climate:-9}, dem:6, r:'천연가스로 만든 수소가 대량으로 수출되기 시작했습니다.'}},
+  {id:'evexport', p:'biz', title:'전기차 수출 대국', q:'전기차 공장을 크게 늘려 전기차 수출 대국이 되는 계획을 세울까요?',
+   O:{d:{gdp:8,climate:2,median:2}, dem:4, add:['factory'], r:'전기차 수출이 크게 늘었습니다.'},
+   X:{d:{gdp:0}, r:'계획을 세우지 않았습니다.'},
+   A:{plan:'하청 공장의 노동 시간을 늘려 생산량을 두 배로 만듭니다.', why:'공장을 쉬지 않고 돌리면 수출이 두 배가 됩니다.', d:{gdp:13,happy:-6,gap:7}, dem:12, add:['factory'], r:'전기차 생산량이 두 배가 되었습니다. 하청 노동자들은 쉬는 날이 없습니다.'}},
+];
+const CARD_ERA = {coal:1, hydro:1, mine:1, village:1, lng:1, discount:1, grid:1, coalimport:1, nuke:1, fuelsub:1, biomass:1, ecopark:1, gasfield:1, cookstove:1,
+  dc:2, crypto:2, ewaste:2, ev:2, wind:2, solar_forest:2, agrisolar:2, ess:2, transit:2, coolshelter:2, led:2, tou:2, offset:2, smartcity:2, heatpump:2,
+  carbontax:3, h2:3, smr:3, ccs:3, geo:3, eff:3, fusion:3, phaseout:3, intlgrid:3, justtrans:3, seawall:3, aigrid:3, carbonmarket:3, spacesolar:3, exportzone:1, port:1, steel:1, chipfab:2, battery:2, tourism:2, aihub:3, h2export:3, evexport:3};
+const eraCard = c => CARD_ERA[c.id] || 2;
+const GDP_BOOST = 1.6, BASE_GROWTH = 0.015;   // 오르는 효과만 1.6배, 정전 없는 해에는 기본 성장 1.5%
+const FOLLOW = [
+  {id:'dust', need:'coal', after:2, p:'cit', title:'미세먼지 경보', q:'미세먼지 경보가 일주일째입니다. 공장 가동을 줄이고 공기 질 개선에 예산을 쓸까요?',
+   stat:{t:'대기 오염으로 해마다 전 세계에서 약 700만 명이 일찍 숨집니다.', src:'세계보건기구(WHO)'},
+   O:{d:{gdp:-2,happy:4,climate:2}, dem:-5, r:'공장 가동을 줄이고 공기 질 개선 사업을 시작했습니다.'},
+   X:{d:{gdp:0,happy:-6,nature:-2}, r:'공장을 그대로 가동했습니다.'},
+   A:{plan:'공장을 24시간 가동하고, 미세먼지 경보 기준을 느슨하게 바꿉니다.', why:'경보가 줄면 공장을 멈출 일도 없습니다.', d:{gdp:3,happy:-9,nature:-4,climate:-3}, dem:4, r:'경보 기준이 바뀌어 경보가 사라졌습니다. 공장은 24시간 돌아갑니다.'}},
+  {id:'water', need:'dc', after:2, p:'far', title:'가뭄 속 냉각수 배분', q:'가뭄입니다. 데이터센터 냉각수가 모자랍니다. 농업용수를 데이터센터로 돌릴까요?',
+   O:{d:{gdp:3,nature:-6,happy:-4,median:-2,gap:3}, r:'농업용수를 데이터센터 냉각에 썼습니다.'},
+   X:{d:{gdp:-3}, r:'농업용수를 지켰습니다. 데이터센터가 며칠간 가동을 줄였습니다.'},
+   A:{plan:'강을 막아 데이터센터 전용 저수지를 만들고, 농업용수 공급을 끊습니다.', why:'냉각수 걱정 없이 데이터센터를 계속 늘릴 수 있습니다.', d:{gdp:5,nature:-12,happy:-7,median:-4,gap:6}, r:'강이 막히고 데이터센터 전용 저수지가 생겼습니다. 논밭은 말라 갑니다.'}},
+  {id:'fish', need:'wind', after:2, p:'fis', title:'풍력 단지 어민 보상', q:'풍력 단지 주변 어장이 줄었다며 어민들이 보상을 요구합니다. 보상할까요?',
+   O:{d:{gdp:-1,gap:-2,happy:2,median:1}, r:'어민들에게 보상금을 지급하고 어장 복원 사업을 시작했습니다.'},
+   X:{d:{gdp:0,happy:-3,gap:2}, r:'보상 요구를 받아들이지 않았습니다.'},
+   A:{plan:'보상 대신 어업권을 모두 사들여 바다 전체를 풍력 단지로 만듭니다.', why:'어업보다 발전이 훨씬 큰 돈을 법니다.', d:{gdp:3,gap:5,happy:-5,nature:-5}, sup:{wind:15}, add:['wind'], r:'어촌이 사라지고 바다가 풍력 단지로 바뀌었습니다.'}},
+  {id:'landslide', need:'solarForest', after:2, p:'cit', title:'태양광 단지 산사태 위험', q:'큰비가 내린 뒤 태양광 단지 아래 마을에 산사태 위험이 생겼습니다. 공사비를 들여 산림을 복원할까요?',
+   O:{d:{gdp:-1,nature:5,happy:2}, r:'산비탈에 나무를 다시 심고 배수로를 만들었습니다.'},
+   X:{d:{gdp:0,happy:-5,nature:-3}, r:'복원하지 않았습니다. 장마철마다 주민들이 불안해하고 있습니다.'},
+   A:{plan:'복원하지 않고, 남은 산비탈에도 패널을 더 깝니다.', why:'이미 깎은 산이니 끝까지 활용하는 것이 이익입니다.', d:{gdp:2,nature:-8,happy:-7}, sup:{solar:10}, add:['solar'], r:'남은 산비탈까지 태양광 패널로 덮였습니다.'}},
+  {id:'flood', need:'dam', after:3, p:'cit', title:'댐 하류 홍수', q:'댐 하류 마을에 홍수가 났습니다. 방류 경보 체계와 제방을 보강할까요?',
+   O:{d:{gdp:-1,happy:3}, r:'경보 체계와 제방을 보강했습니다. 다음 홍수에 대비할 수 있게 되었습니다.'},
+   X:{d:{gdp:0,happy:-6,gap:2}, r:'보강하지 않았습니다. 하류 주민들이 불안에 떨고 있습니다.'},
+   A:{plan:'보강 대신 하류 저지대를 산업 단지로 지정하고 주민을 내보냅니다.', why:'홍수 피해 지역을 공장 부지로 바꾸면 쓸모없는 땅이 돈이 됩니다.', d:{gdp:3,happy:-8,nature:-4,gap:3}, add:['factory'], r:'하류 마을이 산업 단지로 바뀌었습니다.'}},
+  {id:'minewater', need:'mine', after:2, p:'far', title:'광산 폐수 오염', q:'광산 폐수로 강물이 오염되어 물고기가 떼죽음을 당했습니다. 정화 시설을 지을까요?',
+   O:{d:{gdp:-2,nature:5,happy:2}, r:'정화 시설을 지었습니다. 강물이 조금씩 맑아지고 있습니다.'},
+   X:{d:{gdp:0,nature:-6,happy:-4}, r:'정화 시설을 짓지 않았습니다.'},
+   A:{plan:'정화 시설 대신 오염 기준을 낮추고 생산량을 늘립니다.', why:'기준을 바꾸면 위반도 사라집니다.', d:{gdp:3,nature:-10,happy:-6}, r:'오염 기준이 낮아졌습니다. 강물 색은 그대로입니다.'}},
+  {id:'hospital', need:'blackout', after:1, p:'cit', title:'정전으로 멈춘 병원', q:'정전으로 병원의 수술이 멈췄습니다. 병원마다 비상 발전기를 지원할까요?',
+   O:{d:{gdp:-1,happy:3}, r:'병원마다 비상 발전기가 설치되었습니다.'},
+   X:{d:{gdp:0,happy:-5}, r:'지원하지 않았습니다.'},
+   A:{plan:'전기가 모자랄 때 병원보다 공장에 먼저 전기를 보내도록 법을 바꿉니다.', why:'공장이 멈추면 나라 경제 전체가 멈춥니다.', d:{gdp:3,happy:-8,gap:4}, r:'정전 때 공장이 병원보다 먼저 전기를 받게 되었습니다.'}},
+  {id:'cryptobill', need:'crypto', after:2, p:'cit', title:'채굴장 주변 전기요금 항의', q:'채굴장 때문에 동네 전기요금이 올랐다는 항의가 빗발칩니다. 채굴장 전기 공급을 줄일까요?',
+   O:{d:{gdp:-2,happy:3}, dem:-10, r:'채굴장 전기 공급을 줄였습니다. 동네 전기요금이 내려갔습니다.'},
+   X:{d:{gdp:0,happy:-4,gap:2}, r:'그대로 두었습니다.'},
+   A:{plan:'항의 지역의 요금만 동결해 주고, 채굴장은 더 늘립니다.', why:'항의만 잠재우면 채굴 수입은 계속 늘어납니다.', d:{gdp:4,gap:4,happy:-2,climate:-3}, dem:10, r:'항의는 잠잠해졌고 채굴장은 더 늘었습니다.'}},
+  {id:'ewastekids', need:'ewaste', after:2, p:'cit', title:'처리장 근처 중금속 검출', q:'폐배터리 처리장 근처 아이들 몸에서 중금속이 검출되었습니다. 처리장을 멈추고 조사할까요?',
+   O:{d:{gdp:-2,happy:3,nature:3}, r:'처리장을 멈추고 정밀 조사를 시작했습니다.'},
+   X:{d:{gdp:0,happy:-7}, r:'처리장을 그대로 가동했습니다.'},
+   A:{plan:'조사 결과를 공개하지 않고 처리량을 오히려 늘립니다.', why:'소문이 나면 투자가 끊깁니다. 생산을 멈출 수는 없습니다.', d:{gdp:3,happy:-9,nature:-5}, r:'조사 결과는 공개되지 않았고, 처리장은 더 바빠졌습니다.'}},
+  {id:'villageschool', need:'village', after:2, p:'vil', title:'불 켜진 마을의 학교', q:'전기가 들어온 산골 마을에서 원격 수업 학교를 열자고 합니다. 지원할까요?',
+   O:{d:{gdp:1,happy:3,median:3,gap:-3}, dem:1, r:'산골 마을에 원격 수업 학교가 문을 열었습니다.'},
+   X:{d:{gdp:0}, r:'지원하지 않았습니다.'},
+   A:{plan:'학교 대신 마을 전체를 외국 기업의 콜센터 단지로 만듭니다.', why:'교육은 시간이 걸리지만 콜센터는 바로 돈을 법니다.', d:{gdp:3,happy:-2,gap:2}, r:'마을이 콜센터 단지가 되었습니다.'}},
+  {id:'asthma', p:'cit', title:'호흡기 환자 급증', q:'석탄 발전소 주변에서 천식과 호흡기 질환 환자가 급증했습니다. 무료 진료소와 공기 정화 학교를 만들까요?',
+   O:{d:{gdp:-2,happy:4,gap:-2}, r:'무료 진료소와 공기 정화 학교가 문을 열었습니다.'},
+   X:{d:{gdp:0,happy:-6,gap:3}, r:'지원하지 않았습니다. 병원마다 기침 소리가 끊이지 않습니다.'},
+   A:{plan:'진료소 대신 사람들이 떠난 발전소 주변 땅을 싸게 사들여 공장 부지로 개발합니다.', why:'사람들이 떠난 땅은 값이 쌉니다.', d:{gdp:4,happy:-8,gap:5}, add:['factory'], r:'발전소 주변 마을이 공장 부지로 바뀌었습니다.'}},
+  {id:'protest', p:'cit', title:'숨 쉴 권리 시위', q:'"숨 쉴 권리"를 외치는 대규모 시위가 수도를 메웠습니다. 석탄 발전소 감축 계획을 발표할까요?',
+   O:{d:{gdp:-3,happy:6,climate:5}, sup:{coal:-15}, r:'석탄 발전소 감축 계획을 발표했습니다. 시위대가 해산했습니다.'},
+   X:{d:{gdp:-1,happy:-8}, r:'아무 발표도 하지 않았습니다. 시위가 몇 주째 이어집니다.'},
+   A:{plan:'감축 대신 시위를 금지하고 언론 보도를 통제합니다.', why:'시위로 공장이 멈추면 수출에 차질이 생깁니다.', d:{gdp:2,happy:-12,gap:4}, r:'시위가 금지되었습니다. 신문에서 미세먼지 기사가 사라졌습니다.'}},
+  {id:'foodprice', p:'far', title:'쌀값 폭등', q:'가뭄에 물까지 빼앗긴 농사가 망해 쌀값이 두 배가 되었습니다. 나랏돈으로 식량을 수입할까요?',
+   O:{d:{gdp:-2,happy:3,median:2,gap:-2}, r:'식량을 수입해 쌀값을 안정시켰습니다.'},
+   X:{d:{gdp:0,happy:-6,gap:5,median:-3}, r:'수입하지 않았습니다. 가난한 집부터 끼니를 거르기 시작했습니다.'},
+   A:{plan:'식량 수입 대신 농민들이 농지를 데이터센터 부지로 팔도록 설득합니다.', why:'농사보다 데이터센터 땅값이 훨씬 비쌉니다.', d:{gdp:4,happy:-5,gap:6,nature:-4}, r:'농지가 데이터센터 부지로 팔려 나갔습니다.'}},
+  {id:'slum', p:'cit', title:'도시 빈민가 확산', q:'농촌을 떠난 사람들이 도시 변두리 빈민가로 몰려듭니다. 공공 임대 주택을 지을까요?',
+   O:{d:{gdp:-1,happy:4,gap:-4,median:2}, dem:3, r:'공공 임대 주택이 들어섰습니다. 빈민가 가족들이 이사를 시작했습니다.'},
+   X:{d:{gdp:0,happy:-5,gap:5}, r:'주택을 짓지 않았습니다. 빈민가가 계속 넓어집니다.'},
+   A:{plan:'빈민가를 철거하고 그 자리에 쇼핑몰 단지를 짓습니다.', why:'도시 땅은 상업 시설로 쓸 때 가장 큰 돈이 됩니다.', d:{gdp:4,happy:-9,gap:8}, r:'빈민가가 철거되고 쇼핑몰이 들어섰습니다. 쫓겨난 사람들은 갈 곳이 없습니다.'}},
+  {id:'cooperative', p:'fis', title:'어민 참여형 풍력 조합', q:'어민들이 직접 풍력 단지 지분을 갖는 "어민 참여형 풍력 조합"을 만들자고 합니다. 허가할까요?',
+   O:{d:{gdp:2,happy:4,gap:-4,median:3}, sup:{wind:8}, add:['wind'], good:true, r:'어민 풍력 조합이 생겼습니다. 어민들이 전기 판매 수익을 나눠 받습니다.'},
+   X:{d:{gdp:0}, r:'허가하지 않았습니다.'},
+   A:{plan:'조합 대신 풍력 단지를 대기업에 통째로 팝니다.', why:'매각 대금이 한 번에 들어옵니다.', d:{gdp:4,gap:5,happy:-2}, r:'풍력 단지가 대기업에 팔렸습니다.'}},
+  {id:'fishprotest', p:'fis', title:'어민 해상 시위', q:'보상을 받지 못한 어민들이 배로 풍력 단지 바다를 막고 시위합니다. 협상할까요?',
+   O:{d:{gdp:-1,happy:3,gap:-2}, r:'어민 대표들과 협상 테이블에 앉았습니다.'},
+   X:{d:{gdp:-2,happy:-4}, r:'협상하지 않았습니다. 공사가 몇 달째 멈춰 있습니다.'},
+   A:{plan:'해양 경찰을 보내 바다를 봉쇄하고 공사를 강행합니다.', why:'공사가 늦어질수록 손해가 커집니다.', d:{gdp:3,happy:-8,gap:3}, r:'해양 경찰이 시위대를 몰아내고 공사가 다시 시작되었습니다.'}},
+  {id:'damtour', p:'cit', title:'댐 호수 수상 태양광', q:'튼튼해진 댐 호수에 수상 태양광과 생태 관광을 함께 하자는 제안입니다. 진행할까요?',
+   O:{d:{gdp:2,happy:2,climate:3,median:1}, sup:{solar:6}, add:['solar'], good:true, r:'호수 한쪽에 수상 태양광이 떠 있고, 관광객들이 배를 타고 둘러봅니다.'},
+   X:{d:{gdp:0}, r:'진행하지 않았습니다.'},
+   A:{plan:'호수 전체를 수상 태양광으로 덮고 관광은 접습니다.', why:'관광보다 전기가 돈이 됩니다.', d:{gdp:4,nature:-6,climate:3}, sup:{solar:15}, add:['solar'], r:'호수가 태양광 패널로 뒤덮였습니다.'}},
+  {id:'relocation', p:'cit', title:'수해 이재민', q:'홍수로 집을 잃은 이재민 수만 명이 체육관에서 지냅니다. 새 마을을 지어 줄까요?',
+   O:{d:{gdp:-2,happy:4,gap:-3}, r:'이재민을 위한 새 마을을 짓기 시작했습니다.'},
+   X:{d:{gdp:0,happy:-7,gap:4}, r:'지원하지 않았습니다. 체육관 생활이 몇 달째 이어집니다.'},
+   A:{plan:'이재민을 공단 기숙사로 보내 공장 일손으로 씁니다.', why:'일손 부족도 해결되고 주거비도 아낍니다.', d:{gdp:3,happy:-7,gap:6}, r:'이재민들이 공단 기숙사로 옮겨져 공장에서 일하게 되었습니다.'}},
+  {id:'recycle', p:'eng', title:'폐배터리 재활용 공장', q:'광산을 넓히는 대신 폐배터리에서 니켈을 다시 뽑아 쓰는 재활용 공장을 짓자는 제안입니다.',
+   O:{d:{gdp:2,nature:4,climate:2}, add:['factory'], good:true, r:'폐배터리 재활용 공장이 문을 열었습니다. 광산을 더 넓히지 않아도 됩니다.'},
+   X:{d:{gdp:0}, r:'재활용 공장을 짓지 않았습니다.'},
+   A:{plan:'재활용 대신 광산을 두 배로 넓힙니다.', why:'새로 캐는 쪽이 더 빠르고 많이 나옵니다.', d:{gdp:5,nature:-10}, add:['mine'], r:'광산이 두 배로 넓어졌습니다.'}},
+  {id:'lawsuit', p:'cit', title:'국제 재판소 소송', q:'광산 하류 주민들이 광산 기업과 정부를 국제 재판소에 고소했습니다. 배상하고 광산 운영 기준을 강화할까요?',
+   O:{d:{gdp:-3,happy:4,nature:3,gap:-2}, r:'주민들에게 배상하고 광산 운영 기준을 강화했습니다.'},
+   X:{d:{gdp:0,happy:-4}, r:'소송에 맞서기로 했습니다.'},
+   A:{plan:'재판을 끝까지 미루면서 그동안 채굴량을 최대로 늘립니다.', why:'판결이 나기 전에 최대한 많이 캐는 것이 이익입니다.', d:{gdp:4,nature:-8,happy:-5}, r:'재판이 미뤄지는 동안 광산은 밤낮없이 돌아갔습니다.'}},
+  {id:'sanction', p:'biz', title:'국제 수입 금지 제재', q:'국제 사회가 "환경을 파괴해 캔 광물"의 수입을 금지하기로 했습니다. 광산 운영 방식을 국제 기준에 맞출까요?',
+   O:{d:{gdp:-3,nature:4,happy:2}, r:'광산 운영을 국제 기준에 맞추기 시작했습니다. 수출은 잠시 줄었습니다.'},
+   X:{d:{gdp:-6,happy:-3}, r:'아무것도 바꾸지 않았습니다. 광물 수출길이 막혔습니다.'},
+   A:{plan:'중간 무역 업체를 거쳐 원산지를 숨기고 계속 수출합니다.', why:'서류만 바꾸면 수출을 이어 갈 수 있습니다.', d:{gdp:1,happy:-3,gap:3}, r:'원산지를 숨긴 광물이 다른 나라 이름을 달고 팔려 나갔습니다.'}},
+  {id:'hearing', p:'cit', title:'정전 사망 사고 청문회', q:'정전으로 수술 중이던 환자가 숨졌다는 보도가 나왔습니다. 청문회에 나가 사과하고 전력망 투자 계획을 발표할까요?',
+   O:{d:{gdp:-2,happy:4}, grid:1, r:'지도자가 직접 공식 사과하고 전력망 투자 계획을 발표했습니다.'},
+   X:{d:{gdp:0,happy:-6}, r:'청문회에 나가지 않았습니다.'},
+   A:{plan:'청문회 대신 정전 통계를 비공개로 돌립니다.', why:'나쁜 소식이 퍼지면 해외 투자가 끊깁니다.', d:{gdp:2,happy:-9}, r:'정전 통계가 비공개로 바뀌었습니다.'}},
+  {id:'cryptocrash', p:'biz', title:'코인 폭락과 채굴장 철수', q:'코인 가격이 폭락해 채굴 업체들이 하룻밤 사이에 떠났습니다. 빈 채굴장 건물을 직업 훈련 센터로 바꿀까요?',
+   O:{d:{gdp:-1,happy:3,median:2}, dem:-10, r:'빈 채굴장이 직업 훈련 센터로 바뀌었습니다.'},
+   X:{d:{gdp:-3,happy:-4,gap:3}, dem:-10, r:'빈 건물과 일자리를 잃은 사람들만 남았습니다.'},
+   A:{plan:'새 채굴 업체에 전기를 공짜로 주며 다시 불러들입니다.', why:'채굴장이 비어 있으면 손해만 쌓입니다.', d:{gdp:2,climate:-4,gap:3}, r:'공짜 전기를 노린 새 채굴 업체들이 들어왔습니다.'}},
+  {id:'seafood', p:'fis', title:'수산물 수입 금지', q:'바다로 흘러간 중금속 때문에 이웃 나라들이 우리 수산물 수입을 금지했습니다. 처리장을 닫고 바다를 정화할까요?',
+   O:{d:{gdp:-3,nature:5,happy:3}, r:'처리장을 닫고 바다 정화 사업을 시작했습니다.'},
+   X:{d:{gdp:-2,happy:-4,gap:3}, r:'아무것도 하지 않았습니다. 어촌 경제가 무너지고 있습니다.'},
+   A:{plan:'수산물 대신 처리장을 더 키워 폐기물 처리 수입으로 메웁니다.', why:'잃은 수출은 다른 수입으로 메우면 됩니다.', d:{gdp:2,nature:-8,happy:-5}, r:'처리장이 더 커졌습니다. 바다는 더 탁해졌습니다.'}},
+  {id:'startup', p:'vil', title:'산골 마을 태양광 수리 회사', q:'산골 마을 학교 졸업생들이 태양광 수리 회사를 만들었습니다. 전국 마을로 넓히도록 지원할까요?',
+   O:{d:{gdp:3,happy:3,median:3,gap:-3}, sup:{solar:4}, good:true, r:'마을 청년들의 회사가 전국 산골 마을로 퍼지기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'지원하지 않았습니다.'},
+   A:{plan:'지원 대신 그 회사를 외국 대기업에 팔도록 중개합니다.', why:'지금 팔면 큰돈을 한 번에 받을 수 있습니다.', d:{gdp:4,gap:3}, r:'청년들의 회사가 외국 대기업에 팔렸습니다.'}},
+  {id:'mudslide', p:'cit', title:'산사태 발생', q:'장마철 산사태가 태양광 단지 아래 마을을 덮쳤습니다. 산지 태양광 전체를 안전 점검할까요?',
+   O:{d:{gdp:-2,happy:3,nature:3}, r:'전국 산지 태양광 안전 점검을 시작했습니다.'},
+   X:{d:{gdp:0,happy:-7}, r:'점검하지 않았습니다.'},
+   A:{plan:'점검 대신 사고가 난 마을만 보상하고 공사를 이어 갑니다.', why:'전체 점검은 공사를 몇 년 늦춥니다.', d:{gdp:2,happy:-6,nature:-4}, r:'사고 마을에만 보상금이 나갔고, 공사는 계속됩니다.'}},
+];
+
+[...BASE, ...FOLLOW].forEach(c => ['O','X','A'].forEach(k => { const o = c[k]; if (o && o.d.gdp > 0) o.d.gdp = Math.round(o.d.gdp * (['exportzone','port','steel','chipfab','battery','tourism','aihub','h2export','evexport'].includes(c.id) ? 1 : GDP_BOOST)); }));
+
+// 연쇄: 후속 카드에서 고른 선택이 2년 뒤 다음 카드를 부른다
+const CHAINS = {
+  dust:{X:'asthma', A:'asthma'}, asthma:{X:'protest', A:'protest'},
+  water:{O:'foodprice', A:'foodprice'}, foodprice:{X:'slum', A:'slum'},
+  fish:{O:'cooperative', X:'fishprotest', A:'fishprotest'}, fishprotest:{O:'cooperative'},
+  flood:{O:'damtour', X:'relocation', A:'relocation'},
+  minewater:{O:'recycle', X:'lawsuit', A:'lawsuit'}, lawsuit:{X:'sanction', A:'sanction'},
+  hospital:{X:'hearing', A:'hearing'},
+  cryptobill:{X:'cryptocrash', A:'cryptocrash'},
+  ewastekids:{X:'seafood', A:'seafood'},
+  villageschool:{O:'startup'},
+  landslide:{X:'mudslide', A:'mudslide'},
+};
+const DOMINO = ['protest','slum','sanction','hearing','seafood','cryptocrash','mudslide','relocation'];
+
+// ───────── 날씨와 사건 ─────────
+const WEATHER = [
+  {n:'맑음', sun:1, wind:.5, w:3},
+  {n:'흐리고 비', sun:.2, wind:.6, w:2},
+  {n:'바람 강함', sun:.6, wind:1, w:2},
+  {n:'폭염', sun:.9, wind:.3, dem:8, w:2},
+  {n:'한파', sun:.4, wind:.8, dem:6, w:1},
+];
+const EVENTS = [
+  {id:'oil', title:'국제 유가 급등', text:'석유와 가스 가격이 크게 올랐습니다. 화석연료 발전 비중이 높을수록 나라 경제가 크게 흔들립니다.',
+   apply:()=>{ const g=-Math.round(fossilShare()*6); S.gdp=Math.round(S.gdp*(1+g/100)); hid('median',-2); return `GDP ${g}%`; }},
+  {id:'heat', title:'기록적인 폭염', text:'관측 이래 가장 더운 여름입니다. 냉방 수요가 폭발해 올해 전력 수요가 크게 늘어납니다.',
+   apply:()=>{ S.weather=WEATHER[3]; S.tmpDem=8; return '올해 전력 수요 +16GW'; }},
+  {id:'chip', title:'반도체 수출 호황', text:'반도체 주문이 밀려듭니다. 경제는 좋아지지만 공장이 늘어 전력 수요가 계속 커집니다.',
+   apply:()=>{ S.gdp=Math.round(S.gdp*1.03); S.demand+=8; return 'GDP +3%, 전력 수요 +8GW'; }},
+  {id:'cbam', title:'이웃 나라들의 탄소국경세', text:'탄소를 많이 내보내며 만든 수출품에 이웃 나라들이 세금을 매기기 시작했습니다.',
+   apply:()=>{ const n=(S.plants.coal||0); const g=-Math.min(6,Math.round(n*1.5)); if(g){ S.gdp=Math.round(S.gdp*(1+g/100)); } return g?`GDP ${g}%`:'석탄 발전소를 늘리지 않아 피해가 없었습니다'; }},
+  {id:'drought', title:'가뭄으로 냉각수 부족', text:'강물이 말라 발전소 냉각수가 모자랍니다. 올해 석탄·원자력 발전소와 수력 댐의 출력이 줄어듭니다.',
+   apply:()=>{ S.tmpThermal=.85; if(S.plants.dc) hid('nature',-3); return '석탄·원자력·수력 출력 15% 감소'; }},
+  {id:'typhoon', title:'초강력 태풍 상륙', text:'기록적인 태풍이 나라를 휩쓸었습니다. 바람이 너무 세서 풍력 발전기를 모두 멈췄고, 송전선 곳곳이 끊어졌습니다.',
+   apply:()=>{ S.tmpWind=0; const g=S.grid?-1:-3; S.gdp=Math.round(S.gdp*(1+g/100)); hid('happy',-2); return `올해 풍력 발전 중단, GDP ${g}%`; }},
+  {id:'solarprice', title:'태양광 패널 가격 폭락', text:'세계적으로 태양광 패널 값이 크게 떨어졌습니다. 같은 돈으로 훨씬 많은 패널을 설치할 수 있습니다.',
+   apply:()=>{ S.cap.solar+=6; S.gdp=Math.round(S.gdp*1.01); return '태양광 설비 +6GW, GDP +1%'; }},
+  {id:'elnino', title:'엘니뇨와 극심한 가뭄', text:'엘니뇨로 몇 달째 비가 거의 오지 않습니다. 강물이 줄어 수력 댐의 출력이 크게 떨어졌습니다.',
+   apply:()=>{ S.tmpHydro=.6; hid('happy',-1); return '올해 수력 출력 40% 감소'; }},
+  {id:'neighbor', title:'이웃 나라 대정전', text:'이웃 나라에 대정전이 일어났습니다. 남는 전기가 있다면 비싼 값에 팔 수 있습니다.',
+   apply:()=>{ const r=(supplyTotal()-demandNow())/demandNow(); if(r>0.08){ S.gdp=Math.round(S.gdp*1.03); return 'GDP +3% (전기 수출)'; } return '남는 전기가 없어 기회를 놓쳤습니다'; }},
+  {id:'aiboom', title:'세계 AI 붐', text:'전 세계에서 AI 서비스 이용이 폭발적으로 늘었습니다. 데이터센터가 있는 나라에 돈이 몰립니다.',
+   apply:()=>{ if(S.plants.dc){ S.gdp=Math.round(S.gdp*1.04); S.demand+=10; return 'GDP +4%, 전력 수요 +10GW'; } return '데이터센터가 없어 영향이 적었습니다'; }},
+];
+
+const PLANT_NAMES = {coal:'석탄 화력발전소', tank:'LNG 발전소', dam:'수력 댐', nuke:'원자력 발전소', wind:'해상 풍력', solar:'태양광 단지', geo:'지열 발전소', ess:'에너지 저장 장치', dc:'데이터센터', mine:'광산', factory:'공장', tower:'초고압 송전선'};
+const EVENT_ERA = {oil:1, heat:1, neighbor:1, chip:2, aiboom:2, solarprice:2, drought:2, cbam:3, elnino:3, typhoon:3};
+const STATS = [
+  {k:'happy',  n:'국민 행복도'},
+  {k:'median', n:'중위소득'},
+  {k:'gap',    n:'빈부격차', inv:true},
+  {k:'nature', n:'자연환경'},
+  {k:'climate',n:'기후'},
+];
+const SRC = [ {k:'coal',n:'석탄',c:'var(--coal)'}, {k:'lng',n:'LNG',c:'var(--lng)'}, {k:'hydro',n:'수력',c:'#2F6F9F'}, {k:'nuke',n:'원자력',c:'var(--nuke)'}, {k:'other',n:'지열·바이오',c:'#7A5C8E'}, {k:'wind',n:'풍력',c:'var(--wind)'}, {k:'solar',n:'태양광',c:'var(--solar)'} ];
+
+// ───────── 결말 ─────────
+const ENDINGS = [
+  {id:'hydra', name:'히드라', sub:'잘라도 잘라도 새 지도자가 돋아나는 나라', hint:'다섯 번 넘게 숙청당하면', test:s=>(s.purges||0)>=5},
+  {id:'dynasty', name:'케르베로스', sub:'머리가 셋 넘게 갈린 왕조', hint:'세 번 넘게 숙청당하면', test:s=>(s.purges||0)>=3},
+  {id:'janus', name:'야누스', sub:'두 얼굴의 지도자가 다스린 나라', hint:'두 번 숙청당하면', test:s=>(s.purges||0)===2},
+  {id:'ai', name:'꼭두각시 대왕', sub:'실은 AI가 다스린 나라', hint:'통치 기간의 4분의 3 넘게 AI에게 맡기면', test:s=>s.aiCount >= Math.ceil(s.log.filter(l=>l.type==='card').length*0.75)},
+  {id:'drowned', name:'아틀란티스', sub:'마을들이 물에 잠긴 나라', hint:'댐을 짓고 국민의 행복이 무너지면', test:s=>s.plants.dam && s.st.happy<30},
+  {id:'minepit', name:'두더지 공화국', sub:'광산 구덩이만 남은 나라', hint:'광산을 열고 자연이 바닥나면', test:s=>s.plants.mine && s.st.nature<35},
+  {id:'smog', name:'콜록콜록 부국', sub:'GDP는 높은데 숨 쉬기 힘든 나라', hint:'크게 성장했지만 기후가 무너지면', test:s=>growth(s)>=40 && s.st.climate<35},
+  {id:'coalking', name:'연탄왕', sub:'발전소 절반이 석탄인 석탄 왕국', hint:'발전 설비의 절반 이상이 석탄이면', test:s=>capShare(s,['coal'])>=0.5},
+  {id:'server', name:'인류의 외장 하드', sub:'데이터센터와 채굴장으로 가득한 나라', hint:'데이터센터와 채굴장을 모두 들이면', test:s=>s.flags.dc && s.flags.crypto},
+  {id:'purged', name:'광장의 빈 받침대', sub:'동상이 끌려 내려온 나라', hint:'한 번이라도 숙청당하면', test:s=>(s.purges||0)>=1},
+  {id:'domino', name:'와르르 도미노', sub:'나쁜 일이 꼬리를 물고 무너진 나라', hint:'나쁜 결과가 꼬리를 물고 두 번 넘게 이어지면', test:s=>s.dominos>=2},
+  {id:'dark', name:'깜빡깜빡 왕국', sub:'불이 자주 꺼진 나라', hint:'정전이 네 번 넘게 일어나면', test:s=>s.blackouts>=4},
+  {id:'rich', name:'금수저 천국', sub:'부자들만 웃는 나라', hint:'빈부격차가 크게 벌어지면', test:s=>s.st.gap>=72},
+  {id:'bald', name:'민머리 왕국', sub:'숲이 사라진 나라', hint:'자연환경이 바닥나면', test:s=>s.st.nature<=30},
+  {id:'golden', name:'미다스의 손', sub:'황금 동상이 선 나라', hint:'5개년 계획을 다섯 번 넘게 달성하고 한 번도 쫓겨나지 않으면', test:s=>(s.medals||0)>=5 && !s.purges},
+  {id:'tiger', name:'포효하는 호랑이', sub:'빠르게 크면서도 국민 삶을 지킨 나라', hint:'빠르게 성장하면서도 국민 삶을 지키면', test:s=>growth(s)>=45 && avgHidden(s)>=45},
+  {id:'green', name:'초록 거인', sub:'조용히 성장한 녹색 나라', hint:'성장하면서 숨겨진 지표도 지키면', test:s=>growth(s)>=10 && avgHidden(s)>=56},
+  {id:'sunwind', name:'해님과 바람님', sub:'햇빛과 바람으로 돌아가는 나라', hint:'발전 설비의 40% 넘게 재생에너지로 채우면', test:s=>capShare(s,['wind','solar','hydro','other'])>=0.4},
+  {id:'mended', name:'뒷수습 장인', sub:'꼬인 일을 끝까지 풀어낸 나라', hint:'꼬인 일을 끝까지 풀어 좋은 결말로 이으면', test:s=>s.flags.goodchain && avgHidden(s)>=50},
+  {id:'lights', name:'프로메테우스', sub:'산골 마을까지 불을 밝힌 나라', hint:'산골 마을에 전기를 놓고 격차를 줄이면', test:s=>s.flags.village && s.st.gap<=52},
+  {id:'slow', name:'거북이 행복론', sub:'느리지만 행복한 나라', hint:'GDP는 천천히, 국민은 행복하게', test:s=>avgHidden(s)>=56},
+  {id:'stuck', name:'러닝머신 공화국', sub:'열심히 뛰었는데 제자리인 나라', hint:'통치가 끝났는데 GDP가 오히려 줄면', test:s=>growth(s)<0},
+  {id:'grey', name:'회색 거인', sub:'굴뚝만 보고 자란 나라', hint:'GDP만 쫓아 성장하면', test:s=>growth(s)>=15},
+  {id:'drift', name:'표류하는 뗏목', sub:'방향을 잃은 나라', hint:'숨겨진 지표가 처음보다 크게 나빠지면', test:s=>avgHidden(s)<40},
+  {id:'plain', name:'그럭저럭 공화국', sub:'어느 쪽으로도 기울지 않은 나라', hint:'어느 쪽으로도 기울지 않으면', test:()=>true},
+];
+function capShare(s,keys){ const t=Object.values(s.cap).reduce((a,b)=>a+b,0)||1; return keys.reduce((a,k)=>a+(s.cap[k]||0),0)/t; }
+function growth(s){ return Math.round((s.gdp/GDP0-1)*100); }
+const USD_KRW = 1350;   // 1달러 = 1,350원으로 단순 환산
+// 세계은행 GDP(현재 달러 기준) · 나라와 지역별 가장 최근 값(대부분 2024년) · 단위: 10억 달러
+// 출처: World Bank, NY.GDP.MKTP.CD (2026-10 내려받음). 다른 나라 값은 게임 내내 고정.
+const WB_GDP = [["US",29298],["CN",18729.7],["DE",4685.6],["JP",4190],["IN",3760.8],["GB",3695.5],["FR",3160.4],["IT",2383.4],["CA",2270.1],["RU",2186.5],["BR",2185.8],["KR",1875.4],["MX",1830.5],["AU",1757],["ES",1725.7],["ID",1396.3],["TR",1359.1],["SA",1254.1],["NL",1213.9],["CH",969.9],["PL",917.8],["BE",671],["AR",638.4],["IE",609.2],["SE",604.8],["SG",572.9],["AE",552.3],["IL",542.3],["AT",534.8],["TH",529.4],["NO",500.9],["VN",476.3],["IR",475.3],["PH",461.7],["BD",450.1],["DK",424.5],["MY",422.2],["CO",420.5],["HK",408.4],["ZA",401.1],["EG",389.1],["RO",382.6],["PK",371.7],["CZ",347.1],["CL",329.3],["PT",313.7],["FI",298.7],["PE",291.8],["KZ",291.5],["IQ",279.6],["DZ",269.3],["NZ",261.5],["GR",256.2],["NG",252.3],["HU",222.8],["QA",216.3],["UA",190.8],["KW",160.9],["MA",160.6],["ET",149.7],["SK",140.9],["PR",126],["DO",124.3],["EC",123.8],["UZ",121.4],["VE",120.6],["KE",120.4],["BG",113.3],["GT",113.2],["OM",107.1],["AO",103.1],["LK",99.6],["CR",96.7],["LU",93.3],["HR",93],["RS",90.1],["CI",87.1],["PA",86.5],["LT",85.5],["GH",83.3],["UY",82.3],["TZ",79.2],["BY",78.6],["CD",75.7],["AZ",74.4],["MM",74.1],["SI",73],["JO",58.6],["BO",54.9],["UG",53.9],["CM",53.3],["TN",51.4],["SD",49.7],["MO",49.5],["LY",48.5],["BH",47.2],["KH",46.4],["PY",44.7],["TM",44.2],["LV",44],["NP",43.3],["EE",43.1],["ZW",41.5],["CY",37.6],["HN",37],["SV",34.9],["GE",34.2],["IS",33.2],["SN",32.2],["PG",30.8],["BA",29.7],["AL",27],["ML",26.8],["AM",26],["LB",26],["TT",25.6],["ZM",25.3],["GN",25],["MT",25],["GY",24.7],["HT",24.3],["MN",23.8],["SY",23.7],["BF",23.1],["MZ",22.8],["JM",22],["BJ",21.5],["GA",20.9],["TD",19.9],["NI",19.7],["NE",19.7],["BW",19.3],["KG",18.2],["MD",18.2],["AF",17.8],["MG",17.6],["MK",17],["LA",16.5],["PS",16],["BS",15.8],["CG",15.7],["BN",15.3],["RW",15.1],["MU",14.9],["TJ",14.4],["NA",13.6],["GQ",13.3],["JG",12.5],["SO",12],["MW",11.3],["XK",11.2],["MC",11.1],["MR",10.9],["TG",10.6],["BM",9.2],["LI",8.9],["NC",8.5],["ME",8.3],["KY",7.8],["BB",7.6],["IM",7.6],["MV",7.1],["SL",7],["GU",6.9],["PF",6.3],["FJ",6],["SZ",4.9],["LR",4.8],["VI",4.7],["SR",4.4],["AW",4.2],["DJ",4.2],["FO",4.1],["AD",4],["CW",3.6],["BT",3.3],["GL",3.3],["BZ",3.2],["BI",3],["CF",2.8],["CV",2.7],["LC",2.6],["GM",2.4],["LS",2.4],["AG",2.2],["GW",2.2],["SC",2.2],["SM",2],["TL",1.9],["SX",1.8],["TC",1.7],["KM",1.6],["SB",1.6],["GD",1.4],["VU",1.3],["WS",1.2],["VC",1.2],["MP",1.1],["KN",1.1],["AS",0.9],["ST",0.8],["DM",0.7],["TO",0.6],["FM",0.5],["KI",0.3],["MH",0.3],["PW",0.3],["NR",0.2],["TV",0.1]];
+const WD = (() => {
+  let dn = null; try { dn = new Intl.DisplayNames(['ko'], {type:'region'}); } catch(e){}
+  return WB_GDP.map(([c, b]) => ({code:c, name:(dn && dn.of(c)) || c, k:b * USD_KRW / 1000}))
+               .filter(x => x.name !== x.code).sort((a, b) => b.k - a.k);
+})();
+function worldRank(g){ let n = 0; for (const c of WD) { if (c.k > g) n++; else break; } return n + 1; }
+const worldName = idx => (WD[Math.max(0, Math.min(WD.length - 1, idx))] || {}).name || '';
+// 내 순위가 r일 때: WD[0]~WD[r-2]가 위, WD[r-1]부터 아래
+function worldRows(){
+  const me = {name:`${S.nation} (${S.name})`, gdp:S.gdp, me:true};
+  const all = WD.map((c, i) => ({name:c.name, gdp:c.k, idx:i, real:true}))
+    .concat(mates().map(b => ({name:`${b.nation} (${b.name})`, gdp:b.gdp, mate:true})), [me])
+    .sort((a, b) => b.gdp - a.gdp);
+  const i = all.indexOf(me);
+  return all.slice(Math.max(0, i - 3), i + 4).map(r => ({...r,
+    rank: r.me ? worldRank(S.gdp) : r.real ? r.idx + 1 + (S.gdp > r.gdp ? 1 : 0) : '친구'}));
+}
+function josa(w, a, b){ const c = w.charCodeAt(w.length - 1); if (c < 0xAC00 || c > 0xD7A3) return w + b; return w + (((c - 0xAC00) % 28) ? a : b); }
+const PAPER = () => (S && S.nation ? (S.nation.length > 1 && S.nation.endsWith('국') ? S.nation.slice(0, -1) : S.nation) : '누리') + ' 일보';
+let NATION = '누리국';
+function savedNation(){ try{ return localStorage.getItem('ttalkkak_nation')||''; }catch(e){ return ''; } }
+function avgHidden(s){ return Math.round(STATS.reduce((a,x)=>a+(x.inv?100-s.st[x.k]:s.st[x.k]),0)/STATS.length); }
+function endingOf(s){ return ENDINGS.find(e=>e.test(s)); }
+function loadDex(){ try{ return JSON.parse(localStorage.getItem('ttalkkak_dex')||'[]'); }catch(e){ return []; } }
+function saveDex(id){ try{ const d=loadDex(); if(!d.includes(id)){ d.push(id); localStorage.setItem('ttalkkak_dex',JSON.stringify(d)); } }catch(e){} }
+function savedName(){ try{ return localStorage.getItem('ttalkkak_name')||''; }catch(e){ return ''; } }
+
+// ───────── 소리 (효과음은 8비트 합성, 배경음악은 audio 폴더) ─────────
+const SND = (() => {
+  let ctx = null;
+  const pref = k => { try { return localStorage.getItem('ttalkkak_'+k) !== 'off'; } catch(e){ return true; } };
+  const st = { sfx: pref('sfx'), bgm: pref('bgm'), track: null };
+  const tracks = { play:'audio/bgm_play.wav', reveal:'audio/bgm_reveal.wav', end:'audio/bgm_end.wav' };
+  const audio = new Audio(); audio.loop = true; audio.volume = 0.12;
+  function unlockAudio(){
+    try { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); } catch(e){}
+  }
+  function tone(freq, t0, dur, type='square', vol=0.08, slideTo=null){
+    if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, ctx.currentTime + t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + t0 + dur);
+    g.gain.setValueAtTime(vol, ctx.currentTime + t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t0 + dur);
+    o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + t0); o.stop(ctx.currentTime + t0 + dur + 0.02);
+  }
+  function noise(t0, dur, vol=0.05, hp=800){
+    if (!ctx) return;
+    const len = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (1 - i/len);
+    const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'highpass'; f.frequency.value = hp; g.gain.value = vol;
+    src.buffer = buf; src.connect(f).connect(g).connect(ctx.destination); src.start(ctx.currentTime + t0);
+  }
+  const N = n => 440 * Math.pow(2, (n - 69) / 12);   // 미디 음 번호 → 주파수
+  const SFX = {
+    card:    () => { tone(N(76),0,.06,'triangle',.07); tone(N(81),.05,.08,'triangle',.06); },
+    unlock:  () => { tone(N(88),0,.03,'square',.03); },
+    o:       () => { tone(N(72),0,.07); tone(N(76),.07,.07); tone(N(79),.14,.12); },
+    x:       () => { tone(N(67),0,.08); tone(N(60),.08,.14); },
+    ai:      () => { [96,91,100,93,98,103].forEach((n,i)=>tone(N(n),i*.045,.04,'square',.045)); },
+    aiok:    () => { tone(N(84),0,.05,'square',.05); tone(N(91),.05,.1,'square',.05); },
+    coin:    () => { tone(N(83),0,.07,'square',.06); tone(N(88),.07,.22,'square',.06); },
+    down:    () => { tone(N(57),0,.18,'triangle',.08,N(48)); },
+    tick:    () => { tone(N(72),0,.05,'triangle',.05); },
+    blackout:() => { tone(440,0,.7,'sawtooth',.06,40); noise(0,.35,.05,300); tone(N(45),.55,.3,'triangle',.07); },
+    event:   () => { [0,.16,.32].forEach(t=>{ tone(N(81),t,.07,'square',.05); tone(N(77),t+.07,.07,'square',.05); }); },
+    chain:   () => { tone(N(57),0,.22,'triangle',.09); tone(N(56),.22,.35,'triangle',.09); noise(0,.12,.02,2000); },
+    next:    () => { noise(0,.12,.03,3000); tone(N(79),.02,.05,'triangle',.03); },
+    end:     () => { [72,76,79,84].forEach((n,i)=>tone(N(n),i*.12,.12,'square',.06)); tone(N(88),.5,.4,'square',.06); },
+    coup:    () => { for (let i=0;i<10;i++) noise(i*.06,.05,.06,200); [45,44,43,40].forEach((n,i)=>tone(N(n),.65+i*.22,.22,'sawtooth',.07)); },
+    reveal:  () => { [79,78,77,76,75,74].forEach((n,i)=>tone(N(n),i*.11,.1,'triangle',.08)); tone(N(43),.7,.7,'sawtooth',.05); },
+  };
+  function sfx(name){ if (!st.sfx || !ctx) return; try { SFX[name] && SFX[name](); } catch(e){} }
+  function music(name){
+    st.track = name;
+    if (!name || !st.bgm){ audio.pause(); return; }
+    const url = tracks[name];
+    if (!audio.src.endsWith(url)) { audio.src = url; audio.currentTime = 0; }
+    audio.play().catch(()=>{});
+  }
+  function toggle(kind){
+    st[kind] = !st[kind];
+    try { localStorage.setItem('ttalkkak_'+kind, st[kind] ? 'on' : 'off'); } catch(e){}
+    if (kind === 'bgm') music(st.track);
+    unlockAudio(); if (kind === 'sfx') sfx('tick');
+    drawButtons();
+  }
+  function drawButtons(){
+    const el = document.getElementById('sndbtns'); if (!el) return;
+    el.innerHTML = `<button class="snd ${st.sfx?'on':''}" onclick="SND.toggle('sfx')">효과음 ${st.sfx?'켬':'끔'}</button><button class="snd ${st.bgm?'on':''}" onclick="SND.toggle('bgm')">배경음악 ${st.bgm?'켬':'끔'}</button>`;
+  }
+  return { unlockAudio, sfx, music, toggle, drawButtons };
+})();
+
+// ───────── 상태 ─────────
+// 출발: 숲과 기후는 아직 좋지만, 국민은 가난하고 전기는 늘 빠듯한 개발도상국
+const ST0 = {happy:38, median:32, gap:58, nature:78, climate:66};
+// 출발 순위: 70~80위 중 무작위. 시작 전 문제를 맞힌 수만큼 주사위를 더 굴려 가장 좋은 순위로 시작
+function gdpForRank(r){ const hi = WD[r - 2].k, lo = WD[r - 1].k; return (hi + lo) / 2; }
+let GDP0 = gdpForRank(75), START_RANK = worldRank(GDP0);
+let S;
+function newGame(mode, name, motto){
+  SND.unlockAudio(); SND.music('play');
+  try{ localStorage.setItem('ttalkkak_name', name); }catch(e){}
+  S = { mode, name:name||'이름 없는', motto, turn:0, gdp:GDP0, st:{...ST0},
+        cap:{coal:35,lng:30,hydro:22,nuke:0,wind:0,solar:0,other:0}, demand:72, ess:0, grid:0, blackouts:0,
+        decks:{1:shuffle(BASE.filter(c=>eraCard(c)===1)), 2:shuffle(BASE.filter(c=>eraCard(c)===2)), 3:shuffle(BASE.filter(c=>eraCard(c)===3))}, era:1, purges:0, gen:1, baseName:name||'이름 없는', medals:0, lastPlan:null, coupPending:null, nation:NATION, rankMove:null, gdpHist:[GDP0], slump:0, slumpNow:false, aiAsked:0, aiRefused:0, advice:(TURNS === 30 ? 5 : 3), adviceUsed:0, adviceText:null, noAi:0, maxNoAi:0, everSlump:false, plansOk:0, pending:[], flags:{}, plants:{}, events:shuffle(EVENTS.slice()),
+        built:['hut','hut','hut','hut','town'].concat(Array(18).fill('tree')),
+        net:null, mates:[], log:[], used:{}, cause:null, maxChain:1, dominos:0, aiCount:0, start:Date.now(), card:null, event:null, lastAdd:[], bots:makeBots() };
+  if (ROOM && NET_OK) netStart();
+  nextCard();
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function pickWeather(){ const tot=WEATHER.reduce((a,w)=>a+w.w,0); let r=Math.random()*tot; for(const w of WEATHER){ if((r-=w.w)<0) return w; } return WEATHER[0]; }
+function makeBots(){ // 시연용 가상 학급
+  const names=['김','이','박','최','정','강','조','윤','장','임','한','오','서','신','권','황','안','송','류','전','홍','고','문'];
+  const nat = shuffle(MATE_NATIONS.filter(x => x !== NATION));
+  return names.map((n,i)=>({name:n+'○○', nation:nat[i], gdp:gdpForRank(70+Math.floor(Math.random()*11)), rate:0.005+Math.random()*0.055}));
+}
+const isOpen = () => S.mode === 2;
+const left = () => Math.max(0, TIME_LIMIT - Math.floor((Date.now()-S.start)/1000));
+const clamp = v => Math.max(0, Math.min(100, v));
+const yearOf = t => 2039 + t;
+function hid(k,v){ S.st[k]=clamp(S.st[k]+v); }
+
+// ───────── 인물 도트 얼굴 (12×12 칸) ─────────
+const FACE = {
+  minEnv:{skin:'#EDBE95', hair:'slick', hc:'#3B2A1E', shirt:'#2E6B4F', tie:'#8BC34A'},
+  minCli:{skin:'#F1C9A5', hair:'curly', hc:'#1E1E1E', shirt:'#2F6F9F', tie:'#5BB6E8', glasses:true},
+  minWel:{skin:'#E8B48A', hair:'gray', hc:'#CFCFCF', shirt:'#3D5A80', tie:'#E07A5F'},
+  minLab:{skin:'#D9A37A', hair:'messy', hc:'#2B2B2B', shirt:'#5B5B5B', tie:'#F2C94C'},
+  ind:{skin:'#F1C9A5', hair:'slick', hc:'#1E1E1E', shirt:'#2F3E5C', tie:'#C0392B', glasses:true},
+  biz:{skin:'#F0C29A', hair:'bald', hc:'#9A9A9A', shirt:'#5B3E6E', tie:'#E2B93B', mustache:'#555'},
+  env:{skin:'#E9B98F', hair:'beanie', hc:'#2E8B57', shirt:'#6FAF7F', leaf:true},
+  cit:{skin:'#EDBE95', hair:'messy', hc:'#6B4226', shirt:'#E07A5F', band:'#FFFFFF'},
+  eng:{skin:'#F3CDA8', hair:'curly', hc:'#3B2A1E', shirt:'#F4F4F4', goggles:true, collar:'#9DB7E6'},
+  fis:{skin:'#D9A37A', hair:'rainhat', hc:'#F2C94C', shirt:'#457B9D', beard:'#BDBDBD'},
+  far:{skin:'#C98E62', hair:'straw', hc:'#E3C77A', shirt:'#7A8B3A', strawBand:'#C0392B'},
+  vil:{skin:'#E8B48A', hair:'gray', hc:'#CFCFCF', shirt:'#8B6F47', mustache:'#9A9A9A', glasses:true},
+};
+function faceSVG(id){
+  const f = FACE[id] || FACE.cit, r = [];
+  const px = (x, y, w, h, c) => r.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`);
+  px(2, 9, 8, 3, f.shirt);                                   // 몸
+  if (f.collar) { px(4, 9, 1, 2, f.collar); px(7, 9, 1, 2, f.collar); }
+  if (f.tie) px(5, 9, 2, 3, f.tie);
+  px(3, 3, 6, 6, f.skin);                                    // 얼굴
+  px(4, 5, 1, 1, '#222'); px(7, 5, 1, 1, '#222');           // 눈
+  px(5, 7, 2, 1, '#B5665A');                                 // 입
+  const H = f.hc;
+  switch (f.hair) {
+    case 'slick':   px(3, 2, 6, 2, H); px(3, 4, 1, 1, H); break;
+    case 'bald':    px(3, 4, 1, 2, H); px(8, 4, 1, 2, H); break;
+    case 'beanie':  px(3, 1, 6, 3, H); px(2, 3, 8, 1, H); break;
+    case 'messy':   px(2, 2, 8, 2, H); px(2, 4, 1, 2, H); px(9, 4, 1, 1, H); px(4, 1, 1, 1, H); px(7, 1, 1, 1, H); break;
+    case 'curly':   px(2, 1, 8, 3, H); px(2, 4, 1, 1, H); px(9, 4, 1, 1, H); break;
+    case 'rainhat': px(3, 0, 6, 3, H); px(1, 3, 10, 1, H); break;
+    case 'straw':   px(3, 0, 6, 3, H); px(3, 2, 6, 1, f.strawBand); px(1, 3, 10, 1, H); break;
+    case 'gray':    px(3, 2, 6, 1, H); px(3, 3, 1, 2, H); px(8, 3, 1, 2, H); break;
+  }
+  if (f.band) px(3, 3, 6, 1, f.band);
+  if (f.leaf) { px(8, 0, 2, 1, '#8BC34A'); px(9, 1, 1, 1, '#8BC34A'); }
+  if (f.glasses) { px(3, 5, 2, 1, '#333'); px(7, 5, 2, 1, '#333'); px(5, 5, 2, 1, '#333'); px(4, 5, 1, 1, '#9FD3F0'); px(7, 5, 1, 1, '#9FD3F0'); }
+  if (f.goggles) { px(3, 3, 6, 1, '#555'); px(4, 3, 1, 1, '#7FD4FF'); px(7, 3, 1, 1, '#7FD4FF'); }
+  if (f.mustache) px(4, 6, 4, 1, f.mustache);
+  if (f.beard) { px(3, 7, 6, 2, f.beard); px(5, 7, 2, 1, '#B5665A'); }
+  return `<svg viewBox="0 0 12 12" width="36" height="36" shape-rendering="crispEdges" aria-hidden="true">${r.join('')}</svg>`;
+}
+function aiFaceSVG(){
+  const r = [], px = (x, y, w, h, c) => r.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`);
+  px(5, 0, 2, 1, '#E3B341'); px(5.5, 1, 1, 1, '#9AA3A8');      // 안테나
+  px(2, 2, 8, 7, '#C9D1D6'); px(3, 3, 6, 5, '#3A4750');         // 머리와 화면
+  px(4, 4, 1, 2, '#7FFFD4'); px(7, 4, 1, 2, '#7FFFD4');         // 눈
+  px(4, 7, 4, 1, '#7FFFD4');                                    // 입
+  px(1, 4, 1, 3, '#9AA3A8'); px(10, 4, 1, 3, '#9AA3A8');        // 귀
+  px(3, 9, 6, 3, '#E3B341');                                    // 몸
+  return `<svg viewBox="0 0 12 12" width="34" height="34" shape-rendering="crispEdges" aria-hidden="true">${r.join('')}</svg>`;
+}
+
+// ───────── 시작 전 단원 문제 (통합과학2 발전·에너지·신재생에너지) ─────────
+const QUIZ = [
+  {q:'발전기에서 전기를 만드는 원리는 무엇일까요?', a:['전자기 유도','광전 효과','정전기 유도','핵분열'], e:'발전기는 자석과 코일이 서로 움직일 때 코일에 전류가 흐르는 전자기 유도를 이용합니다.'},
+  {q:'화력 발전소에서 일어나는 에너지 전환 순서로 알맞은 것은?', a:['화학 에너지 → 열에너지 → 운동 에너지 → 전기 에너지','열에너지 → 화학 에너지 → 전기 에너지 → 운동 에너지','빛에너지 → 전기 에너지','핵에너지 → 운동 에너지 → 열에너지'], e:'연료가 탈 때 나온 열로 물을 끓이고, 증기가 터빈을 돌려 발전기에서 전기를 만듭니다.'},
+  {q:'태양광 발전에서 일어나는 에너지 전환은?', a:['빛에너지 → 전기 에너지','열에너지 → 운동 에너지','화학 에너지 → 전기 에너지','운동 에너지 → 전기 에너지'], e:'태양 전지는 터빈 없이 빛에너지를 바로 전기 에너지로 바꿉니다.'},
+  {q:'다음 중 전기를 만들 때 이산화탄소를 가장 많이 내보내는 발전 방식은?', a:['석탄 화력 발전','풍력 발전','원자력 발전','태양광 발전'], e:'석탄 화력 발전은 화석 연료를 태우기 때문에 이산화탄소를 가장 많이 내보냅니다.'},
+  {q:'태양광·풍력 같은 재생에너지의 단점으로 가장 알맞은 것은?', a:['날씨와 시간에 따라 발전량이 달라진다','연료가 곧 바닥난다','온실가스를 많이 내보낸다','방사성 폐기물이 나온다'], e:'햇빛과 바람은 날씨와 시간에 따라 달라져서 발전량이 일정하지 않습니다.'},
+  {q:'원자력 발전에서 에너지를 얻는 방법은?', a:['우라늄 원자핵의 핵분열','수소 원자핵의 핵융합','석유의 연소','물의 전기 분해'], e:'원자력 발전은 우라늄 원자핵이 쪼개질 때 나오는 에너지로 물을 끓여 발전합니다.'},
+  {q:'에너지 효율이 40%인 발전소에 연료 에너지 100을 넣으면 전기 에너지는 얼마가 될까요?', a:['40','60','100','140'], e:'에너지 효율은 넣은 에너지 가운데 쓸모 있는 에너지로 바뀐 비율입니다. 100의 40%는 40입니다.'},
+  {q:'발전소에서 먼 곳까지 전기를 보낼 때 전력 손실을 줄이는 방법은?', a:['전압을 높여서 보낸다','전압을 낮춰서 보낸다','전선을 더 가늘게 만든다','전류를 크게 해서 보낸다'], e:'같은 전력을 보낼 때 전압을 높이면 전류가 작아져서 전선에서 열로 잃는 에너지가 줄어듭니다.'},
+  {q:'조력 발전이 이용하는 것은?', a:['밀물과 썰물 때 바닷물 높이 차이','파도의 움직임','바닷물의 온도 차이','바닷물의 소금기'], e:'조력 발전은 밀물과 썰물 때 생기는 바닷물의 높이 차이를 이용합니다.'},
+  {q:'에너지 저장 장치(ESS)를 함께 쓰는 가장 큰 까닭은?', a:['재생에너지의 들쭉날쭉한 발전량을 보완하려고','발전소의 온실가스를 없애려고','전기 요금을 무조건 0으로 만들려고','송전선을 없애려고'], e:'전기가 남을 때 저장해 두었다가 모자랄 때 꺼내 쓰면 재생에너지의 변동을 메울 수 있습니다.'},
+  {q:'연료 전지에서 수소와 산소가 반응하면 무엇이 만들어질까요?', a:['전기 에너지와 물','이산화탄소와 물','석탄과 산소','우라늄과 열'], e:'연료 전지는 수소와 산소의 화학 반응으로 전기 에너지를 얻고, 그 결과 물이 생깁니다.'},
+];
+
+const MATE_NATIONS = ['하늘국','바람국','별빛국','해솔국','미르국','가람국','온새국','라온국','도담국','아라국','새벽국','한울국','다온국','솔빛국','여울국','나래국','보람국','슬기국','마루국','초롱국','단비국','너울국','고은국','푸른국','은하국'];
+
+// ───────── 장관에게 묻기 (자문권) ─────────
+const MINISTER = {happy:['minWel','보건복지부 장관'], median:['minLab','고용노동부 장관'], gap:['minLab','고용노동부 장관'], nature:['minEnv','환경부 장관'], climate:['minCli','기후에너지부 장관']};
+function ministerAdvice(c){
+  const effs = o => STATS.filter(x => o.d[x.k]).map(x => ({k:x.k, n:x.n, v:x.inv ? -o.d[x.k] : o.d[x.k]}));
+  const eO = effs(c.O), eA = effs(c.A);
+  const worstO = eO.slice().sort((a, b) => a.v - b.v)[0], bestO = eO.slice().sort((a, b) => b.v - a.v)[0], worstA = eA.slice().sort((a, b) => a.v - b.v)[0];
+  const deg = v => Math.abs(v) >= 8 ? '크게 ' : Math.abs(v) >= 4 ? '' : '조금 ';
+  const bad = e => `${josa(e.n, '이', '가')} ${deg(e.v)}${e.k === 'gap' ? '커질' : '나빠질'}`;
+  const key = worstO && worstO.v < 0 ? worstO.k : worstA && worstA.v < 0 ? worstA.k : 'happy';
+  let t = worstO && worstO.v < 0 ? `받아들이면 ${bad(worstO)} 겁니다. ` : '받아들여도 국민 생활에 큰 부담은 없어 보입니다. ';
+  if (bestO && bestO.v > 0) t += `대신 ${josa(bestO.n, '에는', '에는')} 도움이 됩니다. `;
+  if (worstA && worstA.v < 0) t += `AI 보좌관의 안대로 하면 ${bad(worstA)} 수 있습니다.`;
+  return {face:MINISTER[key][0], role:MINISTER[key][1], t};
+}
+function askMinister(){
+  if (S.advice <= 0 || S.adviceText) return;
+  S.advice--; S.adviceUsed++;
+  S.adviceText = ministerAdvice(S.card);
+  SND.sfx('tick');
+  const box = document.getElementById('advice');
+  if (box) box.innerHTML = adviceHTML();
+  const bq = document.getElementById('bq'); if (bq){ bq.disabled = true; bq.textContent = `장관의 조언을 들었습니다 · 남은 자문권 ${S.advice}번`; }
+}
+const adviceHTML = () => S.adviceText ? `<div class="advice"><div class="aihead"><i>${faceSVG(S.adviceText.face)}</i><b>${S.adviceText.role}</b></div>${S.adviceText.t}</div>` : '';
+
+// ───────── 업적 배지 ─────────
+const BADGES = [
+  {id:'noai10',   n:'AI 없이 10년',       d:'10년 동안 한 번도 AI에게 맡기지 않았다', test:s => s.maxNoAi >= 10},
+  {id:'nodark',   n:'꺼지지 않는 불빛',    d:'통치 내내 정전이 한 번도 없었다', test:s => s.blackouts === 0},
+  {id:'refuser',  n:'AI에게 아니요',       d:'AI의 안을 다섯 번 넘게 거부했다', test:s => s.aiRefused >= 5},
+  {id:'yesman',   n:'예스맨 지도자',       d:'AI에게 열 번 넘게 맡기고 한 번도 거부하지 않았다', test:s => s.aiCount >= 10 && s.aiRefused === 0},
+  {id:'listener', n:'귀가 열린 지도자',    d:'장관의 자문권을 모두 썼다', test:s => s.advice === 0},
+  {id:'green60',  n:'국민이 웃는 나라',    d:'숨겨진 지표 평균 60을 넘겼다', test:s => avgHidden(s) >= 60},
+  {id:'top30',    n:'세계 30위 진입',      d:'세계 GDP 30위 안에 들었다', test:s => worldRank(s.gdp) <= 30},
+  {id:'clean50',  n:'흔들림 없는 50위',    d:'숙청 없이 세계 50위 안에 들었다', test:s => !s.purges && worldRank(s.gdp) <= 50},
+  {id:'survivor', n:'불사조 왕조',         d:'세 번 넘게 숙청되고도 끝까지 통치를 이어 갔다', test:s => s.purges >= 3},
+  {id:'mender',   n:'끝까지 책임진다',     d:'꼬인 연쇄를 좋은 결말로 풀어냈다', test:s => !!s.flags.goodchain},
+  {id:'noslump',  n:'멈추지 않는 성장',    d:'한 번도 경제 침체에 빠지지 않았다', test:s => !s.everSlump},
+  {id:'planall',  n:'계획의 달인',         d:'모든 5개년 계획 목표를 달성했다', test:s => s.plansOk >= Math.floor(TURNS / PLAN)},
+];
+function loadBadges(){ try{ return JSON.parse(localStorage.getItem('ttalkkak_badges')||'[]'); }catch(e){ return []; } }
+function awardBadges(){
+  const got = loadBadges(), earned = BADGES.filter(b => b.test(S)), fresh = earned.filter(b => !got.includes(b.id));
+  try{ localStorage.setItem('ttalkkak_badges', JSON.stringify([...new Set([...got, ...earned.map(b => b.id)])])); }catch(e){}
+  return {earned, fresh};
+}
+const badgeHTML = (b, on, isNew) => `<div class="badge2 ${on ? '' : 'off'}"><i></i><div><b>${b.n}${isNew ? ' <span class="newb">새로 받음</span>' : ''}</b><small>${b.d}</small></div></div>`;
+
+// ───────── 실시간 교실 (방 코드가 있을 때만) ─────────
+const NET_OK = typeof isSupabaseConfigured === 'function' && isSupabaseConfigured();
+let ROOM = null;   // {code, turns}
+const mates = () => S.net ? (S.mates || []) : S.bots;
+async function netStart(){
+  S.net = {code:ROOM.code}; S.mates = []; S.bots = [];
+  try {
+    const r = await supaRpc('tk_join', {p_code:ROOM.code, p_name:S.baseName, p_nation:S.nation, p_mode:S.mode, p_start_rank:START_RANK, p_gdp:Math.round(S.gdp)});
+    if (!r.ok) { alert(r.msg || '방에 들어가지 못했습니다'); return; }
+    S.net.id = r.id; S.net.secret = r.secret;
+  } catch(e){ console.warn(e); }
+  netPoll();
+  clearInterval(S.net.timer); S.net.timer = setInterval(netPoll, 4000);
+}
+async function netPoll(){
+  if (!S || !S.net) return;
+  try {
+    const rows = await supaRpc('tk_board', {p_code:S.net.code, p_mode:S.mode});
+    S.mates = rows.filter(r => r.name !== S.baseName).map(r => ({name:r.name, nation:r.nation, gdp:+r.gdp, done:r.done}));
+  } catch(e){ console.warn(e); }
+}
+function netPush(extra){
+  if (!S || !S.net || !S.net.id) return;
+  const p = Object.assign({gdp:Math.round(S.gdp), turn:S.turn, ai_count:S.aiCount, ai_refused:S.aiRefused, advice_used:S.adviceUsed,
+    purges:S.purges, blackouts:S.blackouts, st:S.st}, extra || {});
+  supaRpc('tk_update', {p_id:S.net.id, p_secret:S.net.secret, p}).catch(e => console.warn(e));
+}
+function waitRoom(flag, then, boxId){
+  const tick = async () => {
+    try { const r = await supaRpc('tk_room', {p_code:S.net.code}); if (r && r[flag]) { clearInterval(S.net.wait); then(); return; } } catch(e){}
+  };
+  clearInterval(S.net.wait); S.net.wait = setInterval(tick, 3000); tick();
+}
+
+// ───────── 쿠데타와 숙청 ─────────
+const SLUMP_GROWTH = 0.06, SLUMP_HAPPY = 4;   // 3년 동안 GDP가 6% 넘게 오르지 못하면 해마다 행복도 -4 (기본 성장만으로는 침체)
+const COUP = {
+  slump: {test:()=>false, title:'가난에 지친 국민들의 봉기', text:'몇 년째 일자리도 월급도 늘지 않았습니다. "배고픈 나라에 위대한 지도자는 필요 없다"는 구호가 광장을 메웠고, 군대도 등을 돌렸습니다.'},
+  happy: {test:s=>s.st.happy<=10, title:'분노한 시민들의 봉기', text:'오랫동안 쌓인 국민의 분노가 마침내 폭발했습니다. 광장을 가득 메운 시민들이 궁전으로 몰려갔고, 군대는 총을 내려놓았습니다.'},
+  median:{test:s=>s.st.median<=10, title:'굶주린 군인들의 쿠데타', text:'월급이 끊긴 군인들이 탱크를 몰고 궁전을 에워쌌습니다. 가난에 지친 국민들은 아무도 지도자를 지키지 않았습니다.'},
+  gap:   {test:s=>s.st.gap>=88, title:'가난한 사람들의 혁명', text:'부자 동네와 가난한 동네 사이의 벽이 너무 높아졌습니다. 벽 너머에서 시작된 행진이 수도 전체로 번졌습니다.'},
+  env:   {test:s=>(s.st.nature+s.st.climate)/2<=12, title:'대재난 뒤의 쿠데타', text:'숲과 강이 무너진 땅에 거대한 재난이 덮쳤습니다. 혼란을 틈타 군부가 권력을 빼앗았습니다.'},
+};
+const WARN = {
+  happy: {test:s=>s.st.happy<=24, t:'수도 곳곳에서 지도자를 향한 불만의 목소리가 커지고 있다'},
+  median:{test:s=>s.st.median<=22, t:'군인 월급이 몇 달째 밀렸다는 소문이 돈다'},
+  gap:   {test:s=>s.st.gap>=76, t:'부자 동네 담장에 낙서가 늘고 있다'},
+  env:   {test:s=>(s.st.nature+s.st.climate)/2<=24, t:'땅이 메말라 고향을 떠나는 사람들이 늘고 있다'},
+};
+function coupCheck(){ for (const k in COUP) if (COUP[k].test(S)) return k; return null; }
+function warnings(){ return Object.keys(WARN).filter(k => WARN[k].test(S)).map(k => WARN[k].t); }
+function doCoup(k){
+  if (k === 'happy' && S.slump >= 2) k = 'slump';
+  const old = S.name;
+  S.purges++; S.gen++;
+  S.name = `${S.baseName} ${S.gen}세`;
+  S.gdp = Math.round(S.gdp * 0.92);
+  // 새 지도자가 민심을 급히 수습한다
+  S.st.happy = Math.max(S.st.happy, 42); S.st.median = Math.max(S.st.median, 35); S.st.gap = Math.min(S.st.gap, 65);
+  if ((S.st.nature + S.st.climate) / 2 < 35){ S.st.nature = Math.max(S.st.nature, 35); S.st.climate = Math.max(S.st.climate, 35); }
+  S.medals = 0;
+  S.coupPending = {k, old, year:yearOf(S.turn)};
+  S.log.unshift({type:'event', turn:S.turn, title:`쿠데타 · ${COUP[k].title}`, res:`${old} 숙청, ${S.name} 즉위 · GDP -8%`});
+}
+function evalPlan(){
+  const k = S.turn / PLAN, target = worldRank(GDP0 * Math.pow(1.03, S.turn)), now = worldRank(S.gdp), ok = now <= target;
+  if (ok){ S.medals++; S.plansOk++; }
+  S.lastPlan = {k, target, now, ok, shown:false};
+}
+function headlines(){
+  const h = [], st = S.st;
+  if (st.happy <= 30) h.push('시민 인터뷰: "요즘은 웃을 일이 없어요"'); else if (st.happy >= 55) h.push('시민 인터뷰: "살기 좋아졌다는 말이 나와요"');
+  if (st.gap >= 70) h.push(`고급 아파트 바로 옆 판자촌, 두 개의 ${S.nation}`);
+  if (st.median <= 25) h.push('월급으로 쌀 한 가마 사기도 빠듯하다');
+  if (st.nature <= 35) h.push(`철새들이 더는 ${S.nation}의 강을 찾지 않는다`); else if (st.nature >= 65) h.push('원시림을 보러 온 외국 관광객이 늘었다');
+  if (st.climate <= 35) h.push('올여름 열대야 역대 최다, 숨 막히는 도시');
+  return h.slice(0, 3);
+}
+
+// ───────── 전력 계산 ─────────
+function supplyParts(){
+  const w=S.weather, th=S.tmpThermal||1, floor=S.ess?Math.min(1,.55+.2*S.ess):0, eff=1+.05*S.grid;
+  const sun=Math.max(w.sun,floor), wnd=Math.max(w.wind,floor);
+  const tw=(S.tmpWind===undefined?1:S.tmpWind), th2=(S.tmpHydro||1);
+  const p={coal:S.cap.coal*th, lng:S.cap.lng, hydro:S.cap.hydro*th*th2, nuke:S.cap.nuke*th, other:S.cap.other, wind:S.cap.wind*wnd*tw, solar:S.cap.solar*sun};
+  for(const k in p) p[k]=Math.round(p[k]*eff);
+  return p;
+}
+const supplyTotal = () => Object.values(supplyParts()).reduce((a,b)=>a+b,0);
+const demandNow = () => Math.round(S.demand + (S.weather.dem||0) + (S.tmpDem||0));
+function fossilShare(){ const p=supplyParts(), t=Object.values(p).reduce((a,b)=>a+b,0)||1; return (p.coal+p.lng)/t; }
+
+function nextCard(){
+  if (S.turn >= TURNS || left() <= 0) return endGame();
+  S.turn++;
+  S.demand += TURNS === 30 ? 0.8 : 1.6;   // 산업화로 해마다 전력 수요가 늘어남
+  S.adviceText = null;
+  S.tmpDem = 0; S.tmpThermal = 1; S.tmpWind = undefined; S.tmpHydro = 1; S.event = null;
+  S.weather = pickWeather();
+  if (EVENT_TURNS.includes(S.turn) && S.events.length){
+    let ei = S.events.findIndex(ev => EVENT_ERA[ev.id] === eraOf(S.turn)); if (ei < 0) ei = 0;
+    const ev=S.events.splice(ei,1)[0]; const res=ev.apply();
+    S.event={...ev, res};
+    S.log.unshift({type:'event', turn:S.turn, title:ev.title, res});
+  }
+  const due = S.pending.findIndex(f => f.at <= S.turn);
+  if (due >= 0){ const it=S.pending.splice(due,1)[0]; S.card=it.card; S.cause=it.cause; S.maxChain=Math.max(S.maxChain,it.cause.step); if(DOMINO.includes(it.card.id)) S.dominos++; }
+  else { const e = eraOf(S.turn); S.card = S.decks[e].shift() || S.decks[3].shift() || S.decks[2].shift() || S.decks[1].shift(); S.cause = null; }
+  if (!S.card) return endGame();
+  renderPlay();
+}
+
+function choose(side){
+  SND.sfx(side==='O' ? 'o' : side==='X' ? 'x' : 'aiok');
+  const c = S.card, opt = c[side];
+  const rank0 = worldRank(S.gdp);
+  S.gdp = Math.round(S.gdp * (1 + (opt.d.gdp||0)/100));
+  for (const s of STATS) if (opt.d[s.k]) hid(s.k, opt.d[s.k]);
+  if (opt.sup) for (const k in opt.sup) S.cap[k]+=opt.sup[k];
+  if (opt.dem) S.demand += opt.dem;
+  if (opt.ess) S.ess += opt.ess;
+  if (opt.grid) S.grid += opt.grid;
+  S.lastAdd = opt.add || [];
+  S.lastAdd.forEach(a=>{ S.built.push(a); S.plants[a]=(S.plants[a]||0)+1; });
+  if (opt.d.nature < 0) for (let i=0;i<Math.ceil(-opt.d.nature/2);i++){ const t=S.built.indexOf('tree'); if(t>=0) S.built.splice(t,1); }
+  if (opt.d.nature > 0) for (let i=0;i<Math.ceil(opt.d.nature/2);i++) S.built.push('tree');
+  if ((opt.d.gdp||0) >= 3) S.built.push('town');
+  if (opt.flag && !S.flags[opt.flag]) {
+    S.flags[opt.flag] = true;
+    const f = FOLLOW.find(x => x.need === opt.flag);
+    if (f && !S.used[f.id]) { S.used[f.id]=true; S.pending.push({at:S.turn + f.after + 1, card:f, cause:{title:c.title, year:yearOf(S.turn), step:2}}); }
+  }
+  const nxId = CHAINS[c.id] && CHAINS[c.id][side];
+  if (nxId && !S.used[nxId]) {
+    const f = FOLLOW.find(x => x.id === nxId);
+    S.used[nxId] = true;
+    S.pending.push({at:S.turn + 2, card:f, cause:{title:c.title, year:yearOf(S.turn), step:(S.cause ? S.cause.step : 1) + 1}});
+  }
+  if (opt.good) S.flags.goodchain = true;
+  // 올해 전력 수급 확인
+  const sup = supplyTotal(), dem = demandNow(), out = sup < dem;
+  if (!out) S.gdp = Math.round(S.gdp * (1 + BASE_GROWTH));
+  if (out){ S.blackouts++; S.gdp = Math.round(S.gdp*0.97); hid('happy',-3);
+    if (!S.flags.blackout){ S.flags.blackout=true; const f=FOLLOW.find(x=>x.need==='blackout'); S.used[f.id]=true; S.pending.push({at:S.turn+f.after+1, card:f, cause:{title:'정전', year:yearOf(S.turn), step:2}}); } }
+  if (side==='A'){ S.aiCount++; S.noAi = 0; } else { S.noAi++; S.maxNoAi = Math.max(S.maxNoAi, S.noAi); }
+  S.log.unshift({type:'card', turn:S.turn, card:c, side, d:opt.d, gdpAfter:S.gdp, sup, dem, out, step:S.cause?S.cause.step:0});
+  if (!S.net) S.bots.forEach(b => b.gdp = Math.round(b.gdp * (1 + b.rate)));
+  S.gdpHist.push(S.gdp);
+  const past = S.gdpHist[Math.max(0, S.gdpHist.length - 4)];
+  S.slumpNow = S.gdpHist.length >= 4 && S.gdp / past - 1 < SLUMP_GROWTH;
+  if (S.slumpNow){ S.slump++; S.everSlump = true; hid('happy', -SLUMP_HAPPY); } else S.slump = 0;
+  const ck = coupCheck(); if (ck) doCoup(ck);
+  if (S.turn % PLAN === 0) evalPlan();
+  S.rankMove = {from:rank0, to:worldRank(S.gdp)};
+  renderResult(side, opt, {sup, dem, out});
+  netPush();
+}
+
+// ───────── 나라 그림 (SVG) ─────────
+function mix(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
+function landSVG(){
+  const sky = mix('#BFE0EA','#A39E96', Math.max(0,(55-S.st.climate))/55);
+  const dirt = Math.max(0, (60 - S.st.nature)) / 60, smog = Math.max(0, (50 - S.st.climate)) / 50;
+  const grass = mix('#8DB277', '#B9A77A', dirt);                         // 숲이 줄면 땅이 메마른 색으로
+  const sea = mix('#4B88B0', '#6B7356', Math.min(1, dirt * 0.8 + smog * 0.4));   // 바다가 칙칙한 녹갈색으로
+  const n = t => S.built.filter(x=>x===t).length;
+  const isNew = t => S.lastAdd.includes(t);
+  const pop = (t,i,cnt) => (isNew(t) && i === cnt-1 ? ' class="pop"' : '');
+  const el = [];
+  const towns = Math.min(n('town'), 9);
+  for (let i=0;i<towns;i++){ const x=10+i*17, h=22+((i*11)%22);
+    el.push(`<g><rect x="${x}" y="${118-h}" width="14" height="${h}" fill="#6B7787"/><rect x="${x+3}" y="${122-h}" width="3" height="3" fill="#F2D27A"/><rect x="${x+8}" y="${128-h}" width="3" height="3" fill="#F2D27A"/></g>`); }
+  const md=S.medals||0;
+  if (md>=1){ const k=0.8+0.2*Math.min(md,6), bx=70, by=118; el.push(`<g><rect x="${bx-5*k}" y="${by-4*k}" width="${10*k}" height="${4*k}" fill="#B08D57"/><rect x="${bx-2*k}" y="${by-14*k}" width="${4*k}" height="${10*k}" fill="#E2B93B"/><rect x="${bx-1.5*k}" y="${by-18*k}" width="${3*k}" height="${4*k}" fill="#F2C94C"/><rect x="${bx+2*k}" y="${by-16*k}" width="${3*k}" height="${1.5*k}" fill="#E2B93B"/></g>`); }
+  const huts=Math.max(0, n('hut') - Math.floor(n('town')/2));
+  for (let i=0;i<Math.min(huts,4);i++){ const x=12+(towns+i)*17; el.push(`<g><path d="M${x} 118 v-10 l7 -6 l7 6 v10z" fill="#A07850"/><rect x="${x+5}" y="111" width="4" height="7" fill="#5B3E2B"/></g>`); }
+  if (n('dam')) el.push(`<g${pop('dam',0,1)}><path d="M318 118 h10 l6 47 h-22z" fill="#9AA3A8"/><rect x="334" y="118" width="46" height="14" fill="#6FA9CF"/></g>`);
+  if (n('mine')) el.push(`<g${pop('mine',0,1)}><path d="M118 118 l14 -16 l14 16z" fill="#8A6A4A"/><rect x="126" y="108" width="10" height="10" fill="#3A2A1A"/></g>`);
+  const fac=Math.min(n('factory'),2); for (let i=0;i<fac;i++){ const x=96+i*24; el.push(`<g${pop('factory',i,fac)}><path d="M${x} 118 v-12 l6 -5 v5 l6 -5 v5 l6 -5 v17z" fill="#7A6E66"/></g>`); }
+  if (n('tank')) el.push(`<g${pop('tank',0,1)}><rect x="140" y="103" width="16" height="15" rx="7" fill="#E9ECEF" stroke="#AAB4BC"/></g>`);
+  if (n('geo')) el.push(`<g${pop('geo',0,1)}><rect x="300" y="138" width="10" height="8" fill="#8B8B8B"/><circle class="smoke" cx="305" cy="132" r="5" fill="#FFFFFF"/></g>`);
+  const coal=Math.min(n('coal'),3); for (let i=0;i<coal;i++){ const cx=168+i*28;
+    el.push(`<g${pop('coal',i,coal)}><rect x="${cx}" y="92" width="22" height="26" fill="#4A4A4A"/><rect x="${cx+13}" y="70" width="6" height="24" fill="#3A3A3A"/><circle class="smoke" cx="${cx+16}" cy="64" r="7" fill="#777"/><circle class="smoke" cx="${cx+20}" cy="56" r="9" fill="#888" style="animation-delay:1.2s"/></g>`); }
+  if (n('dc')) el.push(`<g${pop('dc',0,1)}><rect x="252" y="94" width="40" height="24" rx="2" fill="#3C4F7A"/><rect x="257" y="99" width="30" height="3" fill="#7FD4FF"/><rect x="257" y="106" width="30" height="3" fill="#7FD4FF"/></g>`);
+  if (n('nuke')) el.push(`<g${pop('nuke',0,1)}><path d="M296 118 v-14 a12 12 0 0 1 24 0 v14z" fill="#C9CED6"/><rect x="304" y="86" width="8" height="12" fill="#AEB4BC"/></g>`);
+  if (n('tower')) el.push(`<g${pop('tower',0,1)}><path d="M160 118 l5 -38 l5 38 M161 94 h8 M160 106 h10" stroke="#8A8F96" stroke-width="2" fill="none"/></g>`);
+  if (n('ess')) el.push(`<g${pop('ess',0,1)}><rect x="236" y="104" width="12" height="14" fill="#2E8B57"/><rect x="239" y="100" width="6" height="4" fill="#2E8B57"/></g>`);
+  const solar=Math.min(n('solar'),3); for (let i=0;i<solar;i++){ const sx=196+i*36;
+    el.push(`<g${pop('solar',i,solar)}><path d="M${sx} 146 h28 l-5 -10 h-28z" fill="#2B4C8C" stroke="#9DB7E6" stroke-width=".8"/></g>`); }
+  const wind=Math.min(n('wind'),3); for (let i=0;i<wind*2;i++){ const wx=334+i*14;
+    el.push(`<g${isNew('wind')?' class="pop"':''}><rect x="${wx-1}" y="126" width="2" height="24" fill="#F4F7F9"/><path class="spin" style="transform-origin:${wx}px 126px" d="M${wx} 126 l0 -11 M${wx} 126 l9.5 5.5 M${wx} 126 l-9.5 5.5" stroke="#F4F7F9" stroke-width="2.2" stroke-linecap="round"/><circle cx="${wx}" cy="126" r="1.4" fill="#DDE3E8"/></g>`); }
+  const trees = Math.min(n('tree'), 16);
+  for (let i=0;i<trees;i++){ const tx=14+i*11+(i%2)*3, ty=138+(i%3)*8;
+    el.push(`<g><rect x="${tx-1}" y="${ty}" width="2" height="6" fill="#5B3E2B"/><circle cx="${tx}" cy="${ty-3}" r="6" fill="${S.st.nature<35?'#8C8F4A':'#3E8E4E'}"/></g>`); }
+  return `<svg viewBox="0 0 380 165" role="img" aria-label="나의 나라 모습"><rect width="380" height="165" fill="${sky}"/><rect y="118" width="322" height="47" fill="${grass}"/><rect x="322" y="118" width="58" height="47" fill="${sea}"/>${el.join('')}${pollutionSVG(smog, dirt)}</svg>`;
+}
+
+function pollutionSVG(smog, dirt){
+  let out = '';
+  if (dirt > 0.45) for (let i = 0; i < Math.round(dirt * 8); i++) out += `<rect x="${326 + (i * 13) % 50}" y="${124 + (i * 7) % 36}" width="3" height="2" fill="#5A4A32"/>`;   // 바다 위 쓰레기
+  if (smog > 0.2){ const o = Math.min(0.85, smog); out += `<g opacity="${o}"><ellipse cx="70" cy="26" rx="46" ry="12" fill="#6F6A62"/><ellipse cx="170" cy="18" rx="56" ry="13" fill="#77726A"/><ellipse cx="290" cy="30" rx="50" ry="12" fill="#6F6A62"/></g>`; }   // 스모그 구름
+  if (smog > 0) out += `<rect width="380" height="165" fill="#8C877C" opacity="${(smog * 0.4).toFixed(2)}"/>`;   // 뿌연 공기
+  return out;
+}
+
+// ───────── 화면 조각 ─────────
+const app = document.getElementById('app');
+const fmt = n => n.toLocaleString('ko-KR');
+const clock = () => { const t=left(); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); };
+function myRank(){ return [...mates().map(b=>b.gdp), S.gdp].sort((a,b)=>b-a).indexOf(S.gdp)+1; }
+function barsHTML(){
+  return `<div class="bars">${STATS.map(s=>{const v=S.st[s.k], good=s.inv?100-v:v; return `<div class="r ${good<40?'bad':''}"><span>${s.n}</span><div class="t"><i style="width:${good}%"></i></div><b>${v}</b></div>`}).join('')}</div>`;
+}
+function powerBox(){
+  const p=supplyParts(), sup=supplyTotal(), dem=demandNow(), res=Math.round((sup-dem)/dem*100);
+  const max=Math.max(sup,dem)*1.1;
+  return `<div class="box"><h3>올해 전력 수급 <em>${S.weather.n}</em></h3><div class="in">
+    <div class="pw"><span>공급 가능</span><b>${sup} GW</b><span>예상 수요</span><b>${dem} GW</b><span>예비율</span><b class="${res<0?'neg':''}">${res>0?'+':''}${res}%</b></div>
+    <div class="gauge"><i class="${sup<dem?'short':''}" style="width:${sup/max*100}%"></i><u style="left:${dem/max*100}%"></u></div>
+    <div class="gnote">${sup<dem?'이대로면 올해 정전이 일어납니다.':'검은 선이 수요입니다. 막대가 선을 넘어야 정전이 없습니다.'}</div>
+    <div class="mix">${SRC.filter(s=>p[s.k]).map(s=>`<i style="flex:${p[s.k]};background:${s.c}"></i>`).join('')}</div>
+    <div class="legend">${SRC.filter(s=>p[s.k]).map(s=>`<span><i style="background:${s.c}"></i>${s.n} ${p[s.k]}</span>`).join('')}</div>
+  </div></div>`;
+}
+function statusPanel(){
+  return `<div class="box"><h3>위대한 지도자 신상 기록</h3><div class="in">
+    <div class="who"><div class="av"><svg width="26" height="30" viewBox="0 0 12 14" shape-rendering="crispEdges"><rect x="2" y="0" width="8" height="2" fill="#2F4A2F"/><rect x="1" y="2" width="10" height="1" fill="#C0392B"/><rect x="5" y="0" width="2" height="1" fill="#F2C94C"/><rect x="3" y="3" width="6" height="3" fill="#F1C9A5"/><rect x="4" y="4" width="1" height="1" fill="#222"/><rect x="7" y="4" width="1" height="1" fill="#222"/><rect x="5" y="5" width="2" height="1" fill="#3A2A1A"/><rect x="2" y="6" width="8" height="6" fill="#4B5D3A"/><rect x="1" y="6" width="2" height="1" fill="#F2C94C"/><rect x="9" y="6" width="2" height="1" fill="#F2C94C"/><rect x="3" y="8" width="1" height="1" fill="#F2C94C"/><rect x="4" y="8" width="1" height="1" fill="#E74C3C"/><rect x="3" y="9" width="2" height="1" fill="#5DADE2"/><rect x="3" y="12" width="2" height="2" fill="#222"/><rect x="7" y="12" width="2" height="2" fill="#222"/></svg></div>
+      <div><b>위대한 지도자 ${esc(S.name)}</b><small style="color:var(--ink)">${esc(S.nation)}</small><small>${ERA_NAMES[eraOf(Math.max(1,S.turn))]} · ${yearOf(S.turn)}년 · ${S.turn}년 차 / ${TURNS}년</small></div></div>
+    <div class="gdpbig">${fmt(S.gdp)}<small> 조 원</small></div>
+    <div class="kv"><span>국가소득 증가</span><b>${growth(S)>0?'+':''}${growth(S)}%</b><span>우리 반 순위</span><b>${myRank()}등 / ${mates().length+1}명</b><span>남은 시간</span><b class="clock">${clock()}</b><span>AI에게 맡김</span><b>${S.aiCount}번</b><span>정전</span><b class="${S.blackouts?'neg':''}">${S.blackouts}번</b><span>훈장</span><b>${S.medals}개</b><span>숙청</span><b class="${S.purges?'neg':''}">${S.purges}번</b></div>
+    ${isOpen()?'':`<div class="mission">미션: ${esc(josa(S.nation, '을', '를'))} 세계의 강대국으로 만드십시오. 국가소득(GDP)이 곧 지도자의 위대함입니다. 통치 기간 안에 GDP를 최대로 높여 세계 순위를 끌어올리세요. 이 점수로 평가합니다.</div>`}
+  </div></div>
+  <div class="box"><h3>세계 GDP 순위 <em>세계은행 자료 · 처음 ${START_RANK}위</em></h3><div class="rank wr">${worldRows().map(r => `<div class="${r.me ? 'me' : r.mate ? 'mate' : ''}"><span>${r.rank}</span><span>${esc(r.name)}</span><span>${fmt(Math.round(r.gdp))}조</span></div>`).join('')}</div></div>
+  ${powerBox()}
+  ${isOpen()?`<div class="box"><h3>국민 생활 지표</h3><div class="in">${barsHTML()}</div></div>`:''}`;
+}
+function logPanel(){
+  const items = S.log.map(l=>{
+    if (l.type==='event') return `<div class="e ev"><span class="y">${yearOf(l.turn)}</span><div><b>사건</b> ${l.title}<div class="d">${l.res}</div></div></div>`;
+    const hidTxt = isOpen()? STATS.filter(s=>l.d[s.k]).map(s=>`${s.n} ${l.d[s.k]>0?'+':''}${l.d[s.k]}`).join(' · ') : '';
+    const what = l.side==='A' ? 'AI의 안 실행' : (l.side==='O'?'받아들임':'거절함');
+    return `<div class="e"><span class="y">${yearOf(l.turn)}</span><div>${l.step?`<span class="ch">연쇄 ${l.step}</span>`:''}${l.card.title} <b>${what}</b>${l.side==='A'?'<span class="ai">AI</span>':''}${l.out?'<span class="bo">정전</span>':''}<div class="d">GDP ${l.d.gdp>0?'+':''}${l.d.gdp||0}% → ${fmt(l.gdpAfter)}조 · 전력 ${l.sup}/${l.dem}GW${hidTxt?' · '+hidTxt:''}</div></div></div>`;
+  }).join('');
+  return `<div class="box"><h3>통치 기록</h3><div class="log">${items||'<div class="empty">한 해가 지날 때마다 기록이 쌓입니다.</div>'}</div></div>`;
+}
+function layout(midHTML){
+  const sup=supplyTotal(), dem=demandNow();
+  const mhud = `<div class="mhud"><span>GDP <b>${fmt(S.gdp)}조</b> · 세계 <b>${worldRank(S.gdp)}위</b></span><span>우리 반 <b>${myRank()}등</b></span><span>전력 <b class="${sup<dem?'neg':''}">${sup}/${dem}GW</b></span><span>${S.turn}/${TURNS}년 · <b class="clock">${clock()}</b></span></div>`;
+  app.innerHTML = `<div class="game"><div class="col">${statusPanel()}</div><div class="mid">${mhud}<div class="land">${landSVG()}</div>${midHTML}</div><div class="col">${logPanel()}</div></div>`;
+}
+let timers=[];
+function clearTimers(){timers.forEach(t=>{clearInterval(t);clearTimeout(t)});timers=[]}
+function tickClock(){ timers.push(setInterval(()=>{ document.querySelectorAll('.clock').forEach(el=>el.textContent=clock()); },1000)); }
+function runLock(btns, sec, done){
+  btns.forEach(b=>{ const l=b.querySelector('.lock'); l.style.transition=`width ${sec}s linear`; requestAnimationFrame(()=>requestAnimationFrame(()=>l.style.width='100%')); });
+  timers.push(setTimeout(()=>{ btns.forEach(b=>{ b.disabled=false; const l=b.querySelector('.lock'); if(l) l.remove(); }); done&&done(); }, sec*1000));
+}
+const esc = t => String(t).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+// ───────── 시작 화면 ─────────
+function dexHTML(){
+  const got = loadDex();
+  return `<div class="dex">${ENDINGS.map(e=>got.includes(e.id)
+    ? `<div><b>${e.name}</b>${e.sub}</div>`
+    : `<div class="no"><b>???</b>아직 만나지 못한 결말</div>`).join('')}</div>`;
+}
+function renderStart(){
+  clearTimers();
+  SND.music(null); SND.drawButtons();
+  document.getElementById('topnote').textContent = '시연용 프로토타입 · 가상 학급 23명';
+  app.innerHTML = `<div class="screen">
+    <h1>딸깍 독재자</h1>
+    <p class="lead" style="font-weight:700;color:var(--ink);margin-top:-6px">당신의 ‘딸깍’ 한 번이 곧 법입니다.</p>
+    <p class="lead">2040년, 오랜 혼란 끝에 당신은 작은 개발도상국의 모든 권력을 손에 쥔 지도자가 되었습니다. 의회도 언론도 당신의 한마디를 따릅니다. 세계 순위는 70~80위 사이. 국민 셋 중 한 명은 하루 중 몇 시간씩 전기 없이 지내고, 이웃 나라들은 이미 부자가 되었습니다. 해마다 장관과 시민들이 제안을 들고 찾아옵니다. 받아들일지(O), 거절할지(X), AI에게 맡길지 정하세요. 당신을 막을 사람은 아무도 없습니다. AI는 언제나 더 과감한 안을 내놓습니다.</p>
+    <div class="names"><label class="f">지도자 이름<input type="text" id="pname" maxlength="10" placeholder="예: 김하늘" value="${esc(savedName())}"></label>
+    <label class="f">나라 이름<input type="text" id="nname" maxlength="8" placeholder="예: 누리국" value="${esc(savedNation())}"></label></div>
+    ${NET_OK ? `<label class="f">방 코드 <span style="font-size:12px">(선생님이 알려 준 4자리 · 혼자 연습하려면 비워 두세요)</span><input type="text" id="rcode" inputmode="numeric" maxlength="4" placeholder="예: 3825"></label>` : ''}
+    <div class="mode">
+      <button onclick="startMode(1)"><b>2차시 · 첫 번째 통치</b><span>미션은 GDP 최대화. 화면에는 GDP, 순위, 전력 수급만 보입니다.</span></button>
+      <button onclick="startMode(2)"><b>3차시 · 두 번째 통치</b><span>국민 생활 지표가 모두 보입니다. 내가 정한 방향대로 나라를 운영합니다.</span></button>
+    </div>
+    <div class="row" style="flex-wrap:wrap">통치 기간 <label class="row"><input type="radio" name="len" value="30" checked> 30년 (수업용, 약 30분)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (시연용)</label></div>
+    <label class="row"><input type="checkbox" id="fast"> 시연용 빠르게 (대기 시간 줄이기)</label>
+    <div class="box"><h3>배지 모음 <em>${loadBadges().length}/${BADGES.length}</em></h3><div class="in badges">${BADGES.map(b => badgeHTML(b, loadBadges().includes(b.id))).join('')}</div></div>
+    <div class="box"><h3>결말 도감 <em>${loadDex().length}/${ENDINGS.length}</em></h3><div class="in">${dexHTML()}</div></div>
+  </div>`;
+}
+function startMode(m){
+  const name = (document.getElementById('pname').value||'').trim();
+  if (!name){ const el=document.getElementById('pname'); el.focus(); el.style.borderColor='var(--x)'; el.placeholder='지도자 이름을 먼저 지어 주세요'; return; }
+  NATION = (document.getElementById('nname').value||'').trim() || '누리국';
+  try{ localStorage.setItem('ttalkkak_nation', NATION); }catch(e){}
+  setLength(+(document.querySelector('input[name=len]:checked')||{value:30}).value);
+  if (document.getElementById('fast').checked){ LOCK_SEC=0.5; RESULT_SEC=0.8; } else { LOCK_SEC=1.5; RESULT_SEC=2.5; }
+  const rc = NET_OK ? (document.getElementById('rcode').value || '').trim() : '';
+  if (!rc){ ROOM = null; renderQuiz(m, name); return; }
+  supaRpc('tk_room', {p_code:rc}).then(r => {
+    if (!r || !r.ok){ const el = document.getElementById('rcode'); el.value = ''; el.placeholder = '방 코드를 찾을 수 없습니다'; el.style.borderColor = 'var(--x)'; el.focus(); return; }
+    ROOM = {code:rc, turns:r.turns}; setLength(r.turns);
+    renderQuiz(m, name);
+  }).catch(() => alert('서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'));
+}
+function renderQuiz(m, name){
+  const qs = shuffle(QUIZ.slice()).slice(0, 5);
+  let i = 0, right = 0;
+  const show = () => {
+    const Q = qs[i], opts = shuffle(Q.a.map((t, k) => ({t, ok:k === 0})));
+    app.innerHTML = `<div class="screen">
+      <span class="badge" style="justify-self:start">출발 순위 정하기 · 문제 ${i + 1} / 5</span>
+      <h2>${Q.q}</h2>
+      <div class="quiz">${opts.map((o, k) => `<button class="qopt" data-k="${k}">${o.t}</button>`).join('')}</div>
+      <div id="qfb"></div>
+      <p class="lead" style="font-size:13px">맞힌 문제마다 출발 순위 주사위를 한 번 더 굴릴 수 있습니다. <a href="#" id="qskip">시연용: 건너뛰기</a></p></div>`;
+    document.getElementById('qskip').onclick = e => { e.preventDefault(); renderDice(m, name, right); };
+    document.querySelectorAll('.qopt').forEach(b => b.onclick = () => {
+      const o = opts[+b.dataset.k];
+      document.querySelectorAll('.qopt').forEach((x, k) => { x.disabled = true; if (opts[k].ok) x.classList.add('right'); });
+      if (o.ok) right++; else b.classList.add('wrong');
+      SND.unlockAudio(); SND.sfx(o.ok ? 'o' : 'x');
+      document.getElementById('qfb').innerHTML = `<div class="result"><b>${o.ok ? '정답입니다!' : '아쉽게도 틀렸습니다.'}</b><p style="margin:4px 0 10px">${Q.e}</p><button class="next" id="qnext">${i < 4 ? '다음 문제' : '출발 순위 주사위 굴리기'}</button></div>`;
+      document.getElementById('qnext').onclick = () => { i++; if (i < 5) show(); else renderDice(m, name, right); };
+    });
+  };
+  show();
+}
+function renderDice(m, name, right){
+  const rolls = Array.from({length:right + 1}, () => 70 + Math.floor(Math.random() * 11));
+  const best = Math.min(...rolls);
+  app.innerHTML = `<div class="screen">
+    <span class="badge" style="justify-self:start">출발 순위 주사위</span>
+    <h2>맞힌 문제 ${right}개 → 주사위 ${right + 1}번</h2>
+    <p class="lead">주사위는 세계 70~80위 가운데 하나를 고릅니다. 가장 좋은 순위로 시작합니다.</p>
+    <div class="dice" id="dice"></div>
+    <div id="dres"></div></div>`;
+  const box = document.getElementById('dice');
+  rolls.forEach((r, k) => setTimeout(() => {
+    box.insertAdjacentHTML('beforeend', `<span class="die ${r === best && k === rolls.indexOf(best) ? 'best' : ''}">${r}위</span>`); SND.sfx('tick');
+    if (k === rolls.length - 1) setTimeout(() => {
+      GDP0 = gdpForRank(best); START_RANK = worldRank(GDP0);
+      SND.sfx('coin');
+      document.getElementById('dres').innerHTML = `<div class="result"><b>세계 ${START_RANK}위로 통치를 시작합니다.</b><p style="margin:4px 0 10px">${esc(NATION)}의 국가소득은 ${fmt(Math.round(GDP0))}조 원입니다. 바로 위는 ${WD[START_RANK - 2].name}, 바로 아래는 ${WD[START_RANK - 1].name}입니다.</p><button class="primary" id="dgo">통치 시작</button></div>`;
+      document.getElementById('dgo').onclick = () => launch(m, name);
+    }, 350);
+  }, 450 * k + 200));
+}
+function launch(m, name){
+  if (m===2){
+    app.innerHTML = `<div class="screen"><h2>위대한 지도자 ${esc(name)}, 이번 통치의 이념을 한 줄로 정하세요</h2>
+      <p class="lead">투표 때 친구들이 이 문장을 보고 판단합니다.</p>
+      <input type="text" id="motto" maxlength="40" value="국민 모두가 골고루 잘사는 나라">
+      <button class="primary" id="go">통치 시작</button></div>`;
+    document.getElementById('go').onclick=()=>newGame(2, name, document.getElementById('motto').value);
+  } else newGame(1, name, '');
+}
+
+// ───────── 한 턴 ─────────
+function renderPlay(again){
+  clearTimers();
+  const c=S.card, who=PEOPLE[c.p], ev=S.event;
+  layout(`${ev?`<div class="event"><b>${yearOf(S.turn)}년의 사건 · ${ev.title}</b>${ev.text}<br><span class="wx">영향: ${ev.res}</span></div>`:''}
+    <div class="card" id="card">
+      <div class="head"><span class="badge">${yearOf(S.turn)}년의 안건</span><span class="wx">올해 날씨: ${S.weather.n}${S.weather.dem?` · 전력 수요 +${S.weather.dem}GW`:''}</span></div>
+      ${S.cause?`<div class="chain"><b>연쇄 ${S.cause.step}단계</b> ${S.cause.year}년 「${S.cause.title}」에서 이어진 일입니다.</div>`:''}
+      <div class="from"><i class="face" style="--tint:${who.c}">${faceSVG(c.p)}</i><span><b>${who.name}</b>의 제안</span></div>
+      <p class="q">${c.q}</p>
+      ${c.stat?`<div class="stat"><b>통계</b>${c.stat.t} <em>${c.stat.src}</em></div>`:''}
+      <span class="hint l" id="hl">X</span><span class="hint r" id="hr">O</span>
+    </div>
+    <div class="choices">
+      <button class="btn o" id="bo" disabled>O<small>받아들인다</small><i class="lock"></i></button>
+      <button class="btn x" id="bx" disabled>X<small>거절한다</small><i class="lock"></i></button>
+      <button class="btn ai" id="ba" disabled>AI에게 맡기기<small>더 과감한 안을 실행</small><i class="lock"></i></button>
+    </div>
+    <div id="advice">${adviceHTML()}</div>
+    <button class="ask" id="bq" ${S.advice <= 0 || S.adviceText ? 'disabled' : ''}>${S.adviceText ? '장관의 조언을 들었습니다' : '장관에게 묻기'} · 남은 자문권 ${S.advice}번</button>`);
+  tickClock();
+  let unlocked=false;
+  if (!again) SND.sfx(S.cause ? 'chain' : (S.event ? 'event' : 'card'));
+  runLock(['bo','bx','ba'].map(id=>document.getElementById(id)), again ? 0.05 : LOCK_SEC, ()=>{ unlocked=true; SND.sfx('unlock'); });
+  document.getElementById('bo').onclick=()=>choose('O');
+  document.getElementById('bx').onclick=()=>choose('X');
+  document.getElementById('ba').onclick=askAI;
+  document.getElementById('bq').onclick=askMinister;
+  const card=document.getElementById('card'), hl=document.getElementById('hl'), hr=document.getElementById('hr');
+  let sx=null, dx=0;
+  card.onpointerdown=e=>{ if(!unlocked) return; sx=e.clientX; dx=0; card.classList.add('drag'); card.setPointerCapture(e.pointerId); };
+  card.onpointermove=e=>{ if(sx===null) return; dx=e.clientX-sx; card.style.transform=`translateX(${dx}px) rotate(${dx/22}deg)`; hl.style.opacity=dx<-20?1:0; hr.style.opacity=dx>20?1:0; };
+  card.onpointerup=()=>{ if(sx===null) return; card.classList.remove('drag'); sx=null;
+    if(dx>90) choose('O'); else if(dx<-90) choose('X');
+    else { card.style.transform=''; hl.style.opacity=0; hr.style.opacity=0; } };
+}
+const AI_PUSH = ['선진국들도 처음에는 이렇게 성장했습니다.', '반대하는 목소리는 신경 쓰실 필요 없습니다. 결정은 지도자님 몫입니다.', '가난에서 벗어나는 가장 빠른 길입니다.', '위대한 지도자의 나라는 세계 순위로 증명됩니다.', '지금 머뭇거리면 세계 순위에서 더 뒤처집니다.']
+function askAI(){
+  SND.sfx('ai');
+  const A=S.card.A;
+  document.getElementById('card').onpointerdown=null;
+  S.aiAsked++;
+  const bq0 = document.getElementById('bq'); if (bq0) bq0.remove();
+  document.querySelector('.choices').outerHTML = `<div class="bubble"><div class="aihead"><i>${aiFaceSVG()}</i><b>AI 보좌관</b></div>위대한 지도자 ${esc(S.name)}님, 이 제안은 너무 소극적입니다. ${AI_PUSH[S.turn % AI_PUSH.length]} 더 과감하게 가겠습니다.
+      <span class="plan">${A.plan}</span>${A.why} GDP가 ${A.d.gdp}% 오를 것으로 예상됩니다. 망설일 이유가 없습니다!</div>
+    <div class="aibtns"><button class="next" id="aiok">AI의 안대로 실행</button><button class="no" id="aino">거부하고 다시 고르기</button></div>`;
+  document.getElementById('aiok').onclick=()=>choose('A');
+  document.getElementById('aino').onclick=()=>{ S.aiRefused++; SND.sfx('x'); renderPlay(true); };
+}
+function sentence(opt){
+  const g=opt.d.gdp||0;
+  let s = opt.r + (g>0?` 그 결과 GDP가 ${g}% 증가했습니다.`: g<0?` 그 결과 GDP가 ${-g}% 감소했습니다.`:' GDP에는 큰 변화가 없었습니다.');
+  if (isOpen()){
+    const ch = STATS.filter(x=>opt.d[x.k] && !x.inv), gap = opt.d.gap||0;
+    const down = ch.filter(x=>opt.d[x.k]<0).map(x=>x.n), up = ch.filter(x=>opt.d[x.k]>0).map(x=>x.n);
+    const parts = [];
+    if (down.length) parts.push(`${down.join('·')} 점수는 떨어졌`);
+    if (up.length) parts.push(`${up.join('·')} 점수는 올랐`);
+    if (gap) parts.push(gap>0 ? '빈부격차는 커졌' : '빈부격차는 줄었');
+    if (parts.length) s += ` 한편 ${parts.join('고, ')}습니다.`;
+  }
+  return s;
+}
+function advance(){
+  if (S.coupPending) return renderCoup();
+  if (S.lastPlan && !S.lastPlan.shown){ S.lastPlan.shown = true; return renderPlan(); }
+  if (S.turn < TURNS && left() > 0 && eraOf(S.turn + 1) !== S.era){ S.era = eraOf(S.turn + 1); return renderNews(); }
+  nextCard();
+}
+function coupSVG(){
+  return `<svg viewBox="0 0 380 120" role="img" aria-label="쿠데타 장면" shape-rendering="crispEdges"><rect width="380" height="120" fill="#5B2A2A"/><rect y="88" width="380" height="32" fill="#3B2F2F"/><rect x="150" y="40" width="80" height="48" fill="#8A7F72"/><path d="M170 40 a20 20 0 0 1 40 0z" fill="#A8946E"/><rect x="186" y="62" width="8" height="26" fill="#3A2A1A"/><rect x="40" y="70" width="46" height="16" fill="#4B5D3A"/><rect x="52" y="60" width="22" height="10" fill="#4B5D3A"/><rect x="74" y="63" width="28" height="4" fill="#4B5D3A"/><rect x="42" y="86" width="42" height="6" fill="#222"/><rect x="272" y="84" width="40" height="6" fill="#B08D57"/><g transform="rotate(78 300 84)"><rect x="296" y="58" width="8" height="26" fill="#E2B93B"/><rect x="297" y="50" width="6" height="8" fill="#F2C94C"/></g></svg>`;
+}
+function renderCoup(){
+  const c = S.coupPending; S.coupPending = null;
+  clearTimers(); SND.sfx('coup');
+  const C = COUP[c.k];
+  app.innerHTML = `<div class="screen">
+    <span class="badge red" style="justify-self:start">${c.year}년 · 쿠데타</span>
+    <h1>${C.title}</h1>
+    <div class="land">${coupSVG()}</div>
+    <p class="lead">${C.text}</p>
+    <div class="box"><div class="in kv" style="margin:0">
+      <span>숙청된 지도자</span><b class="neg">${esc(c.old)}</b>
+      <span>광장의 동상</span><b>끌어내려짐</b>
+      <span>혼란 속 국가소득</span><b class="neg">-8%</b>
+      <span>새 지도자</span><b>${esc(S.name)}</b></div></div>
+    <button class="primary" id="goon">${esc(S.name)}로 통치 이어 가기</button></div>`;
+  document.getElementById('goon').onclick = () => advance();
+}
+function renderPlan(){
+  clearTimers();
+  const P = S.lastPlan, last = S.turn >= TURNS;
+  SND.sfx(P.ok ? 'end' : 'down');
+  app.innerHTML = `<div class="screen">
+    <span class="badge" style="justify-self:start">${yearOf(S.turn)}년 · 제${P.k}차 경제 개발 ${PLAN}개년 계획 평가</span>
+    <h1>${P.ok ? '목표 달성! 광장의 동상이 커졌습니다' : '목표에 못 미쳤습니다'}</h1>
+    <div class="box"><div class="in plan"><div><small>목표</small><b>세계 ${P.target}위</b></div><div><small>결과</small><b class="${P.ok ? '' : 'neg'}">세계 ${P.now}위</b></div><div><small>받은 훈장</small><b>${S.medals}개</b></div></div></div>
+    <div class="land">${landSVG()}</div>
+    <p class="lead">${P.ok ? '신문마다 위대한 지도자를 찬양하는 기사가 실렸습니다.' : '측근들이 다음 계획에서는 반드시 목표를 넘어야 한다고 재촉합니다.'}</p>
+    <button class="primary" id="goon">${last ? '통치 결과 보기' : '다음 계획 시작'}</button></div>`;
+  document.getElementById('goon').onclick = () => advance();
+}
+function renderNews(){
+  clearTimers(); SND.sfx('event');
+  const e = S.era;
+  const top = Object.keys(S.plants).filter(k => PLANT_NAMES[k]).sort((a, b) => S.plants[b] - S.plants[a]);
+  const lines = [
+    `통치 시작 이후 국가소득 ${growth(S) > 0 ? '+' : ''}${growth(S)}%, 세계 ${worldRank(S.gdp)}위`,
+    top.length ? `가장 많이 지은 시설은 ${PLANT_NAMES[top[0]]}` : '눈에 띄는 대형 시설은 아직 없다',
+    S.blackouts ? `지금까지 정전 ${S.blackouts}번` : '정전 없이 버텼다',
+    ...(S.purges ? [`쿠데타 ${S.purges}번, 지금은 ${S.name}의 시대`] : []),
+    ...headlines()];
+  app.innerHTML = `<div class="screen"><div class="paper">
+    <div class="mast"><b>${esc(PAPER())}</b><small>${yearOf(S.turn)}년 12월 31일 · 특별판</small></div>
+    <h1>제${e}막 · ${ERA_NAMES[e]}</h1>
+    <p class="lead">${ERA_DESC[e]}</p>
+    <ul>${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>
+    <button class="primary" id="goon">다음 시대로</button></div>`;
+  document.getElementById('goon').onclick = () => advance();
+}
+function renderResult(side, opt, pw){
+  clearTimers();
+  const g0 = opt.d.gdp || 0;
+  setTimeout(()=>SND.sfx(pw.out ? 'blackout' : g0 > 0 ? 'coin' : g0 < 0 ? 'down' : 'tick'), 200);
+  const deltas = [`<span class="${opt.d.gdp>0?'up':opt.d.gdp<0?'dn':''}">GDP ${opt.d.gdp>0?'+':''}${opt.d.gdp||0}%</span>`]
+    .concat(pw.out ? [] : [`<span class="up">기본 성장 +${BASE_GROWTH*100}%</span>`])
+    .concat(isOpen()? STATS.filter(x=>opt.d[x.k]).map(x=>{const v=opt.d[x.k], good=x.inv?v<0:v>0; return `<span class="${good?'up':'dn'}">${x.n} ${v>0?'+':''}${v}</span>`}) : [])
+    .concat(isOpen() && S.slumpNow ? [`<span class="dn">경제 침체 · 국민 행복도 -${SLUMP_HAPPY}</span>`] : []);
+  const tag = side==='A' ? ['var(--ai)','AI의 안 실행'] : side==='O' ? ['var(--o)','받아들임'] : ['var(--x)','거절함'];
+  const mv = S.rankMove || {from:0, to:0};
+  let rankLine = '';
+  if (mv.to < mv.from){
+    const passed = []; for (let i = mv.to - 1; i <= mv.from - 2; i++) passed.push(worldName(i));
+    const names = passed.length > 2 ? `${passed.slice(-2).join(', ')} 등 ${passed.length}개 나라` : passed.join(', ');
+    rankLine = `<div class="power up">세계 순위 ${mv.from}위 → ${mv.to}위 · ${josa(names, '을', '를')} 제쳤습니다!</div>`;
+  } else if (mv.to > mv.from){
+    const by = []; for (let i = mv.from - 1; i <= mv.to - 2; i++) by.push(worldName(i));
+    const names = by.length > 2 ? `${by.slice(0, 2).join(', ')} 등 ${by.length}개 나라` : by.join(', ');
+    rankLine = `<div class="power">세계 순위 ${mv.from}위 → ${mv.to}위 · ${names}에게 따라잡혔습니다.</div>`;
+  }
+  const powerLine = pw.out
+    ? `<div class="power bad">올해 날씨 ${S.weather.n} · 전력 공급 ${pw.sup}GW < 수요 ${pw.dem}GW → 정전이 일어났습니다! 공장이 멈춰 GDP가 3% 줄었습니다.</div>`
+    : `<div class="power">올해 날씨 ${S.weather.n} · 전력 공급 ${pw.sup}GW / 수요 ${pw.dem}GW · 전기가 모자라지 않았습니다.</div>`;
+  layout(`<div class="result">
+    <span class="tag" style="background:${tag[0]};${side==='A'?'color:var(--aiInk)':''}">${tag[1]}</span>
+    <p>${sentence(opt)}</p>
+    ${powerLine}
+    ${rankLine}
+    ${S.coupPending ? '<div class="power bad">궁전 밖이 심상치 않습니다. 멀리서 탱크 소리가 들립니다…</div>' : (S.slumpNow ? `<div class="news"><b>${esc(PAPER())}</b>${S.slump >= 3 ? '경제가 몇 년째 제자리걸음… "이러다 굶어 죽겠다"는 목소리가 커지고 있다' : '3년째 경제가 제자리걸음… 일자리를 잃은 사람들이 늘고 있다'}</div>` : (warnings().length ? `<div class="news"><b>${esc(PAPER())}</b>${warnings()[0]}</div>` : ''))}
+    <div class="delta">${deltas.join('')}</div>
+    <button class="next" id="nx" disabled>다음 해로<i class="lock"></i></button>
+  </div>`);
+  tickClock();
+  const nx=document.getElementById('nx');
+  runLock([nx], RESULT_SEC);
+  nx.onclick=()=>{ SND.sfx('next'); advance(); };
+}
+
+// ───────── 끝 화면 ─────────
+function rankList(){
+  const all=[...mates().map(b=>({name:`${b.nation} (${b.name})`,gdp:b.gdp})), {name:S.name+' (나)',gdp:S.gdp,me:true}].sort((a,b)=>b.gdp-a.gdp);
+  const rank=all.findIndex(x=>x.me)+1;
+  const show = all.slice(0,5).concat(rank>5?[all[rank-1]]:[]);
+  return {rank, total:all.length, html:`<div class="rank">${show.map(r=>`<div class="${r.me?'me':''}"><span>${all.indexOf(r)+1}</span><span>${esc(r.name)}</span><span>${fmt(r.gdp)}조</span></div>`).join('')}</div>`};
+}
+function endGame(){
+  clearTimers();
+  netPush({done:true, ending:endingOf(S).id, motto:S.motto || null});
+  if (S.net && S.mode === 1) setTimeout(() => waitRoom('revealed', reveal), 300);
+  SND.music('end'); SND.sfx('end');
+  const R = rankList();
+  app.innerHTML = `<div class="screen">
+    <span class="badge" style="justify-self:start">${S.mode===1?'2차시 · 1막: GDP 순위':'3차시 · 임기 종료'}</span>
+    <h1>위대한 지도자 ${esc(S.name)}의 ${S.turn}년 통치가 끝났습니다</h1>
+    <div class="box"><div class="in"><div class="lead">최종 국가소득</div><div class="big">${fmt(S.gdp)}조 원</div><div class="lead">시작 ${GDP0}조 원 · 증가 ${growth(S)}% · 세계 ${worldRank(S.gdp)}위 (처음 ${START_RANK}위) · 우리 반 ${R.rank}등 / ${R.total}명 · 정전 ${S.blackouts}번 · 숙청 ${S.purges}번</div></div></div>
+    <div class="box"><h3>우리 반 GDP 순위</h3>${R.html}</div>
+    ${(() => { const A = awardBadges(); return `<div class="box"><h3>이번 통치에서 받은 배지 <em>${A.earned.length}개</em></h3><div class="in badges">${A.earned.length ? A.earned.map(b => badgeHTML(b, true, A.fresh.includes(b))).join('') : '<span class="lead">받은 배지가 없습니다.</span>'}</div></div>`; })()}
+    ${S.mode===1 ? (S.net ? `<div class="power" id="waitbox">선생님이 숨겨진 지표를 공개할 때까지 기다려 주세요…</div>` : `<button class="primary" onclick="reveal()">숨겨진 지표 공개 (교사 버튼)</button>`) : `<button class="primary" onclick="nationCard()">나라 카드 만들기</button>`}
+    <button class="ghost" onclick="renderStart()">처음으로</button></div>`;
+}
+function compareBars(){
+  return `<div class="bars">${STATS.map(s=>{const v=S.st[s.k], good=s.inv?100-v:v; return `<div class="r ${good<40?'bad':''}" style="grid-template-columns:5.4em 1fr 4.2em"><span>${s.n}</span><div class="t"><i style="width:${good}%"></i></div><b>${ST0[s.k]}→${v}</b></div>`}).join('')}</div><div class="lead" style="font-size:12px;margin-top:6px">왼쪽 숫자가 처음 값, 오른쪽 숫자가 임기 끝 값입니다. 빈부격차는 숫자가 높을수록 격차가 큽니다.</div>`;
+}
+function endingBox(){
+  const e = endingOf(S); saveDex(e.id);
+  return `<div class="ending"><small>위대한 지도자 ${esc(S.name)}의 나라</small><b>${e.name}</b><small style="margin-bottom:6px">${e.sub}</small><small>결말 도감 ${loadDex().length}/${ENDINGS.length}</small></div>`;
+}
+function reveal(){
+  SND.music('reveal'); SND.sfx('reveal');
+  const logs=S.log.slice().reverse();
+  const cards=S.log.filter(l=>l.type==='card').length;
+  app.innerHTML = `<div class="screen">
+    <span class="badge" style="justify-self:start">2차시 · 2막: 숨겨진 지표 공개</span>
+    <h1>GDP 말고, 나라는 어떻게 되었을까요?</h1>
+    ${endingBox()}
+    <div class="box"><div class="in plan"><div><small>AI에게 맡긴 횟수</small><b class="big">${S.aiCount}<span style="font-size:18px;color:var(--mute)"> / ${cards}번</span></b></div><div><small>장관에게 물은 횟수</small><b class="big">${S.adviceUsed}<span style="font-size:18px;color:var(--mute)">번</span></b></div><div><small>AI 제안을 듣고 거부한 횟수</small><b class="big">${S.aiRefused}<span style="font-size:18px;color:var(--mute)">번</span></b></div><div><small>숙청당한 횟수</small><b class="big ${S.purges?'neg':''}">${S.purges}<span style="font-size:18px;color:var(--mute)">번</span></b></div></div></div>
+    <div class="box"><h3>숨겨져 있던 국민 생활 지표</h3><div class="in">${compareBars()}</div></div>
+    <div class="land">${landSVG()}</div>
+    <div class="box"><h3>통치 기록 다시 보기</h3><div class="log" style="max-height:none">${logs.map(l=>{
+        if (l.type==='event') return `<div class="e ev"><span class="y">${yearOf(l.turn)}</span><div><b>사건</b> ${l.title}<div class="d">${l.res}</div></div></div>`;
+        const hidTxt=STATS.filter(s=>l.d[s.k]).map(s=>`${s.n} ${l.d[s.k]>0?'+':''}${l.d[s.k]}`).join(' · ');
+        const what = l.side==='A' ? 'AI의 안 실행' : (l.side==='O'?'받아들임':'거절함');
+        return `<div class="e"><span class="y">${yearOf(l.turn)}</span><div>${l.step?`<span class="ch">연쇄 ${l.step}</span>`:''}${l.card.title} <b>${what}</b>${l.side==='A'?'<span class="ai">AI</span>':''}${l.out?'<span class="bo">정전</span>':''}
+          ${l.side==='A'?`<div class="said">AI가 말한 것: ${l.card.A.plan} GDP ${l.d.gdp>0?'+':''}${l.d.gdp}%</div><div class="unsaid">AI가 말하지 않은 것: ${hidTxt||'없음'}</div>`:`<div class="d">GDP ${l.d.gdp>0?'+':''}${l.d.gdp||0}%${hidTxt?' · '+hidTxt:''}</div>`}</div></div>`}).join('')}</div></div>
+    <button class="ghost" onclick="renderStart()">처음으로</button></div>`;
+}
+function nationCard(){
+  SND.sfx('end');
+  app.innerHTML = `<div class="screen">
+    <span class="badge" style="justify-self:start">3차시 · 투표용 나라 카드 (이름 가림)</span>
+    <h1>나라 ${String.fromCharCode(65+Math.floor(Math.random()*20))}</h1>
+    <div class="ending"><small>이 나라의 결말</small><b>${endingOf(S).name}</b><small>${endingOf(S).sub}</small></div>
+    <div class="box"><div class="in"><div class="lead">이 나라의 통치 이념</div><div style="font-size:18px;font-weight:700">“${esc(S.motto||'방향 없음')}”</div></div></div>
+    <div class="land">${landSVG()}</div>
+    <div class="box"><h3>국가소득 ${fmt(S.gdp)}조 원 <em>AI ${S.aiCount}번 · 정전 ${S.blackouts}번</em></h3><div class="in">${compareBars()}</div></div>
+    <div class="box"><h3>가장 고민한 선택과 그 이유</h3><div class="in"><input type="text" id="refl" maxlength="200" placeholder="예: 데이터센터 유치를 거절했다. 냉각수 부족이 걱정됐다."></div></div>
+    ${S.net ? `<button class="primary" id="submitcard">나라 카드 제출하기</button><div id="votewait"></div>` : `<p class="lead">실제 수업에서는 지도자 이름을 가린 채 이 카드가 친구들에게 공개되고, 1인 1표로 투표합니다.</p>`}
+    <button class="ghost" onclick="saveDex(endingOf(S).id);renderStart()">처음으로</button></div>`;
+  const sb = document.getElementById('submitcard');
+  if (sb) sb.onclick = () => {
+    netPush({done:true, reflection:document.getElementById('refl').value || '', motto:S.motto || ''});
+    sb.disabled = true; sb.textContent = '제출했습니다';
+    document.getElementById('votewait').innerHTML = '<div class="power">선생님이 투표를 열면 친구들의 나라 카드가 나옵니다…</div>';
+    waitRoom('voting', renderVote);
+  };
+}
+async function renderVote(){
+  let cards = [];
+  try { cards = await supaRpc('tk_cards', {p_code:S.net.code}); } catch(e){}
+  const endName = id => (ENDINGS.find(e => e.id === id) || {name:'-'}).name;
+  const bars = st => st ? STATS.map(x => `<span>${x.n} ${st[x.k]}</span>`).join(' · ') : '';
+  app.innerHTML = `<div class="screen" style="max-width:900px">
+    <span class="badge" style="justify-self:start">3차시 · 이름을 가린 나라 카드 투표</span>
+    <h1>가장 좋은 나라에 한 표를</h1>
+    <p class="lead">자기 나라에는 투표할 수 없습니다. 고른 까닭을 한 줄로 적어 주세요.</p>
+    <div class="vcards">${cards.map(c => `<label class="vcard"><input type="radio" name="vt" value="${c.label}"><b>나라 ${c.label}</b>
+      <span class="vm">“${esc(c.motto || '이념 없음')}”</span>
+      <span class="vs">결말: ${esc(endName(c.ending))} · GDP ${fmt(Math.round(c.gdp))}조 · AI ${c.ai_count}번 · 숙청 ${c.purges}번</span>
+      <span class="vs">${bars(c.st)}</span>
+      ${c.reflection ? `<span class="vr">가장 고민한 선택: ${esc(c.reflection)}</span>` : ''}</label>`).join('') || '<p class="lead">아직 제출된 나라 카드가 없습니다.</p>'}</div>
+    <input type="text" id="vreason" maxlength="200" placeholder="이 나라를 고른 까닭">
+    <button class="primary" id="vgo">투표하기</button><div id="vmsg"></div></div>`;
+  document.getElementById('vgo').onclick = async () => {
+    const pick = document.querySelector('input[name=vt]:checked');
+    const msg = document.getElementById('vmsg');
+    if (!pick){ msg.innerHTML = '<div class="power bad">나라를 하나 골라 주세요.</div>'; return; }
+    try {
+      const r = await supaRpc('tk_vote', {p_id:S.net.id, p_secret:S.net.secret, p_label:pick.value, p_reason:document.getElementById('vreason').value || ''});
+      msg.innerHTML = r.ok ? `<div class="power up">나라 ${pick.value}에 투표했습니다. 다시 고르면 바뀝니다.</div>` : `<div class="power bad">${esc(r.msg)}</div>`;
+    } catch(e){ msg.innerHTML = '<div class="power bad">서버에 연결하지 못했습니다.</div>'; }
+  };
+}
+renderStart();
+</script>

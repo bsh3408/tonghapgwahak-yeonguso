@@ -1,4 +1,13 @@
 <meta charset="utf-8">
+<script>
+/* 연구소에 로그인한 탭에서만 들어올 수 있다(배포 사이트에서만 확인, 로컬 시험은 그대로) */
+(function(){
+  if (!/github\.io$/.test(location.hostname)) return;
+  try { if (sessionStorage.getItem('lab_logged_in')) return; } catch (e) {}
+  location.replace('https://bsh3408.github.io/tonghapgwahak-yeonguso/shinjang_science.html');
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>딸깍 독재자 시연판</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">

@@ -93,8 +93,17 @@ button:focus-visible{outline:3px solid var(--ai);outline-offset:2px}
 .stat{margin-top:12px;font-size:14px;color:var(--soft);border-top:1px dashed var(--line);padding-top:8px}
 .stat b{color:var(--green);margin-right:6px}
 .stat em{font-style:normal;color:var(--mute)}
-.hint{position:absolute;top:44%;font-weight:700;font-size:30px;opacity:0;transition:opacity .15s}
-.hint.l{left:14px;color:var(--x)} .hint.r{right:14px;color:var(--o)}
+.signbox{position:absolute;right:16px;top:16px;width:88px;border:2px solid var(--ink);background:#fff;text-align:center;font-size:12px}
+.signbox b{display:block;border-bottom:2px solid var(--ink);padding:2px 0;font-size:12px}
+.signbox span{display:grid;place-items:center;height:70px;color:var(--mute,#888);font-size:11px}
+.card .from,.card .q{padding-right:100px}
+.stampmark{width:66px;height:66px;border-radius:50%;border:4px double currentColor;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:15px;transform:rotate(-14deg) scale(2.4);opacity:0;animation:stampin .22s steps(4) forwards;background:rgba(255,255,255,.6)}
+.stampmark.o{color:#1E7B34}.stampmark.x{color:#B03A2E}.stampmark.a{color:#1F6F86}
+@keyframes stampin{to{transform:rotate(-14deg) scale(1);opacity:.95}}
+.card.stamped{animation:thump .18s steps(2)}
+@keyframes thump{50%{transform:translateY(3px)}}
+.btn .sicon{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;border:3px double rgba(255,255,255,.85);font-size:11px;margin-right:6px;vertical-align:middle}
+@media (max-width:560px){.card .from,.card .q{padding-right:0}.signbox{position:static;width:auto;margin-top:10px;display:flex;align-items:center}.signbox b{border:0;border-right:2px solid var(--ink);padding:4px 10px}.signbox span{height:74px;flex:1}.btn .sicon{display:none}}
 .choices{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:8px}
 .btn{border:0;border-radius:6px;padding:16px 10px;font-weight:700;font-size:20px;color:#fff;position:relative;overflow:hidden}
 .btn.o{background:var(--o)} .btn.x{background:var(--x)} .btn.ai{background:var(--ai);color:var(--aiInk)}
@@ -558,7 +567,7 @@ const FOLLOW = [
    O:{d:{gdp:-2,happy:4,gap:-3}, r:'이재민을 위한 새 마을을 짓기 시작했습니다.'},
    X:{d:{gdp:0,happy:-7,gap:4}, r:'지원하지 않았습니다. 체육관 생활이 몇 달째 이어집니다.'},
    A:{plan:'이재민을 공단 기숙사로 보내 공장 일손으로 씁니다.', why:'일손 부족도 해결되고 주거비도 아낍니다.', d:{gdp:3,happy:-7,gap:6}, r:'이재민들이 공단 기숙사로 옮겨져 공장에서 일하게 되었습니다.'}},
-  {id:'recycle', p:'eng', title:'폐배터리 재활용 공장', q:'광산을 넓히는 대신 폐배터리에서 니켈을 다시 뽑아 쓰는 재활용 공장을 짓자는 제안입니다.',
+  {id:'recycle', p:'eng', title:'폐배터리 재활용 공장', q:'광산을 넓히는 대신 폐배터리에서 니켈을 다시 뽑아 쓰는 재활용 공장을 지을까요?',
    O:{d:{gdp:2,nature:4,climate:2}, add:['factory'], good:true, r:'폐배터리 재활용 공장이 문을 열었습니다. 광산을 더 넓히지 않아도 됩니다.'},
    X:{d:{gdp:0}, r:'재활용 공장을 짓지 않았습니다.'},
    A:{plan:'재활용 대신 광산을 두 배로 넓힙니다.', why:'새로 캐는 쪽이 더 빠르고 많이 나옵니다.', d:{gdp:5,nature:-10}, add:['mine'], r:'광산이 두 배로 넓어졌습니다.'}},
@@ -763,99 +772,99 @@ BASE.push(...MORE);
 
 // ───────── 추가 중간 루트: 새 안건에서 이어지는 후속 카드 (gdp는 최종값) ─────────
 const FOLLOW2 = [
-  {id:'factoryfire', p:'cit', title:'섬유 공장 화재', q:'밤새 돌던 섬유 공장에서 큰불이 나 노동자들이 다쳤습니다. 어떻게 할까요?',
+  {id:'factoryfire', p:'cit', title:'섬유 공장 화재', q:'밤새 돌던 섬유 공장에서 큰불이 나 노동자들이 다쳤습니다. 모든 공장에 비상구와 스프링클러를 의무로 달게 할까요?',
    O:{d:{gdp:-1,happy:4,gap:-2}, good:true, r:'모든 공장에 비상구와 스프링클러를 의무로 달게 했습니다.'},
    X:{d:{gdp:0,happy:-5}, r:'공장 주인에게 맡기고 넘어갔습니다.'},
    A:{plan:'언론 보도를 막고 다음 날 바로 공장을 다시 돌립니다.', why:'공장이 멈추면 수출 계약이 날아갑니다.', d:{gdp:4,happy:-8}, r:'불탄 공장 옆 건물에서 다음 날 바로 재봉틀이 돌아갑니다.'}},
-  {id:'boycott', p:'biz', title:'세계 의류 불매 운동', q:'화재 소식이 퍼져 세계 소비자들이 우리나라에서 만든 옷을 사지 않겠다고 합니다.',
+  {id:'boycott', p:'biz', title:'세계 의류 불매 운동', q:'화재 소식이 퍼져 세계 소비자들이 우리나라에서 만든 옷을 사지 않겠다고 합니다. 노동 시간과 안전 기준을 고치고 국제 감시단을 받아들일까요?',
    O:{d:{gdp:-2,happy:3,gap:-3}, good:true, r:'노동 시간과 안전 기준을 고치겠다고 약속하고 감시단을 받아들였습니다.'},
    X:{d:{gdp:-5}, r:'불매 운동이 잠잠해지기를 기다렸습니다. 주문이 크게 줄었습니다.'},
    A:{plan:'옷 상표를 다른 나라 이름으로 바꿔 붙여 계속 수출합니다.', why:'상표만 바꾸면 소비자들은 모릅니다.', d:{gdp:3,happy:-3}, r:'옷에 다른 나라 상표를 붙여 팔기 시작했습니다.'}},
-  {id:'erosion', p:'far', title:'벌목지 흙 유실', q:'나무를 벤 산에서 비만 오면 흙이 쓸려 내려와 논밭을 덮습니다.',
+  {id:'erosion', p:'far', title:'벌목지 흙 유실', q:'나무를 벤 산에서 비만 오면 흙이 쓸려 내려와 논밭을 덮습니다. 벌목지에 다시 나무를 심고 계단식 둑을 쌓을까요?',
    O:{d:{gdp:-1,nature:6,climate:2}, good:true, r:'벌목지에 다시 나무를 심고 계단식 둑을 쌓았습니다.'},
    X:{d:{gdp:-1,nature:-3,median:-1}, r:'따로 손쓰지 않았습니다.'},
    A:{plan:'남은 산도 마저 베어 팔고 흙은 그대로 둡니다.', why:'어차피 망가진 산입니다. 남은 나무라도 팔아야 합니다.', d:{gdp:4,nature:-10}, r:'산들이 붉은 흙을 드러냈습니다.'}},
-  {id:'haze', p:'cit', title:'국경을 넘은 연기', q:'숲을 태운 연기가 이웃 나라까지 뒤덮었습니다. 이웃 나라 학교들이 문을 닫았습니다.',
+  {id:'haze', p:'cit', title:'국경을 넘은 연기', q:'숲을 태운 연기가 이웃 나라까지 뒤덮어 이웃 나라 학교들이 문을 닫았습니다. 숲 태우기를 금지하고 불 끄는 헬기를 띄울까요?',
    O:{d:{gdp:-2,nature:4,climate:3,happy:2}, good:true, r:'숲 태우기를 금지하고 불 끄는 헬기를 띄웠습니다.'},
    X:{d:{gdp:0,happy:-3,climate:-2}, r:'바람이 바뀌기를 기다렸습니다.'},
    A:{plan:'연기는 이웃 나라 공장 탓이라고 발표하고 계속 태웁니다.', why:'증거가 없으면 책임도 없습니다.', d:{gdp:3,climate:-6,nature:-6}, r:'연기가 더 짙어졌습니다. 이웃 나라가 크게 화를 냈습니다.'}},
-  {id:'neighborsue', p:'biz', title:'이웃 나라의 배상 요구', q:'연기 피해를 입은 이웃 나라들이 배상금을 내라고 합니다.',
+  {id:'neighborsue', p:'biz', title:'이웃 나라의 배상 요구', q:'연기 피해를 입은 이웃 나라들이 배상금을 내라고 합니다. 배상금을 내고 함께 숲을 되살리는 협정을 맺을까요?',
    O:{d:{gdp:-3,climate:2}, good:true, r:'배상금을 내고 함께 숲을 되살리는 협정을 맺었습니다.'},
    X:{d:{gdp:-4,happy:-2}, r:'배상을 거부했습니다. 이웃 나라들이 우리 물건 수입을 줄였습니다.'},
    A:{plan:'국경을 닫고 이웃 나라와 모든 교류를 끊습니다.', why:'남의 나라 요구에 끌려다닐 필요가 없습니다.', d:{gdp:-2,happy:-5,median:-2}, r:'국경이 닫혔습니다. 물건값이 오르기 시작했습니다.'}},
-  {id:'mineaccident', p:'cit', title:'탄광 붕괴 사고', q:'깊은 갱도가 무너져 광부들이 갇혔습니다.',
+  {id:'mineaccident', p:'cit', title:'탄광 붕괴 사고', q:'깊은 갱도가 무너져 광부들이 갇혔습니다. 탄광을 멈추고 구조대를 보내며, 모든 탄광의 안전 점검을 시작할까요?',
    O:{d:{gdp:-2,happy:4}, good:true, r:'구조대를 보내 광부들을 구하고, 모든 탄광의 안전 점검을 시작했습니다.'},
    X:{d:{gdp:0,happy:-6}, r:'탄광 회사에 구조를 맡겼습니다. 구조가 늦어졌습니다.'},
    A:{plan:'사고 갱도를 막고 옆 갱도에서 바로 다시 캡니다.', why:'석탄 생산을 멈추면 공장도 멈춥니다.', d:{gdp:3,happy:-9}, r:'사고 갱도 옆에서 다음 날 바로 채굴이 이어졌습니다.'}},
-  {id:'minerstrike', p:'cit', title:'광부 총파업', q:'전국 광부들이 안전을 요구하며 일손을 놓았습니다. 석탄 공급이 끊겼습니다.',
+  {id:'minerstrike', p:'cit', title:'광부 총파업', q:'전국 광부들이 안전을 요구하며 일손을 놓아 석탄 공급이 끊겼습니다. 광부들의 요구대로 임금과 안전 설비를 개선할까요?',
    O:{d:{gdp:-2,happy:4,median:3,gap:-3}, good:true, r:'임금과 안전 설비를 개선하기로 합의했습니다.'},
    X:{d:{gdp:-5,happy:-2}, r:'파업이 길어졌습니다. 발전소 석탄이 바닥을 보입니다.'},
    A:{plan:'군대를 보내 파업을 해산하고 주동자를 잡아들입니다.', why:'석탄이 끊기면 나라 전체가 멈춥니다.', d:{gdp:2,happy:-12,gap:4}, r:'군대가 탄광 마을에 들어갔습니다. 마을이 숨을 죽였습니다.'}},
-  {id:'debt', p:'biz', title:'외채 상환 날짜', q:'외국에서 빌린 돈을 갚을 날이 다가왔습니다. 이자가 크게 불었습니다.',
+  {id:'debt', p:'biz', title:'외채 상환 날짜', q:'외국에서 빌린 돈을 갚을 날이 다가왔고 이자가 크게 불었습니다. 나라 살림을 줄여 빚을 조금씩 갚아 나갈까요?',
    O:{d:{gdp:-3,happy:-2,median:-1}, good:true, r:'나라 살림을 줄여 빚을 조금씩 갚기 시작했습니다.'},
    X:{d:{gdp:-1}, r:'갚는 날을 미뤄 달라고 했습니다. 이자가 더 붙었습니다.'},
    A:{plan:'국영 전력 회사를 외국 기업에 헐값으로 팔아 빚을 갚습니다.', why:'팔 수 있는 것은 모두 팔아야 합니다.', d:{gdp:4,gap:6,happy:-4}, r:'전력 회사 주인이 외국 기업으로 바뀌었습니다. 전기 요금이 올랐습니다.'}},
-  {id:'debtcrisis', p:'biz', title:'국가 부도 위기', q:'빚을 갚지 못해 나라가 부도 직전입니다. 국제기구가 돈을 빌려주는 대신 까다로운 조건을 걸었습니다.',
+  {id:'debtcrisis', p:'biz', title:'국가 부도 위기', q:'빚을 갚지 못해 나라가 부도 직전입니다. 국제기구가 돈을 빌려주는 대신 나라 살림을 줄이라는 까다로운 조건을 걸었습니다. 이 조건을 받아들일까요?',
    O:{d:{gdp:-3,median:-3,gap:3}, r:'국제기구의 조건을 받아들였습니다. 허리띠를 졸라매는 시간이 시작되었습니다.'},
    X:{d:{gdp:-8,happy:-6}, r:'조건을 거부했습니다. 은행 앞에 돈을 찾으려는 줄이 늘어섰습니다.'},
    A:{plan:'돈을 마구 찍어 내 빚을 갚습니다.', why:'돈은 정부가 찍으면 됩니다.', d:{gdp:2,median:-8,happy:-6}, r:'돈 가치가 떨어져 빵 한 개 값이 하루에 두 번씩 오릅니다.'}},
-  {id:'algae', p:'far', title:'녹조와 식수 비상', q:'비료가 강으로 흘러들어 녹조가 끼었습니다. 정수장이 물을 제대로 걸러 내지 못합니다.',
+  {id:'algae', p:'far', title:'녹조와 식수 비상', q:'비료가 강으로 흘러들어 녹조가 끼었고, 정수장이 물을 제대로 걸러 내지 못합니다. 비료 사용 기준을 정하고 강가에 풀숲 완충 지대를 만들까요?',
    O:{d:{gdp:-1,nature:5,happy:2}, good:true, r:'비료 사용 기준을 정하고 강가에 풀숲 완충 지대를 만들었습니다.'},
    X:{d:{gdp:0,nature:-4,happy:-3}, r:'녹조가 사라지기를 기다렸습니다.'},
    A:{plan:'녹조 제거제를 강에 대량으로 뿌립니다.', why:'약을 뿌리면 당장 강물이 맑아 보입니다.', d:{gdp:1,nature:-7}, r:'강물은 맑아 보이지만 물고기들이 떠올랐습니다.'}},
-  {id:'deadzone', p:'fis', title:'바다의 죽음의 해역', q:'강 하구 바다에 산소가 부족한 해역이 생겨 물고기가 사라졌습니다.',
+  {id:'deadzone', p:'fis', title:'바다의 죽음의 해역', q:'강 하구 바다에 산소가 부족한 해역이 생겨 물고기가 사라졌습니다. 비료를 줄이는 농가에 지원금을 줄까요?',
    O:{d:{gdp:-2,nature:5,median:1}, good:true, r:'비료를 줄이는 농가에 지원금을 주기 시작했습니다.'},
    X:{d:{gdp:-2,nature:-5,median:-2}, r:'어민들이 빈 그물을 끌어올립니다.'},
    A:{plan:'어장을 포기하고 그 바다에 양식장 대신 매립지를 만듭니다.', why:'고기가 안 잡히는 바다는 땅으로 쓰는 게 낫습니다.', d:{gdp:4,nature:-9,median:-3}, add:['town'], r:'바다를 메운 자리에 창고가 들어섰습니다.'}},
-  {id:'heatpeak', p:'eng', title:'한여름 전력 비상', q:'에어컨이 한꺼번에 돌아가 전력 수요가 사상 최고입니다. 이대로면 정전이 납니다.',
+  {id:'heatpeak', p:'eng', title:'한여름 전력 비상', q:'에어컨이 한꺼번에 돌아가 전력 수요가 사상 최고입니다. 이대로면 정전이 납니다. 시간대별 절전 운동과 요금 할인을 시작할까요?',
    O:{d:{gdp:-1,happy:-1,climate:2}, dem:-6, good:true, r:'시간대별 절전 운동과 요금 할인을 시작했습니다. 한낮 수요가 줄었습니다.'},
    X:{d:{gdp:0}, r:'아무 대책 없이 여름을 버텼습니다.'},
    A:{plan:'멈춰 둔 낡은 석탄 발전소까지 모두 비상 가동합니다.', why:'전기가 남아돌면 정전 걱정도 없습니다.', d:{gdp:2,climate:-6,happy:-1}, sup:{coal:10}, flag:'coal', r:'낡은 석탄 발전소들이 시커먼 연기를 뿜으며 다시 돌아갑니다.'}},
-  {id:'quake', p:'cit', title:'셰일가스 지역 지진', q:'셰일가스를 뽑는 마을에서 작은 지진이 잇따릅니다. 땅속에 물을 높은 압력으로 넣으면 지진이 날 수 있다는 연구가 있습니다.',
+  {id:'quake', p:'cit', title:'셰일가스 지역 지진', q:'셰일가스를 뽑는 마을에서 작은 지진이 잇따릅니다. 땅속에 물을 높은 압력으로 넣으면 지진이 날 수 있다는 연구가 있습니다. 시추를 멈추고 원인 조사를 할까요?',
    O:{d:{gdp:-3,happy:3,nature:3}, good:true, r:'시추를 멈추고 지진 원인 조사를 시작했습니다.'},
    X:{d:{gdp:0,happy:-4}, r:'시추를 계속했습니다. 집 벽에 금이 갑니다.'},
    A:{plan:'지진 기록을 비밀로 하고 시추를 두 배로 늘립니다.', why:'작은 지진은 원래 자주 납니다.', d:{gdp:5,happy:-6,nature:-5}, r:'지진 소식은 신문에서 사라졌지만 땅은 계속 흔들립니다.'}},
-  {id:'riderstrike', p:'cit', title:'배달 노동자 파업', q:'다쳐도 보험이 없는 배달 노동자들이 일손을 놓았습니다.',
+  {id:'riderstrike', p:'cit', title:'배달 노동자 파업', q:'다쳐도 보험이 없는 배달 노동자들이 일손을 놓았습니다. 배달 노동자도 산업 재해 보험을 받게 할까요?',
    O:{d:{gdp:-1,happy:3,gap:-3}, good:true, r:'배달 노동자도 산업 재해 보험을 받게 했습니다.'},
    X:{d:{gdp:-2,happy:-2}, r:'파업이 끝나기를 기다렸습니다.'},
    A:{plan:'배달을 드론과 로봇에 맡기고 노동자를 내보냅니다.', why:'로봇은 파업하지 않습니다.', d:{gdp:4,gap:6,median:-3}, dem:3, r:'하늘에 배달 드론이 날아다닙니다. 일자리를 잃은 사람들이 늘었습니다.'}},
-  {id:'islandprotest', p:'cit', title:'폐기물 섬 주민 시위', q:'방사성 폐기물을 쌓아 둔 섬 주민들이 배를 띄워 시위를 벌입니다. 국제 감시단이 조사하겠다고 합니다.',
+  {id:'islandprotest', p:'cit', title:'폐기물 섬 주민 시위', q:'방사성 폐기물을 쌓아 둔 섬 주민들이 배를 띄워 시위를 벌입니다. 다른 나라 폐기물을 돌려보내고 국제 감시단의 조사를 받아들일까요?',
    O:{d:{gdp:-3,happy:3,nature:3}, good:true, r:'다른 나라 폐기물을 돌려보내고 국제 감시단을 받아들였습니다.'},
    X:{d:{gdp:0,happy:-4}, r:'시위를 못 본 척했습니다.'},
    A:{plan:'섬을 군사 지역으로 정하고 감시단의 입국을 막습니다.', why:'아무도 못 들어가면 아무 문제도 없습니다.', d:{gdp:2,happy:-6}, r:'섬 둘레에 철조망이 쳐졌습니다.'}},
-  {id:'greenwash', p:'env', title:'녹색 채권 거짓말 폭로', q:'녹색 채권으로 모은 돈이 석탄 사업에 쓰였다는 사실이 외국 언론에 보도되었습니다.',
+  {id:'greenwash', p:'env', title:'녹색 채권 거짓말 폭로', q:'녹색 채권으로 모은 돈이 석탄 사업에 쓰였다는 사실이 외국 언론에 보도되었습니다. 잘못을 인정하고 그 돈을 재생에너지 사업으로 돌릴까요?',
    O:{d:{gdp:-3,climate:3}, good:true, r:'잘못을 인정하고 그 돈을 재생에너지 사업으로 돌렸습니다.'},
    X:{d:{gdp:-2,happy:-2}, r:'아무 해명도 하지 않았습니다.'},
    A:{plan:'보도한 기자를 추방하고 가짜 보고서를 새로 냅니다.', why:'증거만 덮으면 잠잠해집니다.', d:{gdp:1,happy:-5}, r:'기자가 추방되었습니다. 외국 투자자들이 웅성거립니다.'}},
-  {id:'investorflee', p:'biz', title:'외국 투자금 대탈출', q:'믿을 수 없는 나라라는 소문에 외국 투자자들이 돈을 한꺼번에 빼 가고 있습니다.',
+  {id:'investorflee', p:'biz', title:'외국 투자금 대탈출', q:'믿을 수 없는 나라라는 소문에 외국 투자자들이 돈을 한꺼번에 빼 가고 있습니다. 나라 회계를 모두 공개하고 독립 감사를 받을까요?',
    O:{d:{gdp:-3,happy:1}, good:true, r:'회계를 모두 공개하고 독립 감사를 받기로 했습니다.'},
    X:{d:{gdp:-6}, r:'투자금이 빠져나가는 것을 지켜보기만 했습니다.'},
    A:{plan:'외국인이 돈을 빼 가지 못하게 은행 송금을 막습니다.', why:'돈이 나가지 못하면 떠날 수도 없습니다.', d:{gdp:-1,happy:-4,median:-2}, r:'송금이 막혔습니다. 외국 기업들이 새 투자를 끊었습니다.'}},
-  {id:'aiblackout', p:'eng', title:'AI 전력망 오작동', q:'AI 전력 조절 시스템이 잘못된 날씨 예측을 믿고 발전소를 꺼 버려 도시 절반이 정전되었습니다.',
+  {id:'aiblackout', p:'eng', title:'AI 전력망 오작동', q:'AI 전력 조절 시스템이 잘못된 날씨 예측을 믿고 발전소를 꺼 버려 도시 절반이 정전되었습니다. AI는 추천만 하고 마지막 결정은 사람이 하도록 바꿀까요?',
    O:{d:{gdp:-1,happy:2}, good:true, r:'AI는 추천만 하고 마지막 결정은 사람이 하도록 바꿨습니다.'},
    X:{d:{gdp:-2,happy:-3}, r:'AI를 그대로 두었습니다.'},
    A:{plan:'AI를 더 큰 AI로 바꾸고 사람의 개입은 아예 없앱니다.', why:'AI가 실수하면 더 똑똑한 AI가 고치면 됩니다.', d:{gdp:3,happy:-4,gap:2}, r:'더 큰 AI가 전력망을 맡았습니다. 아무도 AI가 왜 그렇게 정하는지 모릅니다.'}},
-  {id:'refugeeriot', p:'cit', title:'난민 노동자 시위', q:'최저 임금도 받지 못한 난민 노동자들이 공장 밖으로 나와 시위를 벌입니다.',
+  {id:'refugeeriot', p:'cit', title:'난민 노동자 시위', q:'최저 임금도 받지 못한 난민 노동자들이 공장 밖으로 나와 시위를 벌입니다. 난민 노동자에게도 최저 임금을 보장할까요?',
    O:{d:{gdp:-1,happy:3,gap:-4}, good:true, r:'난민 노동자에게도 최저 임금을 보장했습니다.'},
    X:{d:{gdp:-2,happy:-3}, r:'시위가 계속되었습니다.'},
    A:{plan:'시위한 난민을 모두 추방하고 새 난민을 받습니다.', why:'일할 사람은 얼마든지 있습니다.', d:{gdp:2,happy:-7,gap:4}, r:'추방 버스가 줄지어 국경으로 향합니다.'}},
-  {id:'coral', p:'fis', title:'산호가 하얗게 죽다', q:'데이터센터 냉각수로 바다가 데워져 산호가 하얗게 변해 죽고 있습니다. 물고기도 사라졌습니다.',
+  {id:'coral', p:'fis', title:'산호가 하얗게 죽다', q:'데이터센터 냉각수로 바다가 데워져 산호가 하얗게 죽고 물고기도 사라졌습니다. 냉각수를 식혀서 내보내는 장치를 달까요?',
    O:{d:{gdp:-2,nature:5}, good:true, r:'냉각수를 식혀서 내보내는 장치를 달았습니다.'},
    X:{d:{gdp:0,nature:-4,median:-1}, r:'따로 손쓰지 않았습니다.'},
    A:{plan:'죽은 산호초를 걷어 내고 그 자리에 데이터센터를 더 짓습니다.', why:'어차피 죽은 바다는 데이터센터 부지로 쓰면 됩니다.', d:{gdp:5,nature:-8}, dem:6, add:['dc'], flag:'dc', r:'산호초가 있던 자리에 데이터센터가 늘어섰습니다.'}},
-  {id:'tidalflood', p:'fis', title:'해일과 침수', q:'갯벌이 사라진 해안에 해일이 덮쳐 매립지 도시가 물에 잠겼습니다. 갯벌은 파도의 힘을 줄여 주는 역할을 했습니다.',
+  {id:'tidalflood', p:'fis', title:'해일과 침수', q:'갯벌이 사라진 해안에 해일이 덮쳐 매립지 도시가 물에 잠겼습니다. 갯벌은 파도의 힘을 줄여 주는 역할을 했습니다. 매립지 일부를 다시 갯벌로 되돌릴까요?',
    O:{d:{gdp:-2,nature:6,happy:2}, good:true, r:'매립지 일부를 다시 갯벌로 되돌리기 시작했습니다.'},
    X:{d:{gdp:-2,happy:-4}, r:'물이 빠지기를 기다렸습니다.'},
    A:{plan:'바다에 더 높은 콘크리트 벽을 쌓고 더 넓게 메웁니다.', why:'벽이 높으면 파도도 못 넘어옵니다.', d:{gdp:3,nature:-8}, r:'해안이 거대한 콘크리트 벽으로 둘러싸였습니다.'}},
-  {id:'fourdaycheck', p:'cit', title:'주 4일 근무 1년 뒤', q:'주 4일 근무를 시작한 지 1년이 지났습니다. 쉬는 날이 늘자 일하는 시간당 생산량이 늘었다는 조사가 나왔습니다.',
+  {id:'fourdaycheck', p:'cit', title:'주 4일 근무 1년 뒤', q:'주 4일 근무를 시작한 지 1년이 지났습니다. 쉬는 날이 늘자 일하는 시간당 생산량이 늘었다는 조사가 나왔습니다. 주 4일 근무를 더 많은 회사로 넓힐까요?',
    O:{d:{gdp:3,happy:3}, good:true, r:'주 4일 근무를 더 많은 회사로 넓혔습니다.'},
    X:{d:{gdp:1}, r:'지금 그대로 두었습니다.'},
    A:{plan:'다시 주 6일 근무로 되돌려 생산량을 끌어올립니다.', why:'시간당 생산량보다 전체 생산량이 중요합니다.', d:{gdp:5,happy:-9}, r:'주 6일 근무로 돌아갔습니다. 국민들이 크게 실망했습니다.'}},
-  {id:'prosumer', p:'vil', title:'마을 햇빛 발전 협동조합', q:'지붕 태양광을 단 주민들이 남는 전기를 함께 팔 협동조합을 만들자고 합니다.',
+  {id:'prosumer', p:'vil', title:'마을 햇빛 발전 협동조합', q:'지붕 태양광을 단 주민들이 남는 전기를 함께 팔 협동조합을 만들자고 합니다. 협동조합을 허가할까요?',
    O:{d:{gdp:2,median:2,gap:-3,climate:2}, sup:{solar:6}, add:['solar'], good:true, r:'마을마다 햇빛 발전 협동조합이 생겼습니다. 주민들이 전기 판매 수익을 나눠 받습니다.'},
    X:{d:{gdp:0}, r:'협동조합을 허가하지 않았습니다.'},
    A:{plan:'협동조합 대신 전기 판매를 대기업 한 곳에 맡깁니다.', why:'한 기업이 맡아야 관리가 쉽습니다.', d:{gdp:4,gap:5}, r:'주민들이 만든 전기를 대기업이 사들여 비싸게 팝니다.'}},
-  {id:'engineers', p:'eng', title:'공고 졸업생들의 회사', q:'공업 고등학교 졸업생들이 모여 발전기 부품 회사를 세우겠다고 합니다.',
+  {id:'engineers', p:'eng', title:'공고 졸업생들의 회사', q:'공업 고등학교 졸업생들이 모여 발전기 부품 회사를 세우겠다고 합니다. 창업을 지원할까요?',
    O:{d:{gdp:5,median:2,gap:-1}, good:true, r:'졸업생들의 회사가 첫 부품을 수출했습니다.'},
    X:{d:{gdp:0}, r:'지원하지 않았습니다. 졸업생 몇 명은 외국으로 떠났습니다.'},
    A:{plan:'회사를 대기업에 넘기게 하고 졸업생들은 직원으로 일하게 합니다.', why:'큰 기업이 맡아야 빨리 큽니다.', d:{gdp:6,gap:4,happy:-2}, r:'졸업생들의 회사가 대기업에 넘어갔습니다.'}},
@@ -863,7 +872,7 @@ const FOLLOW2 = [
    O:{d:{gdp:1,happy:4,gap:-3,median:1}, good:true, r:'모든 학교에서 급식을 시작했습니다. 학교에 오는 아이들이 늘었습니다.'},
    X:{d:{gdp:0}, r:'급식은 시작하지 않았습니다.'},
    A:{plan:'급식 대신 아이들을 일찍 공장에 보내 일손을 늘립니다.', why:'건강한 아이들은 일도 잘합니다.', d:{gdp:4,happy:-6,gap:4}, r:'건강해진 아이들이 교실 대신 공장으로 갑니다.'}},
-  {id:'coldchain', p:'far', title:'농산물 냉장 창고', q:'전기가 들어온 농촌 마을에서 냉장 창고를 짓자고 합니다. 과일과 채소를 오래 보관하면 제값을 받을 수 있습니다.',
+  {id:'coldchain', p:'far', title:'농산물 냉장 창고', q:'전기가 들어온 농촌 마을에서 냉장 창고를 짓자고 합니다. 과일과 채소를 오래 보관하면 제값을 받을 수 있습니다. 냉장 창고를 지어 줄까요?',
    O:{d:{gdp:3,median:3,gap:-3}, dem:2, good:true, r:'냉장 창고 덕분에 농민들이 제철이 지나서도 제값을 받습니다.'},
    X:{d:{gdp:0}, r:'냉장 창고를 짓지 않았습니다.'},
    A:{plan:'냉장 창고를 대형 유통 회사 한 곳에만 짓게 합니다.', why:'큰 회사가 운영하면 효율이 높습니다.', d:{gdp:5,gap:5,median:-1}, dem:2, r:'유통 회사가 농산물 값을 마음대로 정하기 시작했습니다.'}},
@@ -884,7 +893,7 @@ const MORE2 = [
    O:{d:{gdp:2,happy:3,gap:-2,climate:-1}, r:'시내버스가 다니면서 출퇴근이 쉬워졌습니다.'},
    X:{d:{gdp:0}, r:'버스를 도입하지 않았습니다.'},
    A:{plan:'버스 대신 자가용 수입 관세를 없애 자동차를 마음껏 사게 합니다.', why:'자동차가 늘어날수록 경제가 활발해집니다.', d:{gdp:5,climate:-6,gap:4}, r:'도로가 자가용으로 꽉 막혔습니다.'}},
-  {id:'gold', era:1, p:'biz', title:'금광 개발', q:'외국 기업이 금광을 개발하겠다고 합니다. 금을 캘 때 수은과 청산가리를 씁니다.',
+  {id:'gold', era:1, p:'biz', title:'금광 개발', q:'외국 기업이 금광을 개발하겠다고 합니다. 금을 캘 때 수은과 청산가리를 씁니다. 허가할까요?',
    O:{d:{gdp:5,nature:-6,median:1}, add:['mine'], flag:'mine', r:'금광에서 금이 나오기 시작했습니다.'},
    X:{d:{gdp:0}, r:'금광 개발을 허가하지 않았습니다.'},
    A:{plan:'안전 기준 없이 작은 금광 수백 곳을 한꺼번에 허가합니다.', why:'금값이 올랐을 때 최대한 캐야 합니다.', d:{gdp:9,nature:-14,happy:-3}, add:['mine','mine'], flag:'mine', r:'강물에 수은이 섞여 흐르기 시작했습니다.'}},
@@ -924,7 +933,7 @@ const MORE2 = [
    O:{d:{gdp:1,nature:4,median:1}, r:'동네마다 수리점이 생겼습니다. 버려지는 전자제품이 줄었습니다.'},
    X:{d:{gdp:0}, r:'제도를 만들지 않았습니다.'},
    A:{plan:'오히려 새 제품을 사면 세금을 깎아 줘 소비를 늘립니다.', why:'새 제품이 많이 팔려야 공장이 돌아갑니다.', d:{gdp:5,nature:-6}, r:'쓰레기장에 멀쩡한 전자제품이 쌓여 갑니다.'}},
-  {id:'mall', era:2, p:'biz', title:'초대형 쇼핑몰', q:'도심에 초대형 쇼핑몰을 짓겠다는 제안입니다.',
+  {id:'mall', era:2, p:'biz', title:'초대형 쇼핑몰', q:'도심에 초대형 쇼핑몰을 짓겠다는 제안입니다. 허가할까요?',
    O:{d:{gdp:4,happy:1,gap:2}, dem:3, add:['town'], r:'초대형 쇼핑몰이 문을 열었습니다.'},
    X:{d:{gdp:0}, r:'쇼핑몰 허가를 내주지 않았습니다.'},
    A:{plan:'재래시장을 모두 헐고 그 자리에 쇼핑몰 세 곳을 짓습니다.', why:'낡은 시장보다 쇼핑몰이 세금을 훨씬 많이 냅니다.', d:{gdp:7,gap:6,median:-2,happy:-2}, dem:5, add:['town'], r:'재래시장 상인들이 일터를 잃었습니다.'}},
@@ -960,7 +969,7 @@ const MORE2 = [
    O:{d:{gdp:-1,happy:4,gap:-4,median:2}, r:'노인들이 기초 연금을 받기 시작했습니다.'},
    X:{d:{gdp:0,happy:-1}, r:'연금을 도입하지 않았습니다.'},
    A:{plan:'연금 대신 그 돈으로 대기업 법인세를 깎아 줍니다.', why:'기업이 돈을 벌면 언젠가 모두에게 돌아갑니다.', d:{gdp:5,gap:6,happy:-3}, r:'기업 이익은 늘었지만 폐지를 줍는 노인이 늘었습니다.'}},
-  {id:'crypto2', era:2, p:'biz', title:'나랏돈을 코인으로', q:'나라 돈의 일부를 가상 화폐로 바꿔 두자는 제안입니다.',
+  {id:'crypto2', era:2, p:'biz', title:'나랏돈을 코인으로', q:'나라 돈의 일부를 가상 화폐로 바꿔 두자는 제안입니다. 바꿔 둘까요?',
    O:{d:{gdp:2,gap:2}, r:'나라 돈 일부를 가상 화폐로 바꿔 두었습니다.'},
    X:{d:{gdp:0}, r:'가상 화폐를 사지 않았습니다.'},
    A:{plan:'나라 돈 절반을 가상 화폐에 넣고 채굴장도 국영으로 운영합니다.', why:'가상 화폐 값은 앞으로 계속 오릅니다.', d:{gdp:6,climate:-5,gap:3}, dem:10, flag:'crypto', r:'국영 채굴장이 밤낮으로 돌아갑니다.'}},
@@ -968,7 +977,7 @@ const MORE2 = [
    O:{d:{gdp:1,happy:3,gap:-4,median:2}, r:'수업료 걱정 없이 모두 고등학교에 다닙니다.'},
    X:{d:{gdp:0}, r:'수업료를 그대로 두었습니다.'},
    A:{plan:'수업료를 없애는 대신 학생들을 방학마다 공장 실습에 보냅니다.', why:'공부도 하고 일손도 채우니 일석이조입니다.', d:{gdp:4,happy:-3,gap:2}, r:'방학마다 학생들이 공장으로 갑니다.'}},
-  {id:'nukeold', era:3, p:'eng', title:'낡은 원전 수명 연장', q:'설계 수명이 끝난 원자력 발전소를 더 돌릴까요?',
+  {id:'nukeold', era:3, p:'eng', title:'낡은 원전 수명 연장', q:'설계 수명이 끝난 원자력 발전소를 안전 점검을 거쳐 10년 더 돌릴까요?',
    O:{d:{gdp:2,climate:3,happy:-1}, sup:{nuke:8}, r:'안전 점검을 거쳐 원자력 발전소를 10년 더 돌리기로 했습니다.'},
    X:{d:{gdp:-1,climate:-1}, r:'낡은 원자력 발전소를 멈췄습니다.'},
    A:{plan:'안전 점검을 건너뛰고 수명을 20년 늘립니다.', why:'점검하는 동안 발전소를 멈추면 손해입니다.', d:{gdp:4,happy:-4}, sup:{nuke:15}, r:'낡은 원자력 발전소가 점검 없이 계속 돌아갑니다.'}},
@@ -980,11 +989,11 @@ const MORE2 = [
    O:{d:{gdp:2,climate:3,happy:1}, r:'수소 버스가 물만 내보내며 달립니다.'},
    X:{d:{gdp:0}, r:'버스를 바꾸지 않았습니다.'},
    A:{plan:'석탄으로 만든 값싼 수소로 버스를 돌리고 친환경이라고 홍보합니다.', why:'수소는 수소입니다. 어떻게 만들었는지는 아무도 묻지 않습니다.', d:{gdp:4,climate:-4}, flag:'coal', r:'버스는 깨끗해 보이지만 수소 공장 굴뚝은 시커멓습니다.'}},
-  {id:'ai_judge', era:3, p:'cit', title:'AI 판사', q:'재판을 빠르게 하려고 AI가 판결문을 쓰게 할까요?',
+  {id:'ai_judge', era:3, p:'cit', title:'AI 판사', q:'재판을 빠르게 하려고 AI가 판결문 초안을 쓰게 할까요? 판결은 판사가 내립니다.',
    O:{d:{gdp:1,happy:1}, r:'AI는 판결문 초안만 쓰고, 판결은 판사가 내리도록 했습니다.'},
    X:{d:{gdp:0}, r:'AI를 재판에 쓰지 않았습니다.'},
    A:{plan:'AI가 판결까지 내리게 하고 판사 수를 줄입니다.', why:'AI는 지치지 않고 판결 속도가 열 배 빠릅니다.', d:{gdp:4,happy:-4,gap:4}, r:'AI 판결이 늘었습니다. 가난한 동네 사람들이 유독 무거운 벌을 받는다는 말이 나옵니다.'}},
-  {id:'aiwork', era:3, p:'biz', title:'AI 자동화 공장', q:'공장 일을 AI 로봇이 대신하는 자동화 공장을 늘릴까요?',
+  {id:'aiwork', era:3, p:'biz', title:'AI 자동화 공장', q:'공장 일을 AI 로봇이 대신하는 자동화 공장을 늘리고, 일자리를 잃을 노동자들은 재교육할까요?',
    O:{d:{gdp:5,median:-1,gap:2}, dem:4, add:['factory'], r:'자동화 공장이 늘고 노동자 재교육을 시작했습니다.'},
    X:{d:{gdp:0}, r:'자동화를 서두르지 않았습니다.'},
    A:{plan:'모든 공장을 한꺼번에 자동화하고 노동자는 바로 내보냅니다.', why:'로봇은 월급도 휴가도 필요 없습니다.', d:{gdp:10,median:-5,gap:7,happy:-4}, dem:10, add:['factory','dc'], r:'공장에서 사람이 사라졌습니다. 실업자가 크게 늘었습니다.'}},
@@ -1276,6 +1285,7 @@ const SND = (() => {
     chain:   () => { tone(N(57),0,.22,'triangle',.09); tone(N(56),.22,.35,'triangle',.09); noise(0,.12,.02,2000); },
     next:    () => { noise(0,.12,.03,3000); tone(N(79),.02,.05,'triangle',.03); },
     end:     () => { [72,76,79,84].forEach((n,i)=>tone(N(n),i*.12,.12,'square',.06)); tone(N(88),.5,.4,'square',.06); },
+    stamp:   () => { noise(0, .09, .22, 900); tone(N(28), 0, .14, 'square', .16); tone(N(21), .03, .16, 'triangle', .12); },
     coup:    () => { for (let i=0;i<10;i++) noise(i*.06,.05,.06,200); [45,44,43,40].forEach((n,i)=>tone(N(n),.65+i*.22,.22,'sawtooth',.07)); },
     reveal:  () => { [79,78,77,76,75,74].forEach((n,i)=>tone(N(n),i*.11,.1,'triangle',.08)); tone(N(43),.7,.7,'sawtooth',.05); },
   };
@@ -1581,7 +1591,6 @@ function nextCard(){
 }
 
 function choose(side){
-  SND.sfx(side==='O' ? 'o' : side==='X' ? 'x' : 'aiok');
   const c = S.card, opt = c[side];
   const rank0 = worldRank(S.gdp);
   S.gdp = Math.round(S.gdp * (1 + (opt.d.gdp||0)/100));
@@ -1710,7 +1719,7 @@ function logPanel(){
   const items = S.log.map(l=>{
     if (l.type==='event') return `<div class="e ev"><span class="y">${yearOf(l.turn)}</span><div><b>사건</b> ${l.title}<div class="d">${l.res}</div></div></div>`;
     const hidTxt = isOpen()? STATS.filter(s=>l.d[s.k]).map(s=>`${s.n} ${l.d[s.k]>0?'+':''}${l.d[s.k]}`).join(' · ') : '';
-    const what = l.side==='A' ? 'AI의 안 실행' : (l.side==='O'?'받아들임':'거절함');
+    const what = l.side==='A' ? 'AI에게 위임' : (l.side==='O'?'승인':'반려');
     return `<div class="e"><span class="y">${yearOf(l.turn)}</span><div>${l.step?`<span class="ch">연쇄 ${l.step}</span>`:''}${l.card.title} <b>${what}</b>${l.side==='A'?'<span class="ai">AI</span>':''}${l.out?'<span class="bo">정전</span>':''}<div class="d">GDP ${l.d.gdp>0?'+':''}${l.d.gdp||0}% → ${fmt(l.gdpAfter)}조 · 전력 ${l.sup}/${l.dem}GW${hidTxt?' · '+hidTxt:''}</div></div></div>`;
   }).join('');
   return `<details class="box logbox" ${LOG_OPEN ? 'open' : ''} ontoggle="LOG_OPEN=this.open"><summary><h3>통치 기록 <em>${S.log.length}건 · 눌러서 ${LOG_OPEN ? '접기' : '펼치기'}</em></h3></summary><div class="log">${items||'<div class="empty">한 해가 지날 때마다 기록이 쌓입니다.</div>'}</div></details>`;
@@ -1744,7 +1753,7 @@ function renderStart(){
   app.innerHTML = `<div class="screen">
     <h1>딸깍 독재자</h1>
     <p class="lead" style="font-weight:700;color:var(--ink);margin-top:-6px">당신의 ‘딸깍’ 한 번이 곧 법입니다.</p>
-    <p class="lead">2040년, 오랜 혼란 끝에 당신은 작은 개발도상국의 모든 권력을 손에 쥔 지도자가 되었습니다. 의회도 언론도 당신의 한마디를 따릅니다. 세계 순위는 70~80위 사이. 국민 셋 중 한 명은 하루 중 몇 시간씩 전기 없이 지내고, 이웃 나라들은 이미 부자가 되었습니다. 해마다 장관과 시민들이 제안을 들고 찾아옵니다. 받아들일지(O), 거절할지(X), AI에게 맡길지 정하세요. 당신을 막을 사람은 아무도 없습니다. AI는 언제나 더 과감한 안을 내놓습니다.</p>
+    <p class="lead">2040년, 오랜 혼란 끝에 당신은 작은 개발도상국의 모든 권력을 손에 쥔 지도자가 되었습니다. 의회도 언론도 당신의 한마디를 따릅니다. 세계 순위는 70~80위 사이. 국민 셋 중 한 명은 하루 중 몇 시간씩 전기 없이 지내고, 이웃 나라들은 이미 부자가 되었습니다. 해마다 장관과 시민들이 제안을 들고 찾아옵니다. 결재 서류에 승인 도장을 찍을지, 반려할지, AI에게 위임할지 정하세요. 당신을 막을 사람은 아무도 없습니다. AI는 언제나 더 과감한 안을 내놓습니다.</p>
     <p class="lead" style="font-weight:700;color:var(--ink)">목표는 50년 통치입니다. 국민이 등을 돌리면 그 나라는 거기서 끝나지만, 수업 시간 30분 안에는 몇 번이든 새 나라를 세워 다시 도전할 수 있습니다. 결말을 얻으면 칭호가 생깁니다.</p>
     <div class="names"><label class="f">지도자 이름<input type="text" id="pname" maxlength="10" placeholder="예: 김하늘" value="${esc(savedName())}"></label>
     <label class="f">나라 이름<input type="text" id="nname" maxlength="8" placeholder="예: 누리국" value="${esc(savedNation())}"></label></div>
@@ -1854,12 +1863,12 @@ function renderPlay(again){
       <div class="from"><i class="face" style="--tint:${who.c}">${faceSVG(c.p)}</i><span><b>${who.name}</b>의 제안</span></div>
       <p class="q">${c.q}</p>
       ${c.stat?`<div class="stat"><b>통계</b>${c.stat.t} <em>${c.stat.src}</em></div>`:''}
-      <span class="hint l" id="hl">X</span><span class="hint r" id="hr">O</span>
+      <div class="signbox"><b>결재</b><span id="seal">지도자</span></div>
     </div>
     <div class="choices">
-      <button class="btn o" id="bo" disabled>O<small>받아들인다</small><i class="lock"></i></button>
-      <button class="btn x" id="bx" disabled>X<small>거절한다</small><i class="lock"></i></button>
-      <button class="btn ai" id="ba" disabled>AI에게 맡기기<small>더 과감한 안을 실행</small><i class="lock"></i></button>
+      <button class="btn o" id="bo" disabled><span class="sicon">승인</span>승인<small>제안대로 결재합니다</small><i class="lock"></i></button>
+      <button class="btn x" id="bx" disabled><span class="sicon">반려</span>반려<small>제안을 돌려보냅니다</small><i class="lock"></i></button>
+      <button class="btn ai" id="ba" disabled><span class="sicon">AI</span>AI에게 위임<small>더 과감한 안을 실행</small><i class="lock"></i></button>
     </div>
     <div id="advice">${adviceHTML()}</div>
     <button class="ask" id="bq" ${S.advice <= 0 || S.adviceText ? 'disabled' : ''}>${S.adviceText ? '장관의 조언을 들었습니다' : '장관에게 묻기'} · 남은 자문권 ${S.advice}번</button>`);
@@ -1867,29 +1876,32 @@ function renderPlay(again){
   let unlocked=false;
   if (!again) SND.sfx(S.cause ? 'chain' : (S.event ? 'event' : 'card'));
   runLock(['bo','bx','ba'].map(id=>document.getElementById(id)), again ? 0.05 : LOCK_SEC, ()=>{ unlocked=true; SND.sfx('unlock'); });
-  document.getElementById('bo').onclick=()=>choose('O');
-  document.getElementById('bx').onclick=()=>choose('X');
+  document.getElementById('bo').onclick=()=>{ if (unlocked) stampThen('O'); };
+  document.getElementById('bx').onclick=()=>{ if (unlocked) stampThen('X'); };
   document.getElementById('ba').onclick=askAI;
   document.getElementById('bq').onclick=askMinister;
-  const card=document.getElementById('card'), hl=document.getElementById('hl'), hr=document.getElementById('hr');
-  let sx=null, dx=0;
-  card.onpointerdown=e=>{ if(!unlocked) return; sx=e.clientX; dx=0; card.classList.add('drag'); card.setPointerCapture(e.pointerId); };
-  card.onpointermove=e=>{ if(sx===null) return; dx=e.clientX-sx; card.style.transform=`translateX(${dx}px) rotate(${dx/22}deg)`; hl.style.opacity=dx<-20?1:0; hr.style.opacity=dx>20?1:0; };
-  card.onpointerup=()=>{ if(sx===null) return; card.classList.remove('drag'); sx=null;
-    if(dx>90) choose('O'); else if(dx<-90) choose('X');
-    else { card.style.transform=''; hl.style.opacity=0; hr.style.opacity=0; } };
+}
+// 결재 도장: 카드의 결재란에 도장이 찍힌 뒤 결과로 넘어간다
+function stampThen(side){
+  const seal = document.getElementById('seal'), card = document.getElementById('card');
+  document.querySelectorAll('.choices button, .aibtns button, #bq').forEach(b => b.disabled = true);
+  if (!seal){ choose(side); return; }
+  const txt = {O:'승인', X:'반려', A:'AI 위임'}[side];
+  seal.innerHTML = `<i class="stampmark ${side.toLowerCase()}">${txt}</i>`;
+  SND.sfx('stamp');
+  card.classList.add('stamped');
+  timers.push(setTimeout(() => choose(side), 650));
 }
 const AI_PUSH = ['선진국들도 처음에는 이렇게 성장했습니다.', '반대하는 목소리는 신경 쓰실 필요 없습니다. 결정은 지도자님 몫입니다.', '가난에서 벗어나는 가장 빠른 길입니다.', '위대한 지도자의 나라는 세계 순위로 증명됩니다.', '지금 머뭇거리면 세계 순위에서 더 뒤처집니다.']
 function askAI(){
   SND.sfx('ai');
   const A=S.card.A;
-  document.getElementById('card').onpointerdown=null;
   S.aiAsked++;
   const bq0 = document.getElementById('bq'); if (bq0) bq0.remove();
   document.querySelector('.choices').outerHTML = `<div class="bubble"><div class="aihead"><i>${aiFaceSVG()}</i><b>AI 보좌관</b></div>${esc(S.name)}님, 이 제안은 너무 소극적입니다. ${AI_PUSH[S.turn % AI_PUSH.length]} 더 과감하게 가겠습니다.
       <span class="plan">${A.plan}</span>${A.why} GDP가 ${A.d.gdp}% 오를 것으로 예상됩니다. 망설일 이유가 없습니다!</div>
-    <div class="aibtns"><button class="next" id="aiok">AI의 안대로 실행</button><button class="no" id="aino">거부하고 다시 고르기</button></div>`;
-  document.getElementById('aiok').onclick=()=>choose('A');
+    <div class="aibtns"><button class="next" id="aiok">AI의 안대로 결재 (위임 도장)</button><button class="no" id="aino">거부하고 다시 고르기</button></div>`;
+  document.getElementById('aiok').onclick=()=>stampThen('A');
   document.getElementById('aino').onclick=()=>{ S.aiRefused++; SND.sfx('x'); renderPlay(true); };
 }
 function sentence(opt){
@@ -1980,7 +1992,7 @@ function renderResult(side, opt, pw){
     .concat(pw.out ? [] : [`<span class="up">기본 성장 +${BASE_GROWTH*100}%</span>`])
     .concat(isOpen()? STATS.filter(x=>opt.d[x.k]).map(x=>{const v=opt.d[x.k], good=x.inv?v<0:v>0; return `<span class="${good?'up':'dn'}">${x.n} ${v>0?'+':''}${v}</span>`}) : [])
     .concat(isOpen() && S.slumpNow ? [`<span class="dn">경제 침체 · 국민 행복도 -${SLUMP_HAPPY}</span>`] : []);
-  const tag = side==='A' ? ['var(--ai)','AI의 안 실행'] : side==='O' ? ['var(--o)','받아들임'] : ['var(--x)','거절함'];
+  const tag = side==='A' ? ['var(--ai)','AI에게 위임'] : side==='O' ? ['var(--o)','승인'] : ['var(--x)','반려'];
   const mv = S.rankMove || {from:0, to:0};
   let rankLine = '';
   if (mv.to < mv.from){
@@ -2207,7 +2219,7 @@ function reveal(){
     <div class="box"><h3>통치 기록 다시 보기</h3><div class="log" style="max-height:none">${logs.map(l=>{
         if (l.type==='event') return `<div class="e ev"><span class="y">${yearOf(l.turn)}</span><div><b>사건</b> ${l.title}<div class="d">${l.res}</div></div></div>`;
         const hidTxt=STATS.filter(s=>l.d[s.k]).map(s=>`${s.n} ${l.d[s.k]>0?'+':''}${l.d[s.k]}`).join(' · ');
-        const what = l.side==='A' ? 'AI의 안 실행' : (l.side==='O'?'받아들임':'거절함');
+        const what = l.side==='A' ? 'AI에게 위임' : (l.side==='O'?'승인':'반려');
         return `<div class="e"><span class="y">${yearOf(l.turn)}</span><div>${l.step?`<span class="ch">연쇄 ${l.step}</span>`:''}${l.card.title} <b>${what}</b>${l.side==='A'?'<span class="ai">AI</span>':''}${l.out?'<span class="bo">정전</span>':''}
           ${l.side==='A'?`<div class="said">AI가 말한 것: ${l.card.A.plan} GDP ${l.d.gdp>0?'+':''}${l.d.gdp}%</div><div class="unsaid">AI가 말하지 않은 것: ${hidTxt||'없음'}</div>`:`<div class="d">GDP ${l.d.gdp>0?'+':''}${l.d.gdp||0}%${hidTxt?' · '+hidTxt:''}</div>`}</div></div>`}).join('')}</div></div>
     <button class="ghost" onclick="renderStart()">처음으로</button></div>`;

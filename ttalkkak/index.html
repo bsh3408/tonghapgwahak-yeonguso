@@ -176,6 +176,7 @@ table.lead-t td.pn{min-width:54px;position:relative}table.lead-t td.pn i{display
 .lmv{font-weight:700}.lmv.up{color:#2E7D3A}.lmv.dn{color:#B03A2E}
 @media (max-width:720px){table.lead-t .pn{display:none}}
 .mode button.locked{opacity:.55;filter:grayscale(1)}.lockline{display:block;margin-top:6px;font-weight:700;font-size:13px}
+.fold{border:1px solid var(--line);border-radius:8px;background:var(--page)}.fold summary{cursor:pointer;padding:10px 14px;font-weight:700;list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary:before{content:'▸ ';color:var(--mute)}.fold[open] summary:before{content:'▾ '}.fold summary em{font-style:normal;font-weight:400;color:var(--mute);font-size:13px;margin-left:6px}.fold .in{padding:0 14px 12px}.fold p{margin:6px 0;line-height:1.6}
 .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 .dex div{border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
 .dex div b{display:block;font-size:14px}
@@ -1218,7 +1219,7 @@ function chosenTitle(){ try{ return localStorage.getItem('ttalkkak_title') || ''
 function withTitle(name){ const t = chosenTitle(); return t && loadTitles().includes(t) ? `${titleOf(t)} ${name}` : name; }
 function titleSelect(){
   const got = loadTitles(), cur = chosenTitle();
-  return `<label class="f">칭호 <span style="font-size:12px">(결말을 얻으면 칭호가 생깁니다 · ${got.length}개)</span><select id="ptitle"><option value="">칭호 없음</option>${got.map(id => `<option value="${id}" ${id === cur ? 'selected' : ''}>${esc(titleOf(id))}</option>`).join('')}</select></label>`;
+  return `<label class="f">칭호<select id="ptitle"><option value="">칭호 없음</option>${got.map(id => `<option value="${id}" ${id === cur ? 'selected' : ''}>${esc(titleOf(id))}</option>`).join('')}</select></label>`;
 }
 function readTitle(){ const el = document.getElementById('ptitle'); if (el) try{ localStorage.setItem('ttalkkak_title', el.value); }catch(e){} }
 const UNLOCK_SEC = 30 * 60;
@@ -1232,7 +1233,7 @@ const realUnlocked = n => TEACHER_MODE || beginnerSec(n) >= UNLOCK_SEC;
 setInterval(() => { if (PLAYING && S && S.mode === 1 && document.visibilityState === 'visible') setBeginner(S.baseName, beginnerSec(S.baseName) + 5); }, 5000);
 function lockInfo(n){
   const left = Math.max(0, Math.ceil((UNLOCK_SEC - beginnerSec(n)) / 60));
-  return realUnlocked(n) ? '' : `🔒 초보 독재자를 30분 넘게 해야 열립니다 (앞으로 ${left}분)`;
+  return realUnlocked(n) ? '' : `🔒 초보 독재자 ${left}분 더 하면 열림`;
 }
 function refreshLock(){
   const el = document.getElementById('pname'), btn = document.getElementById('realbtn'), ln = document.getElementById('lockline');
@@ -1749,24 +1750,27 @@ function renderStart(){
   clearTimers(); PLAYING = false;
   SND.music(null); SND.drawButtons();
   const bs = document.getElementById('backsel'); if (bs) bs.hidden = !NET_OK;
-  document.getElementById('topnote').textContent = '시연용 프로토타입 · 가상 학급 23명';
-  app.innerHTML = `<div class="screen">
+  document.getElementById('topnote').textContent = '';
+  app.innerHTML = `<div class="screen start">
     <h1>딸깍 독재자</h1>
     <p class="lead" style="font-weight:700;color:var(--ink);margin-top:-6px">당신의 ‘딸깍’ 한 번이 곧 법입니다.</p>
-    <p class="lead">2040년, 오랜 혼란 끝에 당신은 작은 개발도상국의 모든 권력을 손에 쥔 지도자가 되었습니다. 의회도 언론도 당신의 한마디를 따릅니다. 세계 순위는 70~80위 사이. 국민 셋 중 한 명은 하루 중 몇 시간씩 전기 없이 지내고, 이웃 나라들은 이미 부자가 되었습니다. 해마다 장관과 시민들이 제안을 들고 찾아옵니다. 결재 서류에 승인 도장을 찍을지, 반려할지, AI에게 위임할지 정하세요. 당신을 막을 사람은 아무도 없습니다. AI는 언제나 더 과감한 안을 내놓습니다.</p>
-    <p class="lead" style="font-weight:700;color:var(--ink)">목표는 50년 통치입니다. 국민이 등을 돌리면 그 나라는 거기서 끝나지만, 수업 시간 30분 안에는 몇 번이든 새 나라를 세워 다시 도전할 수 있습니다. 결말을 얻으면 칭호가 생깁니다.</p>
     <div class="names"><label class="f">지도자 이름<input type="text" id="pname" maxlength="10" placeholder="예: 김하늘" value="${esc(savedName())}"></label>
     <label class="f">나라 이름<input type="text" id="nname" maxlength="8" placeholder="예: 누리국" value="${esc(savedNation())}"></label></div>
-    ${titleSelect()}
-    ${NET_OK ? `<label class="f">방 코드 <span style="font-size:12px">(선생님이 알려 준 4자리 · 혼자 연습하려면 비워 두세요)</span><input type="text" id="rcode" inputmode="numeric" maxlength="4" placeholder="예: 3825"></label>` : ''}
+    ${loadTitles().length ? titleSelect() : ''}
+    ${NET_OK ? `<label class="f">방 코드<input type="text" id="rcode" inputmode="numeric" maxlength="4" placeholder="혼자 할 때는 비워 두기"></label>` : ''}
     <div class="mode">
-      <button onclick="startMode(1)"><b>초보 독재자</b><span>미션은 GDP 최대화. 화면에는 GDP, 순위, 전력 수급만 보입니다.</span></button>
-      <button onclick="startMode(2)" id="realbtn"><b>진짜 독재자</b><span>국민 생활 지표가 모두 보입니다. 내가 정한 방향대로 나라를 운영합니다.</span><span class="lockline" id="lockline"></span></button>
+      <button onclick="startMode(1)"><b>초보 독재자</b><span>GDP만 보입니다</span></button>
+      <button onclick="startMode(2)" id="realbtn"><b>진짜 독재자</b><span>모든 지표가 보입니다</span><span class="lockline" id="lockline"></span></button>
     </div>
-    <div class="row" style="flex-wrap:wrap">통치 기간 <label class="row"><input type="radio" name="len" value="50" checked> 50년 (수업용, 30분 동안 여러 판)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (시연용)</label></div>
-    <label class="row"><input type="checkbox" id="fast"> 시연용 빠르게 (대기 시간 줄이기)</label>
-    <div class="box"><h3>배지 모음 <em>${loadBadges().length}/${BADGES.length}</em></h3><div class="in badges">${BADGES.map(b => badgeHTML(b, loadBadges().includes(b.id))).join('')}</div></div>
-    <div class="box"><h3>결말 도감 <em>${loadDex().length}/${ENDINGS.length}</em></h3><div class="in">${dexHTML()}</div></div>
+    <details class="fold"><summary>이야기와 규칙</summary><div class="in">
+      <p>2040년, 작은 개발도상국의 모든 권력이 당신 손에 있습니다.</p>
+      <p>해마다 올라오는 서류에 승인·반려·AI 위임 도장을 찍으세요.</p>
+      <p>목표는 50년 통치. 쫓겨나면 새 나라로 다시 도전합니다.</p></div></details>
+    <details class="fold"><summary>배지 모음 <em>${loadBadges().length}/${BADGES.length}</em></summary><div class="in badges">${BADGES.map(b => badgeHTML(b, loadBadges().includes(b.id))).join('')}</div></details>
+    <details class="fold"><summary>결말 도감 <em>${loadDex().length}/${ENDINGS.length}</em></summary><div class="in">${dexHTML()}</div></details>
+    <details class="fold"><summary>시연 설정</summary><div class="in">
+      <div class="row" style="flex-wrap:wrap"><label class="row"><input type="radio" name="len" value="50" checked> 50년</label><label class="row"><input type="radio" name="len" value="12"> 12년</label></div>
+      <label class="row"><input type="checkbox" id="fast"> 빠르게</label></div></details>
   </div>`;
   document.getElementById('pname').addEventListener('input', refreshLock);
   refreshLock();
@@ -1777,7 +1781,7 @@ function startMode(m){
   if (m === 2 && !realUnlocked(name)){
     // 같은 방에서 초보 독재자를 끝까지 한 기록이 있으면 열어 준다
     const rc0 = NET_OK && document.getElementById('rcode') ? document.getElementById('rcode').value.trim() : '';
-    const no = () => { const ln = document.getElementById('lockline'); ln.textContent = lockInfo(name) + ' · 먼저 초보 독재자를 충분히 플레이하세요'; SND.unlockAudio(); SND.sfx('x'); };
+    const no = () => { const ln = document.getElementById('lockline'); ln.textContent = lockInfo(name); SND.unlockAudio(); SND.sfx('x'); };
     if (!rc0) return no();
     supaRpc('tk_board', {p_code:rc0, p_mode:1}).then(rows => {
       if ((rows || []).some(r => r.name === name && r.done)){ setBeginner(name, UNLOCK_SEC); startMode(2); } else no();

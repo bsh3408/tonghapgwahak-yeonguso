@@ -110,8 +110,8 @@ function codex() {
 const MK_JOBS = { driver: '지하철 기관사', geo: '지질학자', eco: '생태학자', chem: '화학 연구원', weather: '기상 연구원', medic: '응급 구조사' };
 const mkTime = s => { s = +s || 0; const m = Math.floor(s / 60); return m + '분 ' + String(Math.floor(s - m * 60)).padStart(2, '0') + '초'; };
 let MK = null, mkTab = '';
-async function makchaBoard(force) {
-  const box = $('mkRank'); if (!box) return;
+async function makchaBoard(force, el) {
+  const box = el || $('mkRank'); if (!box) return;
   if (!MK || force) { box.innerHTML = '<div class="mkhead"><b>🚇 막차 순위</b></div><p class="mknote">불러오는 중…</p>'; MK = await labRpc('makcha_rank').catch(() => null); }
   if (!MK?.ok) { box.innerHTML = '<div class="mkhead"><b>🚇 막차 순위</b></div><p class="mknote">' + esc(MK?.error || '순위를 아직 불러올 수 없어요.') + '</p>'; return; }
   const me = CURRENT_STUDENT.name, rows = mkTab ? (MK.byJob[mkTab] || []) : MK.overall, mine = mkTab ? MK.meByJob?.[mkTab] : MK.me;
@@ -121,10 +121,29 @@ async function makchaBoard(force) {
     + '<div class="mktabs">' + tabs + '</div>' + tbl
     + '<p class="mknote">' + (mine ? '내 순위: ' + mine.rank + '등 · ' + mine.stages + ' / 24역 · ' + mkTime(mine.secs) : (mkTab ? '이 직업으로 남긴 기록이 없어요.' : '아직 내 기록이 없어요.')) + '</p>'
     + '<p class="mknote">통과한 역이 많을수록, 같으면 걸린 시간이 짧을수록 위예요. 학생마다 가장 좋은 판 하나로 매기며, <b>전체 1~5등</b>이 가산점을 받아요.</p>';
-  box.querySelectorAll('[data-mk]').forEach(b => b.onclick = () => { mkTab = b.dataset.mk; makchaBoard(); });
-  box.querySelector('[data-mkr]').onclick = () => makchaBoard(true);
+  box.querySelectorAll('[data-mk]').forEach(b => b.onclick = () => { mkTab = b.dataset.mk; makchaBoard(false, box); });
+  box.querySelector('[data-mkr]').onclick = () => makchaBoard(true, box);
 }
-async function rank() { $('mkRank')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); makchaBoard(true); }
+// ---------- 딸깍 독재자 순위 (2026-10-30): 진짜 지도자 종합 점수 1~5등 · 국가소득(GDP) 1~5등 ----------
+let TK = null, tkTab = 'leader';
+async function ttalkkakBoard(force, box) {
+  if (!TK || force) { box.innerHTML = '<div class="mkhead"><b>🗳 딸깍 독재자 순위</b></div><p class="mknote">불러오는 중…</p>'; TK = await labRpc('tk_lab_rank').catch(() => null); }
+  if (!TK?.ok) { box.innerHTML = '<div class="mkhead"><b>🗳 딸깍 독재자 순위</b></div><p class="mknote">' + esc(TK?.error || '순위를 아직 불러올 수 없어요.') + '</p>'; return; }
+  const me = CURRENT_STUDENT.name, L = tkTab === 'leader', rows = L ? TK.leader : TK.gdp, mine = L ? TK.meLeader : TK.meGdp, won = n => Math.round(+n || 0).toLocaleString('ko-KR') + '조';
+  const tabs = [['leader', '진짜 지도자 점수'], ['gdp', '국가소득(GDP)']].map(([k, t]) => '<button class="mktab' + (k === tkTab ? ' on' : '') + '" data-tk="' + k + '">' + t + '</button>').join('');
+  const tbl = rows.length ? '<table><tr><th>순위</th><th>이름</th><th>나라</th>' + (L ? '<th>등급</th><th>점수</th>' : '<th>GDP</th>') + '</tr>' + rows.map(r => '<tr class="' + (r.name === me ? 'me' : '') + '"><td>' + r.rank + '등</td><td>' + esc(r.name) + '</td><td>' + esc(r.nation) + '</td>' + (L ? '<td>' + esc(r.grade || '') + '</td><td>' + r.score + '</td>' : '<td>' + won(r.gdp) + '</td>') + '</tr>').join('') + '</table>' : '<p class="mknote">아직 끝까지 마친 기록이 없어요.</p>';
+  box.innerHTML = '<div class="mkhead"><b>🗳 딸깍 독재자 순위 · ' + (L ? '진짜 지도자 1~5등' : '국가소득 1~5등') + '</b><button class="mktab" data-tkr="1">새로 고침</button></div><div class="mktabs">' + tabs + '</div>' + tbl
+    + '<p class="mknote">' + (mine ? '내 순위: ' + mine.rank + '등 · ' + (L ? (mine.grade || '') + ' ' + mine.score + '점' : won(mine.gdp)) : '아직 내 기록이 없어요.') + '</p>'
+    + '<p class="mknote">' + (L ? '진짜 독재자를 끝까지 마친 판의 지도자 종합 점수(GDP·국민 삶·공정·환경·스스로 판단·통치 기간)로 매겨요. 같으면 GDP가 큰 쪽이 위예요.' : '끝까지 마친 판의 국가소득(GDP)으로 매겨요.') + ' 학생마다 가장 좋은 판 하나로 매겨요.</p>';
+  box.querySelectorAll('[data-tk]').forEach(b => b.onclick = () => { tkTab = b.dataset.tk; ttalkkakBoard(false, box); });
+  box.querySelector('[data-tkr]').onclick = () => ttalkkakBoard(true, box);
+}
+let rankGame = 'mk';
+async function rank() { // 순위 단추: 막차·딸깍 독재자 순위를 따로 본다
+  sheet('<h2>🏆 순위</h2><div class="mktabs" id="rkGames"><button class="mktab" data-g="mk">🚇 막차</button><button class="mktab" data-g="tk">🗳 딸깍 독재자</button></div><div class="mkboard" id="rkBody"></div>');
+  const show = g => { rankGame = g; document.querySelectorAll('#rkGames [data-g]').forEach(b => b.classList.toggle('on', b.dataset.g === g)); const box = $('rkBody'); if (g === 'mk') makchaBoard(true, box); else ttalkkakBoard(true, box); };
+  document.querySelectorAll('#rkGames [data-g]').forEach(b => b.onclick = () => show(b.dataset.g)); show(rankGame);
+}
 async function rankOld() {
   sheet('<h2>🏆 순위</h2><p>불러오는 중…</p>');
   const out = await labRpc('subway_rank').catch(() => null);

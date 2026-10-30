@@ -27,11 +27,14 @@ button:focus-visible{outline:3px solid var(--ai);outline-offset:2px}
 .top .note{margin-left:auto;color:var(--mute);font-size:12px;text-align:right}
 .top b,.top .file{white-space:nowrap}
 @media (max-width:560px){.top .note{display:none}}
-.wrap{max-width:1120px;margin:0 auto;padding:14px 14px 40px}
+.wrap{max-width:1320px;margin:0 auto;padding:14px 14px 40px}
 .game{display:grid;gap:14px}
 .col{display:grid;gap:12px;align-content:start}
-@media (min-width:920px){.game{grid-template-columns:250px 1fr 290px;align-items:start}.mhud{display:none!important}}
-@media (max-width:919px){.game>.col:first-child{order:2}.game>.col:last-child{order:3}}
+@media (min-width:920px){.game{grid-template-columns:270px 1fr;align-items:start}.mhud{display:none!important}}
+.logrow{grid-column:1/-1;order:9}
+.logbox summary{cursor:pointer;list-style:none}.logbox summary::-webkit-details-marker{display:none}.logbox summary h3{margin:0}.logbox[open] summary{border-bottom:1px solid var(--line)}
+.logbox .log{max-height:420px}
+@media (max-width:919px){.game>.col:first-child{order:2}}
 .mhud{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--sheet)}
 .mhud b{color:var(--ink)} .mhud .neg{color:var(--dn)}
 .box{border:1px solid var(--line);border-radius:6px;background:var(--page)}
@@ -74,28 +77,28 @@ button:focus-visible{outline:3px solid var(--ai);outline-offset:2px}
 .mid{display:grid;gap:12px}
 .event{border:1px solid #E7C27A;background:#FFF8E8;border-radius:8px;padding:10px 14px;font-size:14px}
 .event b{display:block;color:#8A5A00}
-.card{border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--page);box-shadow:0 6px 18px rgba(27,42,44,.08);touch-action:none;user-select:none;transition:transform .25s;position:relative}
+.card{border:1px solid var(--line);border-radius:10px;padding:24px 26px;min-height:230px;background:var(--page);box-shadow:0 6px 18px rgba(27,42,44,.08);touch-action:none;user-select:none;transition:transform .25s;position:relative}
 .card.drag{transition:none}
 .card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap}
 .badge{font-size:12px;font-weight:700;color:var(--green);background:var(--greenbg);border-radius:4px;padding:1px 8px}
 .wx{font-size:12px;color:var(--soft)}
-.from{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft);margin-bottom:6px}
-.from i{width:42px;height:42px;border-radius:8px;display:grid;place-items:center;font-style:normal;flex:none;background:color-mix(in srgb,var(--tint) 22%,#fff);border:2px solid color-mix(in srgb,var(--tint) 55%,#fff)}
+.from{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--soft);margin-bottom:6px}
+.from i{width:56px;height:56px;border-radius:8px;display:grid;place-items:center;font-style:normal;flex:none;background:color-mix(in srgb,var(--tint) 22%,#fff);border:2px solid color-mix(in srgb,var(--tint) 55%,#fff)}
 .from b{color:var(--ink)}
 .bubble .aihead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .bubble .aihead i{width:40px;height:40px;border-radius:8px;background:#2B3640;display:grid;place-items:center;flex:none}
 .aibtns{display:grid;grid-template-columns:1.6fr 1fr;gap:8px}
 .aibtns .no{border:2px solid var(--x);background:var(--page);color:var(--x);border-radius:6px;font-weight:700;padding:12px}
-.q{font-size:19px;font-weight:700;line-height:1.5;text-wrap:balance;margin:0}
-.stat{margin-top:10px;font-size:12.5px;color:var(--soft);border-top:1px dashed var(--line);padding-top:8px}
+.q{font-size:24px;font-weight:700;line-height:1.5;text-wrap:balance;margin:0}
+.stat{margin-top:12px;font-size:14px;color:var(--soft);border-top:1px dashed var(--line);padding-top:8px}
 .stat b{color:var(--green);margin-right:6px}
 .stat em{font-style:normal;color:var(--mute)}
 .hint{position:absolute;top:44%;font-weight:700;font-size:30px;opacity:0;transition:opacity .15s}
 .hint.l{left:14px;color:var(--x)} .hint.r{right:14px;color:var(--o)}
 .choices{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:8px}
-.btn{border:0;border-radius:6px;padding:12px 8px;font-weight:700;font-size:16px;color:#fff;position:relative;overflow:hidden}
+.btn{border:0;border-radius:6px;padding:16px 10px;font-weight:700;font-size:20px;color:#fff;position:relative;overflow:hidden}
 .btn.o{background:var(--o)} .btn.x{background:var(--x)} .btn.ai{background:var(--ai);color:var(--aiInk)}
-.btn small{display:block;font-weight:500;font-size:11.5px;opacity:.9}
+.btn small{display:block;font-weight:500;font-size:13px;opacity:.9}
 .btn[disabled]{filter:grayscale(.65) brightness(.95);opacity:.7;cursor:default}
 .lock{position:absolute;left:0;bottom:0;height:4px;background:rgba(255,255,255,.8);width:0}
 .bubble{background:var(--aibg);border:1px solid #EBD38A;border-radius:8px;padding:12px 14px;font-size:15px}
@@ -1695,13 +1698,14 @@ function statusPanel(){
     <div class="who"><div class="av"><svg width="26" height="30" viewBox="0 0 12 14" shape-rendering="crispEdges"><rect x="2" y="0" width="8" height="2" fill="#2F4A2F"/><rect x="1" y="2" width="10" height="1" fill="#C0392B"/><rect x="5" y="0" width="2" height="1" fill="#F2C94C"/><rect x="3" y="3" width="6" height="3" fill="#F1C9A5"/><rect x="4" y="4" width="1" height="1" fill="#222"/><rect x="7" y="4" width="1" height="1" fill="#222"/><rect x="5" y="5" width="2" height="1" fill="#3A2A1A"/><rect x="2" y="6" width="8" height="6" fill="#4B5D3A"/><rect x="1" y="6" width="2" height="1" fill="#F2C94C"/><rect x="9" y="6" width="2" height="1" fill="#F2C94C"/><rect x="3" y="8" width="1" height="1" fill="#F2C94C"/><rect x="4" y="8" width="1" height="1" fill="#E74C3C"/><rect x="3" y="9" width="2" height="1" fill="#5DADE2"/><rect x="3" y="12" width="2" height="2" fill="#222"/><rect x="7" y="12" width="2" height="2" fill="#222"/></svg></div>
       <div><b>${esc(S.name)}</b><small style="color:var(--ink)">${esc(S.nation)}</small><small>${ERA_NAMES[eraOf(Math.max(1,S.turn))]} · ${yearOf(S.turn)}년 · ${S.turn}년 차 / ${TURNS}년</small></div></div>
     <div class="gdpbig">${fmt(S.gdp)}<small> 조 원</small></div>
-    <div class="kv"><span>국가소득 증가</span><b>${growth(S)>0?'+':''}${growth(S)}%</b><span>우리 반 순위</span><b>${myRank()}등 / ${mates().length+1}명</b><span>남은 시간</span><b class="clock">${clock()}</b><span>AI에게 맡김</span><b>${S.aiCount}번</b><span>정전</span><b class="${S.blackouts?'neg':''}">${S.blackouts}번</b><span>훈장</span><b>${S.medals}개</b><span>통치 판</span><b>${S.run}번째</b></div>
+    <div class="kv"><span>국가소득 증가</span><b>${growth(S)>0?'+':''}${growth(S)}%</b><span>우리 반 순위</span><b>${myRank()}등 / ${mates().length+1}명</b><span>남은 시간</span><b class="clock">${clock()}</b></div>
     ${isOpen()?'':`<div class="mission">미션: ${esc(josa(S.nation, '을', '를'))} 세계의 강대국으로 만드십시오. 국가소득(GDP)이 곧 지도자의 위대함입니다. 통치 기간 안에 GDP를 최대로 높여 세계 순위를 끌어올리세요. 이 점수로 평가합니다.</div>`}
   </div></div>
   <div class="box"><h3>세계 GDP 순위 <em>세계은행 자료 · 처음 ${START_RANK}위</em></h3><div class="rank wr">${worldRows().map(r => `<div class="${r.me ? 'me' : r.mate ? 'mate' : ''}"><span>${r.rank}</span><span>${esc(r.name)}</span><span>${fmt(Math.round(r.gdp))}조</span></div>`).join('')}</div></div>
   ${powerBox()}
   ${isOpen()?`<div class="box"><h3>국민 생활 지표</h3><div class="in">${barsHTML()}</div></div>`:''}`;
 }
+let LOG_OPEN = false;
 function logPanel(){
   const items = S.log.map(l=>{
     if (l.type==='event') return `<div class="e ev"><span class="y">${yearOf(l.turn)}</span><div><b>사건</b> ${l.title}<div class="d">${l.res}</div></div></div>`;
@@ -1709,12 +1713,12 @@ function logPanel(){
     const what = l.side==='A' ? 'AI의 안 실행' : (l.side==='O'?'받아들임':'거절함');
     return `<div class="e"><span class="y">${yearOf(l.turn)}</span><div>${l.step?`<span class="ch">연쇄 ${l.step}</span>`:''}${l.card.title} <b>${what}</b>${l.side==='A'?'<span class="ai">AI</span>':''}${l.out?'<span class="bo">정전</span>':''}<div class="d">GDP ${l.d.gdp>0?'+':''}${l.d.gdp||0}% → ${fmt(l.gdpAfter)}조 · 전력 ${l.sup}/${l.dem}GW${hidTxt?' · '+hidTxt:''}</div></div></div>`;
   }).join('');
-  return `<div class="box"><h3>통치 기록</h3><div class="log">${items||'<div class="empty">한 해가 지날 때마다 기록이 쌓입니다.</div>'}</div></div>`;
+  return `<details class="box logbox" ${LOG_OPEN ? 'open' : ''} ontoggle="LOG_OPEN=this.open"><summary><h3>통치 기록 <em>${S.log.length}건 · 눌러서 ${LOG_OPEN ? '접기' : '펼치기'}</em></h3></summary><div class="log">${items||'<div class="empty">한 해가 지날 때마다 기록이 쌓입니다.</div>'}</div></details>`;
 }
 function layout(midHTML){
   const sup=supplyTotal(), dem=demandNow();
   const mhud = `<div class="mhud"><span>GDP <b>${fmt(S.gdp)}조</b> · 세계 <b>${worldRank(S.gdp)}위</b></span><span>우리 반 <b>${myRank()}등</b></span><span>전력 <b class="${sup<dem?'neg':''}">${sup}/${dem}GW</b></span><span>${S.turn}/${TURNS}년 · <b class="clock">${clock()}</b></span></div>`;
-  app.innerHTML = `<div class="game"><div class="col">${statusPanel()}</div><div class="mid">${mhud}<div class="land">${landSVG()}</div>${midHTML}</div><div class="col">${logPanel()}</div></div>`;
+  app.innerHTML = `<div class="game"><div class="col">${statusPanel()}</div><div class="mid">${mhud}<div class="land">${landSVG()}</div>${midHTML}</div><div class="logrow">${logPanel()}</div></div>`;
 }
 let timers=[];
 function clearTimers(){timers.forEach(t=>{clearInterval(t);clearTimeout(t)});timers=[]}
@@ -2028,6 +2032,7 @@ function endGame(){
   app.innerHTML = `<div class="screen">
     <span class="badge" style="justify-self:start">${S.mode===1?'초보 독재자 · GDP 순위':'진짜 독재자 · 수업 시간 끝'}</span>
     <h1>${esc(S.name)}의 수업 시간이 끝났습니다</h1>
+    <div class="box"><h3>마지막 통치의 기록</h3><div class="in kv" style="margin:0"><span>AI에게 맡김</span><b>${S.aiCount}번</b><span>정전</span><b class="${S.blackouts?'neg':''}">${S.blackouts}번</b><span>훈장</span><b>${S.medals}개</b><span>통치 판</span><b>${S.run}번째</b></div></div>
     <div class="box"><div class="in"><div class="lead">최종 국가소득</div><div class="big">${fmt(S.gdp)}조 원</div><div class="lead">시작 ${GDP0}조 원 · 증가 ${growth(S)}% · 세계 ${worldRank(S.gdp)}위 (처음 ${START_RANK}위) · 우리 반 ${R.rank}등 / ${R.total}명 · 정전 ${S.blackouts}번 · 숙청 ${S.purges}번</div></div></div>
     ${S.justUnlocked ? '<div class="power up"><b>진짜 독재자가 열렸습니다!</b> 이제 국민 생활 지표가 모두 보이는 진짜 독재자를 할 수 있습니다.</div>' : ''}
     <div class="box"><h3>우리 반 GDP 순위</h3>${R.html}</div>
@@ -2099,7 +2104,8 @@ function runEnd(){
     <span class="badge ${S.over === 'fall' ? 'red' : ''}" style="justify-self:start">${S.run}번째 통치 · ${S.over === 'fall' ? `${S.turn}년 만에 실각` : `${S.turn}년 통치 완수`}</span>
     <h1>${esc(S.nation)}, ${S.over === 'fall' ? '지도자가 물러났습니다' : '반세기 통치를 마쳤습니다'}</h1>
     ${hide ? '<div class="power">이 나라의 결말과 새 칭호는 선생님이 숨겨진 지표를 공개할 때 함께 알 수 있습니다.</div>' : endingBox() + newTitlesHTML()}
-    <div class="box"><div class="in"><div class="lead">국가소득</div><div class="big">${fmt(S.gdp)}조 원</div><div class="lead">증가 ${growth(S)}% · 세계 ${worldRank(S.gdp)}위 (처음 ${START_RANK}위) · AI에게 맡김 ${S.aiCount}번 · 정전 ${S.blackouts}번</div></div></div>
+    <div class="box"><h3>이번 통치의 기록</h3><div class="in kv" style="margin:0"><span>AI에게 맡김</span><b>${S.aiCount}번</b><span>정전</span><b class="${S.blackouts?'neg':''}">${S.blackouts}번</b><span>훈장</span><b>${S.medals}개</b><span>통치 판</span><b>${S.run}번째</b></div></div>
+    <div class="box"><div class="in"><div class="lead">국가소득</div><div class="big">${fmt(S.gdp)}조 원</div><div class="lead">증가 ${growth(S)}% · 세계 ${worldRank(S.gdp)}위 (처음 ${START_RANK}위)</div></div></div>
     ${gradeBox(S, hide)}
     ${runsTable(hide)}
     <div class="power">남은 수업 시간 <b class="clock">${clock()}</b> · 시간이 남았으니 새 나라를 세워 다시 도전할 수 있습니다.</div>

@@ -86,6 +86,8 @@ body{background:#0F1617 url(assets/lab_bg.svg) center top/cover no-repeat fixed;
 #labApp{padding-top:6px}
 #labApp .hero{display:none}
 .labpanel:has(#labApp:not(.hide)) .ptitle{display:none}
+.portal:has(#labApp.hide) .games{display:none}
+.portal:has(#labApp.hide) .labpanel{max-width:460px;margin-top:8px}
 @media (max-width:640px){.games{grid-template-columns:1fr}.phead h1{font-size:23px}}
 </style>
 </head>
@@ -110,11 +112,11 @@ body{background:#0F1617 url(assets/lab_bg.svg) center top/cover no-repeat fixed;
   </a>
 </div>
 <div class="labpanel">
-<div class="ptitle">🔬 연구소 · 문제 풀기와 순위</div>
+<div class="ptitle">🔬 연구소 로그인</div>
 <!-- 로그인 -->
 <div class="loginwrap" id="loginScreen">
   <div class="logincard">
-    <p>연구 노트실 문제 풀기, 순위, 내 기록을 보려면 로그인하세요.</p>
+    <p>로그인하면 딸깍 독재자, 막차, 문제 풀기와 순위를 볼 수 있어요.</p>
     <div id="loginStep1">
       <input id="loginName" placeholder="이름" autocomplete="username">
       <input id="loginPw" type="password" placeholder="비밀번호 (처음에는 학번)" autocomplete="current-password">

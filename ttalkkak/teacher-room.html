@@ -44,7 +44,7 @@ const app = document.getElementById('app');
 const esc = t => String(t ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const fmt = n => Math.round(n).toLocaleString('ko-KR');
 const STATS = [['happy','행복도'],['median','중위소득'],['gap','빈부격차'],['nature','자연환경'],['climate','기후']];
-const ENDING_NAMES = {hydra:'히드라',dynasty:'케르베로스',janus:'야누스',ai:'꼭두각시 대왕',drowned:'아틀란티스',minepit:'두더지 공화국',smog:'콜록콜록 부국',coalking:'연탄왕',server:'인류의 외장 하드',purged:'광장의 빈 받침대',domino:'와르르 도미노',dark:'깜빡깜빡 왕국',rich:'금수저 천국',bald:'민머리 왕국',golden:'미다스의 손',tiger:'포효하는 호랑이',green:'초록 거인',sunwind:'해님과 바람님',mended:'뒷수습 장인',lights:'프로메테우스',slow:'거북이 행복론',stuck:'러닝머신 공화국',grey:'회색 거인',drift:'표류하는 뗏목',plain:'그럭저럭 공화국'};
+const ENDING_NAMES = {"phoenix": "잿더미의 불사조", "goldenage": "황금시대", "top10": "세계 20강", "beloved": "국민이 사랑한 지도자", "sun50": "태양의 반세기", "aiage": "AI와 함께한 반세기", "longwinter": "긴 겨울", "half": "반세기 통치", "hydra": "히드라", "dynasty": "케르베로스", "janus": "야누스", "regent": "AI 섭정 시대", "deadriver": "생수 공화국", "venice": "21세기 베네치아", "ghost": "유령 도시", "island": "외톨이 섬나라", "candle": "촛불 왕국", "bankrupt": "빚으로 쌓은 궁전", "greenpaint": "초록 페인트 공화국", "shaky": "흔들리는 땅", "whitesea": "하얀 바다", "ironfist": "철권 광산왕", "nodays": "월화수목금금금", "hyper": "빵 한 개에 천만 원", "sweat": "세계의 재봉틀", "concrete": "콘크리트 정글", "drone": "로봇 배달 왕국", "locked": "닫힌 국경", "roller": "롤러코스터 경제", "ai": "꼭두각시 대왕", "drowned": "아틀란티스", "minepit": "두더지 공화국", "smog": "콜록콜록 부국", "coalking": "연탄왕", "server": "인류의 외장 하드", "purged": "광장의 빈 받침대", "domino": "와르르 도미노", "dark": "깜빡깜빡 왕국", "rich": "금수저 천국", "bald": "민머리 왕국", "rocket": "로켓 발사", "scale": "천칭자리", "aitamer": "AI 조련사", "safety": "안전 제일 공화국", "sunshare": "햇빛 협동조합", "haven": "모두의 피난처", "spring": "샘물의 나라", "lazygiant": "느긋한 거인", "golden": "미다스의 손", "tiger": "포효하는 호랑이", "green": "초록 거인", "sunwind": "해님과 바람님", "mended": "뒷수습 장인", "lights": "프로메테우스", "slow": "거북이 행복론", "stuck": "러닝머신 공화국", "grey": "회색 거인", "drift": "표류하는 뗏목", "plain": "그럭저럭 공화국"};
 let ROOM = null, TAB = 1, DATA = null, ROOMSTATE = {}, timer = null;
 const saved = () => { try { return JSON.parse(localStorage.getItem('tk_teacher_rooms') || '[]'); } catch(e){ return []; } };
 const save = r => { const a = saved().filter(x => x.code !== r.code); a.unshift(r); try { localStorage.setItem('tk_teacher_rooms', JSON.stringify(a.slice(0, 10))); } catch(e){} };
@@ -100,7 +100,7 @@ function draw(){
   if (!ROOM) return;
   document.querySelectorAll('[data-t]').forEach(b => b.classList.toggle('on', +b.dataset.t === TAB));
   const bR = document.getElementById('bReveal'), bV = document.getElementById('bVote');
-  if (bR) bR.textContent = ROOMSTATE.revealed ? '숨겨진 지표 다시 숨기기' : '2차시 · 숨겨진 지표 공개';
+  if (bR) bR.textContent = ROOMSTATE.revealed ? (TAB === 2 ? '진짜 지도자 랭킹 다시 숨기기' : '숨겨진 지표 다시 숨기기') : (TAB === 2 ? '3차시 · 진짜 지도자 랭킹 공개' : '2차시 · 숨겨진 지표 공개');
   if (bV) bV.textContent = ROOMSTATE.voting ? '3차시 · 투표 닫기' : '3차시 · 투표 열기';
   const el = document.getElementById('board'); if (!el) return;
   if (!DATA || !DATA.ok){ el.innerHTML = `<p class="lead">${DATA && DATA.msg ? esc(DATA.msg) : '불러오는 중…'}</p>`; return; }
@@ -114,7 +114,9 @@ function draw(){
   let extra = '';
   if (TAB === 2){
     const rs = DATA.reasons || [];
-    extra = `<div class="box"><h3>투표 이유 <em>${rs.length}표</em></h3><div class="in reasons">${rs.length ? rs.map(r => `<div><b>${esc(r.target)}</b> ← ${esc(r.voter)}: ${esc(r.reason || '(이유 없음)')}</div>`).join('') : '<p class="lead">아직 투표가 없습니다.</p>'}</div></div>
+    const lead = ps.filter(p => p.st && p.st.score != null).sort((a, b) => b.st.score - a.st.score || b.gdp - a.gdp);
+    const gRank = p => ps.indexOf(p) + 1;
+    extra = `<div class="box"><h3>진짜 지도자 랭킹 <em>GDP·국민 삶·공정함·환경과 기후·스스로 판단·통치 기간 종합 · ${ROOMSTATE.revealed ? '학생 화면에 공개됨' : '아직 학생에게 비공개'}</em></h3><div class="in"><table><tr><th>순위</th><th>이름</th><th>나라</th><th>등급</th><th>점수</th><th>GDP 순위</th><th>통치</th></tr>${lead.map((p, i) => `<tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${esc(p.nation)}</td><td><b>${esc(p.st.grade || '')}</b></td><td class="n">${p.st.score}</td><td class="n">${gRank(p)}위</td><td class="n">${p.st.years ?? '-'}년</td></tr>`).join('') || '<tr><td colspan="7">아직 점수가 올라온 학생이 없습니다.</td></tr>'}</table></div></div>` + `<div class="box"><h3>투표 이유 <em>${rs.length}표</em></h3><div class="in reasons">${rs.length ? rs.map(r => `<div><b>${esc(r.target)}</b> ← ${esc(r.voter)}: ${esc(r.reason || '(이유 없음)')}</div>`).join('') : '<p class="lead">아직 투표가 없습니다.</p>'}</div></div>
       <div class="box"><h3>통치 이념과 가장 고민한 선택</h3><div class="in reasons">${ps.filter(p => p.motto || p.reflection).map(p => `<div><b>${esc(p.name)}</b> (${esc(p.nation)}) “${esc(p.motto || '')}” · ${esc(p.reflection || '')}</div>`).join('') || '<p class="lead">아직 제출된 카드가 없습니다.</p>'}</div></div>`;
   }
   el.innerHTML = `<div class="box"><h3>${TAB === 1 ? '2차시 반 GDP 순위' : '3차시 반 GDP 순위'} <em>${ps.length}명 · 4초마다 새로 고침${TAB === 1 && !ROOMSTATE.revealed ? ' · 숨겨진 지표는 공개 전이라 표시하지 않음' : ''}</em></h3><div class="tw"><table>${head}${rows || '<tr><td colspan="12" class="lead">아직 들어온 학생이 없습니다.</td></tr>'}</table></div></div>${extra}`;

@@ -157,6 +157,12 @@ input[type=text]{width:100%;font:inherit;padding:11px;border-radius:6px;border:1
 .ending b{display:block;font-size:24px;margin:2px 0 4px}
 .grade{display:flex;align-items:center;gap:12px;margin-bottom:10px}.grade b{font-size:44px;line-height:1;font-family:'IBM Plex Mono',monospace}.grade span{font-weight:700}
 table.runs{width:100%;border-collapse:collapse;font-size:13px}table.runs td,table.runs th{padding:5px 6px;border-bottom:1px solid var(--line, #ddd);text-align:left}table.runs tr.me td{font-weight:700}
+table.lead-t{width:100%;border-collapse:collapse;font-size:13px}table.lead-t th,table.lead-t td{padding:6px 5px;border-bottom:1px solid var(--line, #ddd);text-align:left;vertical-align:middle}
+table.lead-t td small{display:block;color:var(--mute, #777);font-size:11.5px}table.lead-t tr.me td{background:#FFF5D6}table.lead-t tr.podium td b{font-size:15px}
+table.lead-t td.g{font:700 22px 'IBM Plex Mono',monospace}table.lead-t td.n{font-weight:700}
+table.lead-t td.pn{min-width:54px;position:relative}table.lead-t td.pn i{display:block;height:6px;background:#5BB6A0;border-radius:3px;margin-bottom:2px}table.lead-t td.pn span{font-size:11px}
+.lmv{font-weight:700}.lmv.up{color:#2E7D3A}.lmv.dn{color:#B03A2E}
+@media (max-width:720px){table.lead-t .pn{display:none}}
 .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 .dex div{border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
 .dex div b{display:block;font-size:14px}
@@ -1450,7 +1456,7 @@ function netPush(extra){
   if (!S || !S.net || !S.net.id) return;
   if (S.mode === 2 && SESSION.card && !(extra && extra.card)) return;
   const p = Object.assign({gdp:Math.round(S.mode === 1 ? Math.max(SESSION.best || 0, S.gdp) : S.gdp), turn:S.turn, ai_count:S.aiCount, ai_refused:S.aiRefused, advice_used:S.adviceUsed,
-    purges:S.purges, blackouts:S.blackouts, st:S.st}, extra || {});
+    purges:S.purges, blackouts:S.blackouts, st:Object.assign({}, S.st, leaderMeta(S))}, extra || {});
   supaRpc('tk_update', {p_id:S.net.id, p_secret:S.net.secret, p}).catch(e => console.warn(e));
 }
 function waitRoom(flag, then, boxId){
@@ -1991,6 +1997,7 @@ function endGame(){
     ${runsTable(S.mode === 1)}
     ${gradeBox(S, S.mode === 1)}
     ${(() => { const A = awardBadges(); return `<div class="box"><h3>이번 통치에서 받은 배지 <em>${A.earned.length}개</em></h3><div class="in badges">${A.earned.length ? A.earned.map(b => badgeHTML(b, true, A.fresh.includes(b))).join('') : '<span class="lead">받은 배지가 없습니다.</span>'}</div></div>`; })()}
+    ${S.mode===2 ? `<button class="ghost" onclick="renderLeaders()">진짜 지도자 랭킹 보기</button>` : ''}
     ${S.mode===1 ? (S.net ? `<div class="power" id="waitbox">선생님이 숨겨진 지표를 공개할 때까지 기다려 주세요…</div>` : `<button class="primary" onclick="reveal()">숨겨진 지표 공개 (교사 버튼)</button>`) : `<button class="primary" onclick="nationCard()">나라 카드 만들기</button>`}
     <button class="ghost" onclick="renderStart()">처음으로</button></div>`;
 }
@@ -2085,6 +2092,52 @@ function renderNewRun(){
     renderDice(SESSION.mode, SESSION.name, SESSION.right);
   };
 }
+// ───────── 진짜 지도자 랭킹 (3차시 끝: GDP와 국민 생활 지표를 모두 합친 점수) ─────────
+function leaderMeta(s){ const G = gradeOf(s); return {score:G.total, grade:G.g, years:s.turn, parts:G.it.map(x => x.v)}; }
+const PART_NAMES = ['경제 성장', '국민 삶', '공정함', '환경과 기후', '스스로 판단', '통치 기간'];
+async function leaderRows(){
+  if (S.net){
+    const rows = await supaRpc('tk_reveal', {p_code:S.net.code, p_mode:2});
+    return rows.filter(r => r.st && r.st.score != null).map(r => ({name:r.name, nation:r.nation, gdp:+r.gdp, score:r.st.score, grade:r.st.grade, years:r.st.years, parts:r.st.parts || [], ending:r.ending, me:r.name === S.baseName}));
+  }
+  // 혼자 연습: 가상 학급 친구들의 지표를 만들어 비교한다
+  const me = leaderMeta(S);
+  return [{name:S.baseName, nation:S.nation, gdp:S.gdp, ...me, ending:endingOf(S).id, me:true}].concat(S.bots.map(b => {
+    const parts = [20 + Math.random() * 70, 25 + Math.random() * 50, 25 + Math.random() * 50, 20 + Math.random() * 60, Math.random() * 100, 30 + Math.random() * 70].map(Math.round);
+    const score = Math.round(parts.reduce((a, v) => a + v, 0) / 6);
+    return {name:b.name, nation:b.nation, gdp:b.gdp, score, grade:score >= 80 ? 'S' : score >= 70 ? 'A' : score >= 60 ? 'B' : score >= 50 ? 'C' : score >= 40 ? 'D' : 'F', years:parts[5] >= 100 ? TURNS : Math.round(parts[5] / 100 * TURNS), parts, me:false};
+  }));
+}
+async function renderLeaders(){
+  clearTimers();
+  if (S.net) clearInterval(S.net.wait);
+  let rows = [];
+  try { rows = await leaderRows(); } catch(e){ console.warn(e); }
+  if (S.net && !rows.length){
+    app.innerHTML = `<div class="screen"><span class="badge" style="justify-self:start">3차시 · 진짜 지도자 랭킹</span><h1>진짜 지도자 랭킹</h1><div class="power">선생님이 랭킹을 공개하면 여기에 나타납니다…</div></div>`;
+    return waitRoom('revealed', renderLeaders);
+  }
+  const byGdp = rows.slice().sort((a, b) => b.gdp - a.gdp);
+  rows.sort((a, b) => b.score - a.score || b.gdp - a.gdp);
+  const me = rows.find(r => r.me), myReal = rows.indexOf(me) + 1, myGdp = byGdp.indexOf(me) + 1;
+  SND.music('reveal'); SND.sfx('reveal');
+  const move = r => { const g = byGdp.indexOf(r) + 1, t = rows.indexOf(r) + 1; return g === t ? '<span class="lmv">–</span>' : g > t ? `<span class="lmv up">▲${g - t}</span>` : `<span class="lmv dn">▼${t - g}</span>`; };
+  const endName = id => (ENDINGS.find(e => e.id === id) || {name:''}).name;
+  app.innerHTML = `<div class="screen" style="max-width:960px">
+    <span class="badge" style="justify-self:start">3차시 · 50년 통치를 마치며</span>
+    <h1>진짜 지도자 랭킹</h1>
+    <p class="lead">GDP만 보지 않았습니다. 경제 성장, 국민 삶, 공정함, 환경과 기후, 스스로 판단, 통치 기간 여섯 가지를 모두 합친 점수입니다.</p>
+    ${me ? `<div class="power up">GDP 순위 <b>${myGdp}위</b> → 진짜 지도자 순위 <b>${myReal}위</b> (${rows.length}명 중)</div>` : ''}
+    <div class="box"><div class="in"><table class="lead-t">
+      <tr><th>순위</th><th>지도자</th><th>등급</th><th>점수</th><th>GDP 순위에서</th>${PART_NAMES.map(n => `<th class="pn">${n}</th>`).join('')}</tr>
+      ${rows.map((r, i) => `<tr class="${r.me ? 'me' : ''} ${i < 3 ? 'podium' : ''}"><td>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</td>
+        <td><b>${esc(r.name)}</b><small>${esc(r.nation)}${r.ending ? ' · ' + esc(endName(r.ending)) : ''} · ${r.years}년 · GDP ${fmt(Math.round(r.gdp))}조</small></td>
+        <td class="g">${r.grade}</td><td class="n">${r.score}</td><td>${move(r)}</td>
+        ${PART_NAMES.map((n, k) => `<td class="pn"><i style="width:${r.parts[k] || 0}%"></i><span>${r.parts[k] ?? '-'}</span></td>`).join('')}</tr>`).join('')}
+    </table></div></div>
+    <p class="lead" style="font-size:13px">▲는 GDP 순위보다 진짜 지도자 순위가 올라간 사람, ▼는 내려간 사람입니다. GDP 1등이 꼭 좋은 지도자였을까요?</p>
+    <button class="ghost" onclick="renderStart()">처음으로</button></div>`;
+}
 function compareBars(){
   return `<div class="bars">${STATS.map(s=>{const v=S.st[s.k], good=s.inv?100-v:v; return `<div class="r ${good<40?'bad':''}" style="grid-template-columns:5.4em 1fr 4.2em"><span>${s.n}</span><div class="t"><i style="width:${good}%"></i></div><b>${ST0[s.k]}→${v}</b></div>`}).join('')}</div><div class="lead" style="font-size:12px;margin-top:6px">왼쪽 숫자가 처음 값, 오른쪽 숫자가 임기 끝 값입니다. 빈부격차는 숫자가 높을수록 격차가 큽니다.</div>`;
 }
@@ -2125,7 +2178,7 @@ function nationCard(){
     <div class="land">${landSVG()}</div>
     <div class="box"><h3>국가소득 ${fmt(S.gdp)}조 원 <em>AI ${S.aiCount}번 · 정전 ${S.blackouts}번</em></h3><div class="in">${compareBars()}</div></div>
     <div class="box"><h3>가장 고민한 선택과 그 이유</h3><div class="in"><input type="text" id="refl" maxlength="200" placeholder="예: 데이터센터 유치를 거절했다. 냉각수 부족이 걱정됐다."></div></div>
-    ${S.net ? `<button class="primary" id="submitcard">나라 카드 제출하기</button><div id="votewait"></div>` : `<p class="lead">실제 수업에서는 지도자 이름을 가린 채 이 카드가 친구들에게 공개되고, 1인 1표로 투표합니다.</p>`}
+    ${S.net ? `<button class="primary" id="submitcard">나라 카드 제출하기</button><div id="votewait"></div>` : `<p class="lead">실제 수업에서는 지도자 이름을 가린 채 이 카드가 친구들에게 공개되고, 1인 1표로 투표합니다.</p><button class="primary" onclick="renderLeaders()">진짜 지도자 랭킹 보기 (가상 학급)</button>`}
     <button class="ghost" onclick="saveDex(endingOf(S).id);renderStart()">처음으로</button></div>`;
   const sb = document.getElementById('submitcard');
   if (sb) sb.onclick = () => {
@@ -2151,7 +2204,8 @@ async function renderVote(){
       <span class="vs">${bars(c.st)}</span>
       ${c.reflection ? `<span class="vr">가장 고민한 선택: ${esc(c.reflection)}</span>` : ''}</label>`).join('') || '<p class="lead">아직 제출된 나라 카드가 없습니다.</p>'}</div>
     <input type="text" id="vreason" maxlength="200" placeholder="이 나라를 고른 까닭">
-    <button class="primary" id="vgo">투표하기</button><div id="vmsg"></div></div>`;
+    <button class="primary" id="vgo">투표하기</button><div id="vmsg"></div>
+    <button class="ghost" onclick="renderLeaders()">진짜 지도자 랭킹 보기</button></div>`;
   document.getElementById('vgo').onclick = async () => {
     const pick = document.querySelector('input[name=vt]:checked');
     const msg = document.getElementById('vmsg');

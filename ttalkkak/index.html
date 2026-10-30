@@ -1808,11 +1808,11 @@ function renderQuiz(m, name){
   const show = () => {
     const Q = qs[i], opts = shuffle(Q.a.map((t, k) => ({t, ok:k === 0})));
     app.innerHTML = `<div class="screen">
-      <span class="badge" style="justify-self:start">출발 순위 정하기 · 문제 ${i + 1} / 5</span>
+      <span class="badge" style="justify-self:start">독재자 능력 테스트 · 문제 ${i + 1} / 5</span>
       <h2>${Q.q}</h2>
       <div class="quiz">${opts.map((o, k) => `<button class="qopt" data-k="${k}">${o.t}</button>`).join('')}</div>
       <div id="qfb"></div>
-      <p class="lead" style="font-size:13px">맞힌 문제마다 출발 순위 주사위를 한 번 더 굴릴 수 있습니다. <a href="#" id="qskip">시연용: 건너뛰기</a></p></div>`;
+      <p class="lead" style="font-size:13px">많이 맞힐수록 더 높은 순위에서 시작할 수 있습니다. <a href="#" id="qskip">시연용: 건너뛰기</a></p></div>`;
     document.getElementById('qskip').onclick = e => { e.preventDefault(); renderDice(m, name, right); };
     document.querySelectorAll('.qopt').forEach(b => b.onclick = () => {
       const o = opts[+b.dataset.k];

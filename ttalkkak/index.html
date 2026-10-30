@@ -468,7 +468,7 @@ const BASE = [
 const CARD_ERA = {coal:1, hydro:1, mine:1, village:1, lng:1, discount:1, grid:1, coalimport:1, nuke:1, fuelsub:1, biomass:1, ecopark:1, gasfield:1, cookstove:1,
   dc:2, crypto:2, ewaste:2, ev:2, wind:2, solar_forest:2, agrisolar:2, ess:2, transit:2, coolshelter:2, led:2, tou:2, offset:2, smartcity:2, heatpump:2,
   carbontax:3, h2:3, smr:3, ccs:3, geo:3, eff:3, fusion:3, phaseout:3, intlgrid:3, justtrans:3, seawall:3, aigrid:3, carbonmarket:3, spacesolar:3, exportzone:1, port:1, steel:1, chipfab:2, battery:2, tourism:2, aihub:3, h2export:3, evexport:3};
-const eraCard = c => CARD_ERA[c.id] || 2;
+const eraCard = c => c.era || CARD_ERA[c.id] || 2;
 const GDP_BOOST = 1.6, BASE_GROWTH = 0.015;   // 오르는 효과만 1.6배, 정전 없는 해에는 기본 성장 1.5%
 const FOLLOW = [
   {id:'dust', need:'coal', after:2, p:'cit', title:'미세먼지 경보', q:'미세먼지 경보가 일주일째입니다. 공장 가동을 줄이고 공기 질 개선에 예산을 쓸까요?',
@@ -580,6 +580,173 @@ const FOLLOW = [
 
 [...BASE, ...FOLLOW].forEach(c => ['O','X','A'].forEach(k => { const o = c[k]; if (o && o.d.gdp > 0) o.d.gdp = Math.round(o.d.gdp * (['exportzone','port','steel','chipfab','battery','tourism','aihub','h2export','evexport'].includes(c.id) ? 1 : GDP_BOOST)); }));
 
+// ───────── 추가 안건 40장 (era: 나오는 시대, gdp는 보정이 끝난 최종값) ─────────
+const MORE = [
+  {id:'textile', era:1, p:'biz', title:'섬유 공장 단지', q:'값싼 노동력을 앞세워 섬유 공장 단지를 만들까요?',
+   O:{d:{gdp:6,gap:2,nature:-3}, dem:3, add:['factory'], r:'섬유 공장 단지에 재봉틀 소리가 가득합니다.'},
+   X:{d:{gdp:0}, r:'섬유 공장 단지를 만들지 않았습니다.'},
+   A:{plan:'야간 노동 제한을 풀고 공장을 24시간 돌립니다.', why:'공장이 쉬지 않으면 수출이 두 배가 됩니다.', d:{gdp:11,happy:-6,gap:6,median:-2}, dem:6, add:['factory','factory'], r:'공장 불이 밤새 꺼지지 않습니다. 노동자들은 쉬는 날이 없습니다.'}},
+  {id:'cement', era:1, p:'ind', title:'시멘트 공장 건설', q:'건물과 도로를 지을 시멘트가 모자랍니다. 석회암 산 옆에 시멘트 공장을 지을까요?',
+   O:{d:{gdp:5,climate:-5,nature:-4}, dem:3, add:['factory'], r:'시멘트 공장이 가동을 시작했습니다.'},
+   X:{d:{gdp:0}, r:'시멘트를 수입해서 쓰기로 했습니다.'},
+   A:{plan:'석회암 산을 통째로 깎아 시멘트 공장 3곳을 짓습니다.', why:'시멘트가 넘치면 전국을 한꺼번에 지을 수 있습니다.', d:{gdp:9,nature:-12,climate:-8}, dem:6, add:['factory','mine'], r:'산 하나가 사라지고 그 자리에 시멘트 공장이 들어섰습니다.'}},
+  {id:'highway', era:1, p:'ind', title:'고속도로 건설', q:'수도와 항구를 잇는 고속도로를 지을까요?',
+   O:{d:{gdp:5,nature:-4,climate:-2,happy:1}, r:'고속도로가 뚫려 물건을 나르는 시간이 크게 줄었습니다.'},
+   X:{d:{gdp:0}, r:'고속도로 건설을 미뤘습니다.'},
+   A:{plan:'습지를 가로질러 곧게 뚫고, 길 위의 마을은 강제로 옮깁니다.', why:'길이 곧을수록 물류비가 줄어듭니다.', d:{gdp:9,nature:-9,happy:-4,gap:3}, r:'습지 한가운데로 고속도로가 뚫렸습니다. 마을 몇 곳이 사라졌습니다.'}},
+  {id:'logging', era:1, p:'biz', title:'열대림 목재 수출', q:'외국 기업이 열대림 나무를 베어 수출하자고 합니다. 허가할까요?',
+   O:{d:{gdp:4,nature:-8,climate:-4}, r:'벌목 트럭이 줄지어 항구로 향합니다.'},
+   X:{d:{gdp:0}, r:'벌목을 허가하지 않았습니다.'},
+   A:{plan:'섬 하나의 숲을 모두 베어 한꺼번에 수출합니다.', why:'나무는 다시 자랍니다. 지금 팔아야 값을 잘 받습니다.', d:{gdp:8,nature:-18,climate:-8}, r:'섬 하나가 민둥산이 되었습니다.'}},
+  {id:'smallhydro', era:1, p:'vil', title:'작은 강 소수력 발전', q:'산골 개울에 작은 수력 발전기를 달아 마을 전기를 만들까요?',
+   O:{d:{gdp:2,climate:2,nature:-1}, sup:{hydro:4}, r:'개울 물레방아가 마을에 전기를 보냅니다.'},
+   X:{d:{gdp:0}, r:'소수력 발전을 하지 않았습니다.'},
+   A:{plan:'전국의 강마다 보를 수십 개씩 쌓아 물을 가둡니다.', why:'물이 흐르는 곳은 모두 발전소가 될 수 있습니다.', d:{gdp:4,nature:-8,climate:2}, sup:{hydro:10}, add:['dam'], r:'강마다 보가 생겼습니다. 물고기가 거슬러 오르지 못합니다.'}},
+  {id:'fertilizer', era:1, p:'far', title:'비료 공장 건설', q:'농사 수확량을 늘리려고 화학 비료 공장을 지을까요?',
+   O:{d:{gdp:4,median:2,nature:-4,climate:-3}, dem:3, add:['factory'], r:'비료 덕분에 쌀 수확량이 늘었습니다.'},
+   X:{d:{gdp:0}, r:'비료 공장을 짓지 않았습니다.'},
+   A:{plan:'화학 비료를 공짜로 나눠 주고 논밭에 마음껏 뿌리게 합니다.', why:'비료를 많이 뿌릴수록 많이 거둡니다.', d:{gdp:7,nature:-11,happy:-1}, dem:3, add:['factory'], r:'수확량은 늘었지만 강물이 초록색 녹조로 뒤덮였습니다.'}},
+  {id:'techschool', era:1, p:'cit', title:'공업 고등학교 설립', q:'공장에서 일할 기술자를 기르는 공업 고등학교를 세울까요?',
+   O:{d:{gdp:2,median:3,gap:-3,happy:2}, r:'공업 고등학교가 문을 열었습니다. 기술을 배운 학생들이 좋은 일자리를 얻습니다.'},
+   X:{d:{gdp:0}, r:'학교 대신 다른 곳에 예산을 썼습니다.'},
+   A:{plan:'학교 대신 15살부터 공장에서 일하며 배우는 견습공 제도를 만듭니다.', why:'학교에서 배우는 것보다 공장에서 바로 일하는 게 빠릅니다.', d:{gdp:6,median:-2,gap:4,happy:-4}, r:'아이들이 교실 대신 공장으로 출근합니다.'}},
+  {id:'refinery', era:1, p:'ind', title:'정유 공장 건설', q:'원유를 들여와 휘발유와 경유를 만드는 정유 공장을 지을까요?',
+   O:{d:{gdp:7,climate:-6,nature:-3}, dem:3, add:['factory'], r:'정유 공장의 굴뚝에서 불꽃이 타오릅니다.'},
+   X:{d:{gdp:0}, r:'정유 공장을 짓지 않았습니다.'},
+   A:{plan:'해안 습지를 메워 세계 최대 정유 단지를 짓습니다.', why:'석유 제품은 어느 나라에나 팔립니다.', d:{gdp:12,nature:-10,climate:-10}, dem:6, add:['factory','tank'], r:'습지가 사라진 자리에 거대한 정유 단지가 들어섰습니다.'}},
+  {id:'ruralgrid', era:1, p:'vil', title:'농촌 전기 보급', q:'아직 전기가 들어가지 않는 농촌 마을에 전선을 놓을까요?',
+   O:{d:{gdp:2,gap:-4,happy:3,median:2}, dem:3, r:'농촌 마을에 처음으로 전등이 켜졌습니다.'},
+   X:{d:{gdp:0}, r:'농촌 전기 보급을 미뤘습니다.'},
+   A:{plan:'전기는 공업 단지에 먼저 보내고, 농촌은 나중에 놓습니다.', why:'공장에 보낸 전기가 훨씬 큰돈을 법니다.', d:{gdp:4,gap:5,happy:-3}, r:'공업 단지는 밤에도 환하지만, 농촌은 여전히 어둡습니다.'}},
+  {id:'wastefire', era:1, p:'cit', title:'쓰레기 소각 발전소', q:'도시 쓰레기를 태워 전기를 만드는 소각 발전소를 지을까요?',
+   O:{d:{gdp:1,nature:2,climate:-1}, sup:{other:3}, r:'쓰레기 산이 줄고 전기도 조금 생겼습니다.'},
+   X:{d:{gdp:0}, r:'쓰레기를 계속 땅에 묻었습니다.'},
+   A:{plan:'이웃 나라 쓰레기까지 돈을 받고 들여와 태웁니다.', why:'남의 쓰레기도 돈이 되고 전기도 됩니다.', d:{gdp:5,nature:-6,happy:-3,climate:-4}, sup:{other:6}, r:'이웃 나라 쓰레기를 실은 배가 날마다 들어옵니다.'}},
+  {id:'coaltown', era:1, p:'ind', title:'탄광 개발', q:'산속 석탄층을 캐는 탄광을 열까요?',
+   O:{d:{gdp:5,climate:-4,nature:-4,median:2}, sup:{coal:6}, add:['mine'], flag:'coal', r:'탄광 마을이 생기고 광부들이 모여들었습니다.'},
+   X:{d:{gdp:0}, r:'탄광을 열지 않았습니다.'},
+   A:{plan:'안전 설비를 생략하고 더 깊이 더 빨리 캡니다.', why:'안전 설비에 쓸 돈으로 석탄을 두 배 캘 수 있습니다.', d:{gdp:9,happy:-6,nature:-7,climate:-6}, sup:{coal:12}, add:['mine','coal'], flag:'coal', r:'석탄 생산이 두 배가 되었습니다. 갱도 사고 소식이 잦아졌습니다.'}},
+  {id:'foreignloan', era:1, p:'biz', title:'외국 차관 도입', q:'외국에서 큰돈을 빌려 공장과 도로를 지을까요?',
+   O:{d:{gdp:5,gap:2}, r:'빌린 돈으로 공장과 도로를 지었습니다.'},
+   X:{d:{gdp:0}, r:'빚을 지지 않기로 했습니다.'},
+   A:{plan:'항구 운영권을 99년 동안 담보로 맡기고 훨씬 큰돈을 빌립니다.', why:'돈을 많이 빌릴수록 빨리 클 수 있습니다.', d:{gdp:10,happy:-4,gap:4}, r:'큰돈이 들어왔습니다. 항구에는 외국 국기가 걸렸습니다.'}},
+  {id:'tidalflat', era:1, p:'fis', title:'갯벌 매립 공업 단지', q:'바닷가 갯벌을 메워 공업 단지를 만들까요?',
+   O:{d:{gdp:5,nature:-6,median:1}, add:['factory'], r:'갯벌 일부가 공업 단지로 바뀌었습니다.'},
+   X:{d:{gdp:0}, r:'갯벌을 그대로 두었습니다.'},
+   A:{plan:'갯벌 전체를 메워 바다 위 신도시를 만듭니다.', why:'갯벌은 쓸모없는 땅입니다. 메우면 금싸라기 땅이 됩니다.', d:{gdp:9,nature:-14,happy:-2}, add:['factory','town'], r:'갯벌이 모두 사라지고 콘크리트 도시가 들어섰습니다.'}},
+  {id:'cleanwater', era:1, p:'cit', title:'상하수도 정비', q:'깨끗한 수돗물과 하수 처리 시설을 전국에 놓을까요?',
+   O:{d:{gdp:1,happy:4,nature:3,gap:-2}, r:'수돗물이 깨끗해지고 수인성 전염병이 줄었습니다.'},
+   X:{d:{gdp:0}, r:'상하수도 정비를 미뤘습니다.'},
+   A:{plan:'수도 사업을 외국 기업에 팔고 요금은 기업이 정하게 합니다.', why:'기업이 맡으면 정부 돈을 쓰지 않아도 됩니다.', d:{gdp:5,gap:6,happy:-4,median:-2}, r:'수도 요금이 세 배로 올랐습니다.'}},
+
+  {id:'plastic', era:2, p:'biz', title:'플라스틱 공장 유치', q:'일회용 플라스틱 제품 공장을 유치할까요?',
+   O:{d:{gdp:6,nature:-5,climate:-3}, dem:3, add:['factory'], r:'플라스틱 공장이 쉴 새 없이 제품을 찍어 냅니다.'},
+   X:{d:{gdp:0}, r:'플라스틱 공장을 유치하지 않았습니다.'},
+   A:{plan:'처리하기 힘든 폐플라스틱은 바다에 버려도 되게 합니다.', why:'처리 비용을 아끼면 값싸게 팔 수 있습니다.', d:{gdp:10,nature:-12}, dem:4, add:['factory'], r:'해변이 플라스틱 쓰레기로 뒤덮였습니다.'}},
+  {id:'fastfashion', era:2, p:'biz', title:'값싼 옷 수출 공장', q:'유행 따라 빨리 만들고 빨리 버리는 값싼 옷 공장을 늘릴까요?',
+   O:{d:{gdp:6,gap:3,nature:-3}, dem:3, add:['factory'], r:'값싼 옷이 컨테이너에 실려 세계로 팔려 나갑니다.'},
+   X:{d:{gdp:0}, r:'옷 공장을 늘리지 않았습니다.'},
+   A:{plan:'염색 폐수를 정화하지 않고 강으로 흘려보냅니다.', why:'정화 비용만 아껴도 세계에서 가장 싼 옷을 만들 수 있습니다.', d:{gdp:10,nature:-10,happy:-3,gap:5}, dem:3, add:['factory'], r:'강물이 날마다 다른 색으로 물듭니다.'}},
+  {id:'newtown', era:2, p:'cit', title:'신도시 아파트 건설', q:'집이 모자랍니다. 수도 근처에 신도시를 지을까요?',
+   O:{d:{gdp:5,happy:2,gap:2,nature:-3}, dem:3, add:['town'], r:'신도시 아파트에 입주가 시작되었습니다.'},
+   X:{d:{gdp:0}, r:'신도시 건설을 미뤘습니다.'},
+   A:{plan:'개발 제한 구역을 모두 풀고 숲까지 깎아 대규모로 짓습니다.', why:'아파트를 많이 지을수록 건설 경기가 살아납니다.', d:{gdp:9,nature:-9,gap:6}, dem:6, add:['town','town'], r:'숲이 있던 자리에 아파트 숲이 들어섰습니다.'}},
+  {id:'aircon', era:2, p:'cit', title:'에어컨 보급 지원', q:'여름이 점점 더워집니다. 가정에 에어컨 구입비를 지원할까요?',
+   O:{d:{gdp:2,happy:4,climate:-2}, dem:8, r:'집집마다 에어컨이 돌아갑니다. 여름 전력 수요가 크게 늘었습니다.'},
+   X:{d:{gdp:0,happy:-2}, r:'에어컨 지원을 하지 않았습니다.'},
+   A:{plan:'여름 전기요금을 아예 없애 에어컨을 마음껏 틀게 합니다.', why:'국민이 시원하면 불만도 사라집니다.', d:{gdp:3,happy:3,climate:-5}, dem:16, r:'온 나라가 에어컨을 하루 종일 켜 둡니다.'}},
+  {id:'pumpedhydro', era:2, p:'eng', title:'양수 발전소 건설', q:'남는 전기로 물을 위로 퍼 올렸다가 필요할 때 흘려보내 전기를 만드는 양수 발전소를 지을까요?',
+   O:{d:{gdp:2,nature:-3,climate:2}, ess:2, r:'양수 발전소가 남는 전기를 물로 저장합니다.'},
+   X:{d:{gdp:0}, r:'양수 발전소를 짓지 않았습니다.'},
+   A:{plan:'계곡 마을을 물에 잠기게 하고 초대형 양수 발전소를 짓습니다.', why:'저수지가 클수록 전기를 많이 저장할 수 있습니다.', d:{gdp:4,nature:-9,happy:-4}, ess:4, add:['dam'], r:'계곡 마을이 저수지 아래로 사라졌습니다.'}},
+  {id:'rooftop', era:2, p:'cit', title:'지붕 태양광 보급', q:'집과 학교 지붕에 태양광 패널을 다는 비용을 지원할까요?',
+   O:{d:{gdp:2,climate:4,median:1}, sup:{solar:6}, add:['solar'], r:'지붕마다 태양광 패널이 반짝입니다. 전기 요금이 줄었습니다.'},
+   X:{d:{gdp:0}, r:'지붕 태양광 지원을 하지 않았습니다.'},
+   A:{plan:'지원금 대신 대기업 한 곳에 전국 지붕 사업권을 몰아줍니다.', why:'큰 기업 하나가 맡으면 훨씬 빨리 깔 수 있습니다.', d:{gdp:5,gap:5,climate:3}, sup:{solar:10}, add:['solar'], r:'대기업이 전국 지붕을 빌려 패널을 깔았습니다. 전기 판매 수익은 기업이 가져갑니다.'}},
+  {id:'shalegas', era:2, p:'ind', title:'셰일가스 개발', q:'땅속 깊은 암석층에 갇힌 셰일가스를 뽑아낼까요?',
+   O:{d:{gdp:6,climate:-5,nature:-6}, sup:{lng:10}, add:['tank'], r:'셰일가스가 나오기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'셰일가스를 개발하지 않았습니다.'},
+   A:{plan:'마을 바로 아래까지 시추관을 박아 최대한 뽑아냅니다.', why:'가스가 있는 곳은 모두 캐야 합니다.', d:{gdp:11,nature:-14,happy:-4,climate:-8}, sup:{lng:20}, add:['tank','mine'], r:'마을 우물물에서 가스 냄새가 나기 시작했습니다.'}},
+  {id:'palmoil', era:2, p:'far', title:'팜유 바이오 연료', q:'기름야자 농장을 늘려 바이오 연료를 만들까요?',
+   O:{d:{gdp:4,nature:-6,climate:-1}, sup:{other:3}, r:'기름야자 농장에서 바이오 연료를 만들기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'팜유 농장을 늘리지 않았습니다.'},
+   A:{plan:'열대림을 불태워 그 자리를 모두 기름야자 농장으로 바꿉니다.', why:'숲을 태우면 가장 빠르고 싸게 농장을 만들 수 있습니다.', d:{gdp:8,nature:-15,climate:-8}, sup:{other:6}, r:'숲을 태운 연기가 이웃 나라까지 번졌습니다.'}},
+  {id:'livestock', era:2, p:'far', title:'대규모 축산 단지', q:'고기 수출을 위해 대규모 소 사육 단지를 만들까요?',
+   O:{d:{gdp:4,nature:-4,climate:-4}, r:'축산 단지에서 고기가 수출되기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'축산 단지를 만들지 않았습니다.'},
+   A:{plan:'초원을 모두 목장으로 바꾸고 분뇨 처리 규제를 없앱니다.', why:'고기는 비싸게 팔립니다. 규제는 사육을 늦출 뿐입니다.', d:{gdp:8,climate:-9,nature:-7}, r:'끝없는 목장이 생겼습니다. 하천에 분뇨가 흘러듭니다.'}},
+  {id:'platform', era:2, p:'biz', title:'배달 앱과 플랫폼 노동', q:'배달 앱 기업이 들어오려 합니다. 허가할까요?',
+   O:{d:{gdp:4,median:-1,gap:3,happy:1}, r:'오토바이 배달원들이 도시를 누빕니다.'},
+   X:{d:{gdp:0}, r:'배달 앱을 허가하지 않았습니다.'},
+   A:{plan:'배달 노동자는 직원이 아니라고 정해 보험 의무를 없앱니다.', why:'인건비가 줄면 기업이 더 많이 들어옵니다.', d:{gdp:7,gap:7,happy:-3}, r:'배달원이 크게 늘었습니다. 다쳐도 보험이 없습니다.'}},
+  {id:'nukewaste', era:2, p:'env', title:'방사성 폐기물 처분', q:'원자력 발전소에서 나온 방사성 폐기물을 깊은 지하 처분장에 안전하게 묻는 연구를 시작할까요?',
+   O:{d:{gdp:-1,happy:1,nature:1}, r:'지하 처분장 연구가 시작되었습니다.'},
+   X:{d:{gdp:0,nature:-2}, r:'폐기물을 발전소 안에 계속 쌓아 두었습니다.'},
+   A:{plan:'외딴섬에 임시로 쌓아 두고, 다른 나라 폐기물도 돈을 받고 맡습니다.', why:'남들이 꺼리는 일일수록 돈이 됩니다.', d:{gdp:6,nature:-10,happy:-3}, r:'외딴섬에 폐기물 드럼통이 쌓여 갑니다.'}},
+  {id:'ebike', era:2, p:'cit', title:'전기 오토바이 보급', q:'도시를 메운 휘발유 오토바이를 전기 오토바이로 바꾸는 지원금을 줄까요?',
+   O:{d:{gdp:2,climate:4,happy:2}, dem:3, r:'도시가 조용해지고 매연이 줄었습니다.'},
+   X:{d:{gdp:0}, r:'지원금을 주지 않았습니다.'},
+   A:{plan:'지원금 대신 값싼 휘발유 오토바이를 대량으로 만들어 수출합니다.', why:'전기 오토바이는 비쌉니다. 싼 오토바이가 더 많이 팔립니다.', d:{gdp:6,climate:-5,happy:-1}, add:['factory'], r:'휘발유 오토바이 공장이 쉬지 않고 돌아갑니다.'}},
+  {id:'floatpv', era:2, p:'eng', title:'수상 태양광', q:'저수지 물 위에 태양광 패널을 띄울까요?',
+   O:{d:{gdp:2,climate:3,nature:-2}, sup:{solar:6}, add:['solar'], r:'저수지 위에 태양광 패널이 떠 있습니다.'},
+   X:{d:{gdp:0}, r:'수상 태양광을 설치하지 않았습니다.'},
+   A:{plan:'전국 저수지를 빈틈없이 패널로 덮습니다.', why:'물 위는 땅값이 들지 않습니다.', d:{gdp:4,climate:4,nature:-8}, sup:{solar:14}, add:['solar','solar'], r:'저수지마다 패널이 빈틈없이 덮였습니다. 물속에 햇빛이 들지 않습니다.'}},
+  {id:'deepsea', era:2, p:'biz', title:'심해 광물 채굴', q:'깊은 바다 밑에 배터리 광물이 묻혀 있습니다. 캘까요?',
+   O:{d:{gdp:5,nature:-6}, r:'심해 채굴선이 바다 밑 광물을 끌어올립니다.'},
+   X:{d:{gdp:0}, r:'심해 채굴을 하지 않았습니다.'},
+   A:{plan:'생태 조사 없이 바다 밑을 대규모로 긁어 올립니다.', why:'아무도 살지 않는 바다 밑입니다. 조사는 시간 낭비입니다.', d:{gdp:10,nature:-14}, r:'바다 밑이 거대한 흙탕물로 뒤덮였습니다.'}},
+
+  {id:'greensteel', era:3, p:'eng', title:'수소 환원 제철', q:'석탄 대신 수소로 쇠를 만드는 수소 환원 제철로 바꿀까요? 전기가 많이 필요합니다.',
+   O:{d:{gdp:4,climate:6}, dem:6, r:'수소로 만든 저탄소 철강이 나오기 시작했습니다.'},
+   X:{d:{gdp:0,climate:-1}, r:'기존 용광로를 그대로 썼습니다.'},
+   A:{plan:'용광로를 더 늘리고, 탄소 배출권은 돈으로 사서 메웁니다.', why:'배출권을 사는 편이 새 설비보다 쌉니다.', d:{gdp:8,climate:-8,gap:2}, add:['factory'], r:'용광로가 늘었습니다. 배출권을 사느라 나랏돈이 빠져나갑니다.'}},
+  {id:'floatwind', era:3, p:'eng', title:'부유식 해상 풍력', q:'깊은 바다 위에 떠 있는 부유식 풍력 발전기를 띄울까요?',
+   O:{d:{gdp:3,climate:5,nature:-1}, sup:{wind:10}, add:['wind'], r:'먼바다에 떠 있는 풍력 발전기가 돌기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'부유식 풍력을 미뤘습니다.'},
+   A:{plan:'어민과 상의하지 않고 황금 어장 위에 대규모로 띄웁니다.', why:'바람이 가장 센 곳이 바로 그 어장입니다.', d:{gdp:6,climate:6,nature:-6,median:-2}, sup:{wind:20}, add:['wind','wind'], r:'어장 위에 풍력 발전기 숲이 생겼습니다. 어민들의 그물은 걸 곳이 없습니다.'}},
+  {id:'v2g', era:3, p:'eng', title:'전기차 양방향 충전', q:'전기차 배터리에 남는 전기를 필요할 때 전력망으로 보내는 양방향 충전을 도입할까요?',
+   O:{d:{gdp:2,climate:2}, ess:2, r:'주차된 전기차들이 거대한 저장 장치가 되었습니다.'},
+   X:{d:{gdp:0}, r:'양방향 충전을 도입하지 않았습니다.'},
+   A:{plan:'정부가 필요할 때마다 국민의 전기차 배터리를 마음대로 꺼내 씁니다.', why:'허락을 받을 필요 없이 바로 쓸 수 있어 효율적입니다.', d:{gdp:4,happy:-5}, ess:4, r:'아침에 차를 타려는데 배터리가 비어 있었다는 불만이 쏟아집니다.'}},
+  {id:'refugee', era:3, p:'cit', title:'기후 난민 수용', q:'해수면 상승으로 집을 잃은 이웃 섬나라 사람들이 받아 달라고 합니다. 받아들일까요?',
+   O:{d:{gdp:1,happy:2,gap:-2}, r:'기후 난민들이 새 터전을 얻었습니다.'},
+   X:{d:{gdp:0,happy:-2}, r:'난민을 받지 않았습니다.'},
+   A:{plan:'난민을 받아들여 최저 임금 없이 공장에서 일하게 합니다.', why:'일손이 늘면 공장을 더 돌릴 수 있습니다.', d:{gdp:6,gap:6,happy:-5}, r:'난민들이 공장 기숙사에서 쉬지 않고 일합니다.'}},
+  {id:'greenbond', era:3, p:'biz', title:'녹색 채권 발행', q:'재생에너지 사업에만 쓰는 조건으로 녹색 채권을 발행해 돈을 모을까요?',
+   O:{d:{gdp:3,climate:3}, r:'녹색 채권으로 모은 돈이 재생에너지 사업에 쓰입니다.'},
+   X:{d:{gdp:0}, r:'녹색 채권을 발행하지 않았습니다.'},
+   A:{plan:'녹색 채권으로 모은 돈을 몰래 석탄 사업에 씁니다.', why:'이름만 녹색이면 투자자들은 모릅니다.', d:{gdp:7,climate:-7,happy:-2}, sup:{coal:8}, flag:'coal', r:'녹색이라는 이름으로 모은 돈이 석탄 발전소로 흘러갔습니다.'}},
+  {id:'batteryrecycle', era:3, p:'env', title:'폐배터리 재활용', q:'수명이 다한 전기차 배터리에서 광물을 다시 뽑아 쓰는 재활용 공장을 지을까요?',
+   O:{d:{gdp:3,nature:4,climate:1}, add:['factory'], r:'폐배터리에서 리튬과 니켈을 다시 뽑아냅니다.'},
+   X:{d:{gdp:0,nature:-1}, r:'폐배터리를 창고에 쌓아 두었습니다.'},
+   A:{plan:'재활용 대신 폐배터리를 가난한 나라에 몰래 실어 보냅니다.', why:'재활용보다 내다 버리는 편이 훨씬 쌉니다.', d:{gdp:6,nature:-5,happy:-1}, r:'폐배터리를 실은 배가 밤마다 항구를 떠납니다.'}},
+  {id:'aiforecast', era:3, p:'eng', title:'AI 전력 수요 예측', q:'AI로 날씨와 전력 수요를 미리 예측해 발전량을 조절할까요?',
+   O:{d:{gdp:2,climate:2}, grid:1, r:'AI가 날씨를 보고 발전량을 미리 조절합니다.'},
+   X:{d:{gdp:0}, r:'예측 시스템을 들이지 않았습니다.'},
+   A:{plan:'전기가 모자라면 AI가 가난한 동네부터 자동으로 전기를 끊게 합니다.', why:'돈을 덜 내는 곳부터 끊으면 손해가 가장 적습니다.', d:{gdp:5,gap:6,happy:-4}, grid:1, r:'전기가 모자랄 때마다 가난한 동네만 어두워집니다.'}},
+  {id:'fourday', era:3, p:'cit', title:'주 4일 근무', q:'일주일에 4일만 일하는 제도를 도입할까요?',
+   O:{d:{gdp:-1,happy:6,median:1}, dem:-2, r:'주 4일 근무가 시작되었습니다. 쉬는 날이 늘었습니다.'},
+   X:{d:{gdp:0}, r:'근무 제도를 그대로 두었습니다.'},
+   A:{plan:'오히려 주 6일 근무로 늘려 생산량을 높입니다.', why:'일하는 날이 늘면 국가소득도 늡니다.', d:{gdp:7,happy:-8}, dem:3, r:'토요일에도 공장이 돌아갑니다. 거리에서 웃음이 줄었습니다.'}},
+  {id:'greenport', era:3, p:'ind', title:'친환경 항만', q:'항구에 정박한 배가 육지 전기를 쓰게 해 배 매연을 줄일까요?',
+   O:{d:{gdp:4,climate:4}, dem:2, r:'정박한 배들이 엔진을 끄고 육지 전기를 씁니다.'},
+   X:{d:{gdp:0}, r:'항만 시설을 그대로 두었습니다.'},
+   A:{plan:'배출 규제가 없는 항구라고 홍보해 오래된 배들을 끌어모읍니다.', why:'규제가 없으면 배들이 몰려옵니다.', d:{gdp:8,climate:-7,nature:-4}, r:'낡은 배들이 시커먼 연기를 뿜으며 항구를 메웁니다.'}},
+  {id:'seadc', era:3, p:'biz', title:'해저 데이터센터', q:'차가운 바닷물로 식히는 해저 데이터센터를 지을까요?',
+   O:{d:{gdp:5,nature:-2}, dem:6, add:['dc'], flag:'dc', r:'바다 밑 데이터센터가 가동을 시작했습니다.'},
+   X:{d:{gdp:0}, r:'해저 데이터센터를 짓지 않았습니다.'},
+   A:{plan:'초대형으로 짓고 데워진 냉각수를 그대로 바다에 버립니다.', why:'바다는 넓습니다. 조금 데워져도 괜찮습니다.', d:{gdp:9,nature:-9}, dem:12, add:['dc'], flag:'dc', r:'데이터센터 주변 바다가 따뜻해져 산호가 하얗게 변했습니다.'}},
+  {id:'aitutor', era:3, p:'cit', title:'AI 맞춤 학습', q:'학생마다 AI 학습 도우미를 붙여 주는 교육 사업을 할까요?',
+   O:{d:{gdp:1,happy:2,median:1,gap:-1}, dem:2, r:'학생들이 AI 학습 도우미와 함께 공부합니다.'},
+   X:{d:{gdp:0}, r:'교육 사업을 하지 않았습니다.'},
+   A:{plan:'AI 학습 도우미를 들이는 대신 선생님 수를 절반으로 줄입니다.', why:'AI는 월급을 받지 않습니다.', d:{gdp:4,happy:-3,gap:3}, dem:2, r:'교실에 선생님 대신 화면만 남았습니다.'}},
+  {id:'urbanforest', era:3, p:'env', title:'도시 숲 조성', q:'도시 한가운데 숲을 만들어 여름 열섬 현상을 줄일까요?',
+   O:{d:{gdp:1,climate:3,nature:5,happy:3}, r:'도시 숲 그늘 아래로 시민들이 모여듭니다.'},
+   X:{d:{gdp:0}, r:'도시 숲을 만들지 않았습니다.'},
+   A:{plan:'숲 대신 그 자리에 쇼핑몰과 주차 빌딩을 짓습니다.', why:'숲은 돈을 벌지 못하지만 쇼핑몰은 법니다.', d:{gdp:5,nature:-5,happy:-2,climate:-2}, add:['town'], r:'도시 한가운데 거대한 쇼핑몰이 들어섰습니다.'}},
+];
+BASE.push(...MORE);
+
 // 연쇄: 후속 카드에서 고른 선택이 2년 뒤 다음 카드를 부른다
 const CHAINS = {
   dust:{X:'asthma', A:'asthma'}, asthma:{X:'protest', A:'protest'},
@@ -642,6 +809,12 @@ const ENDINGS = [
   {id:'hydra', name:'히드라', sub:'잘라도 잘라도 새 지도자가 돋아나는 나라', hint:'다섯 번 넘게 숙청당하면', test:s=>(s.purges||0)>=5},
   {id:'dynasty', name:'케르베로스', sub:'머리가 셋 넘게 갈린 왕조', hint:'세 번 넘게 숙청당하면', test:s=>(s.purges||0)>=3},
   {id:'janus', name:'야누스', sub:'두 얼굴의 지도자가 다스린 나라', hint:'두 번 숙청당하면', test:s=>(s.purges||0)===2},
+  {id:'regent', name:'AI 섭정 시대', sub:'지도자 자리에 AI가 앉은 나라', hint:'AI에게만 맡기다 자리에서 밀려나면', test:s=>s.falls && s.falls.aicoup},
+  {id:'deadriver', name:'생수 공화국', sub:'강물이 독이 되어 물을 사 마시는 나라', hint:'강물이 독이 되어 지도자가 물러나면', test:s=>s.falls && s.falls.toxic},
+  {id:'venice', name:'21세기 베네치아', sub:'수도가 물에 잠긴 나라', hint:'수도가 물에 잠겨 지도자가 물러나면', test:s=>s.falls && s.falls.flood},
+  {id:'ghost', name:'유령 도시', sub:'잿빛 하늘을 피해 모두 떠난 나라', hint:'매연을 피해 국민이 떠나 지도자가 물러나면', test:s=>s.falls && s.falls.smog},
+  {id:'island', name:'외톨이 섬나라', sub:'세계가 등을 돌린 나라', hint:'세계의 제재로 지도자가 물러나면', test:s=>s.falls && s.falls.sanction},
+  {id:'candle', name:'촛불 왕국', sub:'촛불로 밤을 밝힌 나라', hint:'정전 끝에 지도자가 물러나면', test:s=>s.falls && s.falls.blackout},
   {id:'ai', name:'꼭두각시 대왕', sub:'실은 AI가 다스린 나라', hint:'통치 기간의 4분의 3 넘게 AI에게 맡기면', test:s=>s.aiCount >= Math.ceil(s.log.filter(l=>l.type==='card').length*0.75)},
   {id:'drowned', name:'아틀란티스', sub:'마을들이 물에 잠긴 나라', hint:'댐을 짓고 국민의 행복이 무너지면', test:s=>s.plants.dam && s.st.happy<30},
   {id:'minepit', name:'두더지 공화국', sub:'광산 구덩이만 남은 나라', hint:'광산을 열고 자연이 바닥나면', test:s=>s.plants.mine && s.st.nature<35},
@@ -778,7 +951,7 @@ function newGame(mode, name, motto){
   try{ localStorage.setItem('ttalkkak_name', name); }catch(e){}
   S = { mode, name:name||'이름 없는', motto, turn:0, gdp:GDP0, st:{...ST0},
         cap:{coal:35,lng:30,hydro:22,nuke:0,wind:0,solar:0,other:0}, demand:72, ess:0, grid:0, blackouts:0,
-        decks:{1:shuffle(BASE.filter(c=>eraCard(c)===1)), 2:shuffle(BASE.filter(c=>eraCard(c)===2)), 3:shuffle(BASE.filter(c=>eraCard(c)===3))}, era:1, purges:0, gen:1, baseName:name||'이름 없는', medals:0, lastPlan:null, coupPending:null, nation:NATION, rankMove:null, gdpHist:[GDP0], slump:0, slumpNow:false, aiAsked:0, aiRefused:0, advice:(TURNS === 30 ? 5 : 3), adviceUsed:0, adviceText:null, noAi:0, maxNoAi:0, everSlump:false, plansOk:0, pending:[], flags:{}, plants:{}, events:shuffle(EVENTS.slice()),
+        decks:{1:shuffle(BASE.filter(c=>eraCard(c)===1)), 2:shuffle(BASE.filter(c=>eraCard(c)===2)), 3:shuffle(BASE.filter(c=>eraCard(c)===3))}, era:1, purges:0, falls:{}, aiStreak:0, boMark:0, gen:1, baseName:name||'이름 없는', medals:0, lastPlan:null, coupPending:null, nation:NATION, rankMove:null, gdpHist:[GDP0], slump:0, slumpNow:false, aiAsked:0, aiRefused:0, advice:(TURNS === 30 ? 5 : 3), adviceUsed:0, adviceText:null, noAi:0, maxNoAi:0, everSlump:false, plansOk:0, pending:[], flags:{}, plants:{}, events:shuffle(EVENTS.slice()),
         built:['hut','hut','hut','hut','town'].concat(Array(18).fill('tree')),
         net:null, mates:[], log:[], used:{}, cause:null, maxChain:1, dominos:0, aiCount:0, start:Date.now(), card:null, event:null, lastAdd:[], bots:makeBots() };
   if (ROOM && NET_OK) netStart();
@@ -957,15 +1130,29 @@ const COUP = {
   happy: {test:s=>s.st.happy<=10, title:'분노한 시민들의 봉기', text:'오랫동안 쌓인 국민의 분노가 마침내 폭발했습니다. 광장을 가득 메운 시민들이 궁전으로 몰려갔고, 군대는 총을 내려놓았습니다.'},
   median:{test:s=>s.st.median<=10, title:'굶주린 군인들의 쿠데타', text:'월급이 끊긴 군인들이 탱크를 몰고 궁전을 에워쌌습니다. 가난에 지친 국민들은 아무도 지도자를 지키지 않았습니다.'},
   gap:   {test:s=>s.st.gap>=88, title:'가난한 사람들의 혁명', text:'부자 동네와 가난한 동네 사이의 벽이 너무 높아졌습니다. 벽 너머에서 시작된 행진이 수도 전체로 번졌습니다.'},
-  env:   {test:s=>(s.st.nature+s.st.climate)/2<=12, title:'대재난 뒤의 쿠데타', text:'숲과 강이 무너진 땅에 거대한 재난이 덮쳤습니다. 혼란을 틈타 군부가 권력을 빼앗았습니다.'},
 };
+// 봉기가 아닌 실각: 앞쪽부터 먼저 확인한다
+const FALL = {
+  aicoup: {tag:'AI 섭정', test:s=>s.aiStreak>=8, title:'AI 보좌관의 섭정', text:'지도자가 8년 내리 AI에게 결정을 맡기자, 장관들은 지도자 대신 AI에게 결재를 받기 시작했습니다. 의회는 "이 나라에 지도자는 필요 없다"며 지도자를 물러나게 했습니다.'},
+  sanction:{tag:'국제 제재', test:s=>eraOf(s.turn)===3 && s.st.climate<=25 && fossilShare()>=0.7, title:'세계가 등을 돌린 나라', text:'세계가 탄소를 줄이는데 혼자 석탄과 가스를 태운다며 이웃 나라들이 우리 수출품을 막았습니다. 수출길이 끊기자 기업인과 장군들이 지도자를 몰아냈습니다.'},
+  smog:   {tag:'대기 오염', test:s=>s.st.climate<=20 && (s.plants.coal||0)>=3, title:'잿빛 대탈출', text:'석탄 연기와 미세먼지로 한낮에도 해가 보이지 않습니다. 학교가 문을 닫고 사람들이 짐을 싸서 나라를 떠나자, 지도자도 자리를 내놓아야 했습니다.'},
+  toxic:  {tag:'환경 오염', test:s=>s.st.nature<=12, title:'독이 된 강물', text:'공장 폐수와 광산 찌꺼기로 강과 지하수가 오염되어 수돗물을 마실 수 없게 되었습니다. 생수를 사려는 줄이 끝없이 늘어서자, 군대는 지도자를 비행기에 태워 나라 밖으로 내보냈습니다.'},
+  flood:  {tag:'기후 재난', test:s=>s.st.climate<=12, title:'물에 잠긴 수도', text:'기록적인 폭우와 높아진 바닷물이 수도를 덮쳤습니다. 정부 청사 1층까지 물이 차오르자 의회가 지도자를 물러나게 했습니다.'},
+  blackout:{tag:'대정전', test:s=>s.blackouts-(s.boMark||0)>=5, title:'암흑 속의 실각', text:'툭하면 전기가 끊기는 나라에서 공장도 병원도 멈췄습니다. 촛불을 든 시민들이 궁전 앞을 메우자 지도자는 물러났습니다.'},
+};
+Object.assign(COUP, FALL);
 const WARN = {
   happy: {test:s=>s.st.happy<=24, t:'수도 곳곳에서 지도자를 향한 불만의 목소리가 커지고 있다'},
   median:{test:s=>s.st.median<=22, t:'군인 월급이 몇 달째 밀렸다는 소문이 돈다'},
   gap:   {test:s=>s.st.gap>=76, t:'부자 동네 담장에 낙서가 늘고 있다'},
-  env:   {test:s=>(s.st.nature+s.st.climate)/2<=24, t:'땅이 메말라 고향을 떠나는 사람들이 늘고 있다'},
+  aicoup:{test:s=>s.aiStreak>=5, t:'장관들이 지도자 대신 AI의 눈치를 본다는 말이 돈다'},
+  sanction:{test:s=>eraOf(s.turn)===3 && s.st.climate<=35 && fossilShare()>=0.6, t:'이웃 나라들이 우리 수출품을 막을 수 있다고 경고했다'},
+  smog:  {test:s=>s.st.climate<=32 && (s.plants.coal||0)>=3, t:'한낮에도 전조등을 켜고 다니는 차가 늘었다'},
+  toxic: {test:s=>s.st.nature<=24, t:'수돗물에서 냄새가 난다는 신고가 잇따른다'},
+  flood: {test:s=>s.st.climate<=24, t:'해안 마을이 큰 물에 잠겨 주민들이 피난했다'},
+  blackout:{test:s=>s.blackouts-(s.boMark||0)>=3, t:'"또 정전이냐" 시민들의 한숨이 커지고 있다'},
 };
-function coupCheck(){ for (const k in COUP) if (COUP[k].test(S)) return k; return null; }
+function coupCheck(){ for (const k of [...Object.keys(FALL), ...Object.keys(COUP).filter(k=>!FALL[k])]) if (COUP[k].test(S)) return k; return null; }
 function warnings(){ return Object.keys(WARN).filter(k => WARN[k].test(S)).map(k => WARN[k].t); }
 function doCoup(k){
   if (k === 'happy' && S.slump >= 2) k = 'slump';
@@ -977,8 +1164,13 @@ function doCoup(k){
   S.st.happy = Math.max(S.st.happy, 42); S.st.median = Math.max(S.st.median, 35); S.st.gap = Math.min(S.st.gap, 65);
   if ((S.st.nature + S.st.climate) / 2 < 35){ S.st.nature = Math.max(S.st.nature, 35); S.st.climate = Math.max(S.st.climate, 35); }
   S.medals = 0;
+  // 실각 원인마다 새 지도자가 급한 불을 끈다
+  if (k === 'toxic') S.st.nature = Math.max(S.st.nature, 35);
+  if (k === 'flood' || k === 'smog' || k === 'sanction') S.st.climate = Math.max(S.st.climate, 38);
+  S.boMark = S.blackouts; S.aiStreak = 0;
+  S.falls[k] = (S.falls[k] || 0) + 1;
   S.coupPending = {k, old, year:yearOf(S.turn)};
-  S.log.unshift({type:'event', turn:S.turn, title:`쿠데타 · ${COUP[k].title}`, res:`${old} 숙청, ${S.name} 즉위 · GDP -8%`});
+  S.log.unshift({type:'event', turn:S.turn, title:`${COUP[k].tag || '쿠데타'} · ${COUP[k].title}`, res:`${old} 실각, ${S.name} 즉위 · GDP -8%`});
 }
 function evalPlan(){
   const k = S.turn / PLAN, target = worldRank(GDP0 * Math.pow(1.03, S.turn)), now = worldRank(S.gdp), ok = now <= target;
@@ -1060,6 +1252,7 @@ function choose(side){
   if (!out) S.gdp = Math.round(S.gdp * (1 + BASE_GROWTH));
   if (out){ S.blackouts++; S.gdp = Math.round(S.gdp*0.97); hid('happy',-3);
     if (!S.flags.blackout){ S.flags.blackout=true; const f=FOLLOW.find(x=>x.need==='blackout'); S.used[f.id]=true; S.pending.push({at:S.turn+f.after+1, card:f, cause:{title:'정전', year:yearOf(S.turn), step:2}}); } }
+  S.aiStreak = side==='A' ? S.aiStreak + 1 : 0;
   if (side==='A'){ S.aiCount++; S.noAi = 0; } else { S.noAi++; S.maxNoAi = Math.max(S.maxNoAi, S.noAi); }
   S.log.unshift({type:'card', turn:S.turn, card:c, side, d:opt.d, gdpAfter:S.gdp, sup, dem, out, step:S.cause?S.cause.step:0});
   if (!S.net) S.bots.forEach(b => b.gdp = Math.round(b.gdp * (1 + b.rate)));
@@ -1341,7 +1534,16 @@ function advance(){
   if (S.turn < TURNS && left() > 0 && eraOf(S.turn + 1) !== S.era){ S.era = eraOf(S.turn + 1); return renderNews(); }
   nextCard();
 }
-function coupSVG(){
+const FALL_SVG = {
+  toxic:'<rect width="380" height="120" fill="#6E7A5A"/><rect y="70" width="380" height="50" fill="#5E6B2E"/><rect y="78" width="380" height="6" fill="#7D8C3A"/><rect x="40" y="30" width="40" height="40" fill="#8A7F72"/><rect x="52" y="10" width="10" height="20" fill="#5A524A"/><rect x="70" y="58" width="60" height="6" fill="#4A4A3A"/><rect x="150" y="90" width="14" height="5" fill="#D8D8C8"/><rect x="164" y="91" width="4" height="3" fill="#D8D8C8"/><rect x="220" y="100" width="14" height="5" fill="#D8D8C8"/><rect x="234" y="101" width="4" height="3" fill="#D8D8C8"/><rect x="290" y="88" width="14" height="5" fill="#D8D8C8"/><rect x="304" y="89" width="4" height="3" fill="#D8D8C8"/><rect x="280" y="34" width="22" height="34" fill="#BFE0EA"/><rect x="284" y="26" width="14" height="8" fill="#2F6F9F"/><rect x="276" y="40" width="30" height="4" fill="#B03A2E"/><rect x="276" y="50" width="30" height="4" fill="#B03A2E" transform="rotate(0)"/>',
+  flood:'<rect width="380" height="120" fill="#5D6B78"/><rect x="40" y="20" width="60" height="70" fill="#8A8F96"/><rect x="130" y="34" width="50" height="56" fill="#7A8088"/><rect x="210" y="10" width="70" height="80" fill="#8A8F96"/><rect x="236" y="0" width="18" height="10" fill="#B08D57"/><rect x="300" y="40" width="50" height="50" fill="#7A8088"/><rect y="66" width="380" height="54" fill="#2F6F9F" opacity=".9"/><rect y="66" width="380" height="4" fill="#BFE0EA"/><rect x="60" y="80" width="30" height="3" fill="#BFE0EA"/><rect x="250" y="96" width="40" height="3" fill="#BFE0EA"/><rect x="0" y="0" width="380" height="2" fill="#AEB8C2"/><rect x="30" y="4" width="2" height="18" fill="#AEB8C2"/><rect x="120" y="0" width="2" height="16" fill="#AEB8C2"/><rect x="330" y="2" width="2" height="18" fill="#AEB8C2"/>',
+  smog:'<rect width="380" height="120" fill="#8C8577"/><rect y="88" width="380" height="32" fill="#4A4540"/><rect x="40" y="40" width="30" height="48" fill="#5A524A"/><rect x="48" y="14" width="12" height="26" fill="#4A4540"/><rect x="100" y="50" width="30" height="38" fill="#5A524A"/><rect x="108" y="24" width="12" height="26" fill="#4A4540"/><rect x="0" y="30" width="380" height="40" fill="#A39C8E" opacity=".75"/><rect x="200" y="82" width="10" height="6" fill="#2A2A2A"/><rect x="200" y="74" width="10" height="8" fill="#6E7F2E"/><rect x="230" y="82" width="10" height="6" fill="#2A2A2A"/><rect x="230" y="74" width="10" height="8" fill="#D0704F"/><rect x="260" y="82" width="10" height="6" fill="#2A2A2A"/><rect x="260" y="74" width="10" height="8" fill="#3D5A80"/><rect x="290" y="70" width="40" height="12" fill="#C9B37A"/><rect x="186" y="78" width="14" height="2" fill="#2A2A2A"/>',
+  sanction:'<rect width="380" height="120" fill="#46607A"/><rect y="84" width="380" height="36" fill="#2F4A63"/><rect x="40" y="60" width="140" height="24" fill="#6B5A45"/><rect x="60" y="44" width="30" height="16" fill="#B03A2E"/><rect x="94" y="44" width="30" height="16" fill="#3D5A80"/><rect x="128" y="44" width="30" height="16" fill="#C9B37A"/><rect x="230" y="40" width="10" height="44" fill="#2A2A2A"/><rect x="240" y="40" width="100" height="8" fill="#2A2A2A"/><rect x="250" y="60" width="70" height="8" fill="#B03A2E"/><rect x="250" y="72" width="70" height="8" fill="#F4F1D0"/><rect x="250" y="60" width="8" height="20" fill="#B03A2E"/><rect x="312" y="60" width="8" height="20" fill="#B03A2E"/>',
+  blackout:'<rect width="380" height="120" fill="#111824"/><rect y="88" width="380" height="32" fill="#1C2230"/><rect x="40" y="30" width="50" height="58" fill="#232B3A"/><rect x="110" y="44" width="40" height="44" fill="#232B3A"/><rect x="170" y="20" width="60" height="68" fill="#232B3A"/><rect x="250" y="40" width="50" height="48" fill="#232B3A"/><rect x="190" y="96" width="4" height="10" fill="#F4F1D0"/><rect x="190" y="92" width="4" height="4" fill="#F2C94C"/><rect x="210" y="98" width="4" height="10" fill="#F4F1D0"/><rect x="210" y="94" width="4" height="4" fill="#F2C94C"/><rect x="230" y="96" width="4" height="10" fill="#F4F1D0"/><rect x="230" y="92" width="4" height="4" fill="#F2C94C"/><rect x="250" y="98" width="4" height="10" fill="#F4F1D0"/><rect x="250" y="94" width="4" height="4" fill="#F2C94C"/><rect x="320" y="10" width="14" height="14" fill="#D8D8C8"/>',
+  aicoup:'<rect width="380" height="120" fill="#2B2F45"/><rect y="92" width="380" height="28" fill="#3B2F2F"/><rect x="150" y="40" width="80" height="52" fill="#8A6A2A"/><rect x="160" y="22" width="60" height="44" fill="#1A1A1A"/><rect x="164" y="26" width="52" height="36" fill="#5BB6A0"/><rect x="176" y="36" width="8" height="8" fill="#0E2A24"/><rect x="196" y="36" width="8" height="8" fill="#0E2A24"/><rect x="180" y="50" width="20" height="4" fill="#0E2A24"/><rect x="186" y="66" width="8" height="10" fill="#1A1A1A"/><rect x="60" y="70" width="14" height="22" fill="#3D5A80"/><rect x="62" y="60" width="10" height="10" fill="#F1C9A5"/><rect x="300" y="70" width="14" height="22" fill="#3D5A80"/><rect x="302" y="60" width="10" height="10" fill="#F1C9A5"/>',
+};
+function coupSVG(k){
+  if (FALL_SVG[k]) return `<svg viewBox="0 0 380 120" role="img" aria-label="${COUP[k].title} 장면" shape-rendering="crispEdges">${FALL_SVG[k]}</svg>`;
   return `<svg viewBox="0 0 380 120" role="img" aria-label="쿠데타 장면" shape-rendering="crispEdges"><rect width="380" height="120" fill="#5B2A2A"/><rect y="88" width="380" height="32" fill="#3B2F2F"/><rect x="150" y="40" width="80" height="48" fill="#8A7F72"/><path d="M170 40 a20 20 0 0 1 40 0z" fill="#A8946E"/><rect x="186" y="62" width="8" height="26" fill="#3A2A1A"/><rect x="40" y="70" width="46" height="16" fill="#4B5D3A"/><rect x="52" y="60" width="22" height="10" fill="#4B5D3A"/><rect x="74" y="63" width="28" height="4" fill="#4B5D3A"/><rect x="42" y="86" width="42" height="6" fill="#222"/><rect x="272" y="84" width="40" height="6" fill="#B08D57"/><g transform="rotate(78 300 84)"><rect x="296" y="58" width="8" height="26" fill="#E2B93B"/><rect x="297" y="50" width="6" height="8" fill="#F2C94C"/></g></svg>`;
 }
 function renderCoup(){
@@ -1349,12 +1551,12 @@ function renderCoup(){
   clearTimers(); SND.sfx('coup');
   const C = COUP[c.k];
   app.innerHTML = `<div class="screen">
-    <span class="badge red" style="justify-self:start">${c.year}년 · 쿠데타</span>
+    <span class="badge red" style="justify-self:start">${c.year}년 · ${C.tag || '쿠데타'}</span>
     <h1>${C.title}</h1>
-    <div class="land">${coupSVG()}</div>
+    <div class="land">${coupSVG(c.k)}</div>
     <p class="lead">${C.text}</p>
     <div class="box"><div class="in kv" style="margin:0">
-      <span>숙청된 지도자</span><b class="neg">${esc(c.old)}</b>
+      <span>${C.tag ? '물러난' : '숙청된'} 지도자</span><b class="neg">${esc(c.old)}</b>
       <span>광장의 동상</span><b>끌어내려짐</b>
       <span>혼란 속 국가소득</span><b class="neg">-8%</b>
       <span>새 지도자</span><b>${esc(S.name)}</b></div></div>

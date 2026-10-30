@@ -163,6 +163,7 @@ table.lead-t td.g{font:700 22px 'IBM Plex Mono',monospace}table.lead-t td.n{font
 table.lead-t td.pn{min-width:54px;position:relative}table.lead-t td.pn i{display:block;height:6px;background:#5BB6A0;border-radius:3px;margin-bottom:2px}table.lead-t td.pn span{font-size:11px}
 .lmv{font-weight:700}.lmv.up{color:#2E7D3A}.lmv.dn{color:#B03A2E}
 @media (max-width:720px){table.lead-t .pn{display:none}}
+.mode button.locked{opacity:.55;filter:grayscale(1)}.lockline{display:block;margin-top:6px;font-weight:700;font-size:13px}
 .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 .dex div{border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
 .dex div b{display:block;font-size:14px}
@@ -1208,6 +1209,25 @@ function titleSelect(){
   return `<label class="f">칭호 <span style="font-size:12px">(결말을 얻으면 칭호가 생깁니다 · ${got.length}개)</span><select id="ptitle"><option value="">칭호 없음</option>${got.map(id => `<option value="${id}" ${id === cur ? 'selected' : ''}>${esc(titleOf(id))}</option>`).join('')}</select></label>`;
 }
 function readTitle(){ const el = document.getElementById('ptitle'); if (el) try{ localStorage.setItem('ttalkkak_title', el.value); }catch(e){} }
+const UNLOCK_SEC = 30 * 60;
+const TEACHER_MODE = /teacher/.test(location.hash);   // 교사 시연용: 주소 끝에 #teacher
+let PLAYING = false;
+const beginnerKey = n => 'ttalkkak_beginner_' + (n || '').trim();
+function beginnerSec(n){ try{ return +localStorage.getItem(beginnerKey(n)) || 0; }catch(e){ return 0; } }
+function setBeginner(n, v){ try{ localStorage.setItem(beginnerKey(n), String(Math.round(v))); }catch(e){} }
+const realUnlocked = n => TEACHER_MODE || beginnerSec(n) >= UNLOCK_SEC;
+// 초보 독재자를 실제로 하고 있는 동안만 5초씩 쌓는다 (다른 탭을 보고 있으면 세지 않는다)
+setInterval(() => { if (PLAYING && S && S.mode === 1 && document.visibilityState === 'visible') setBeginner(S.baseName, beginnerSec(S.baseName) + 5); }, 5000);
+function lockInfo(n){
+  const left = Math.max(0, Math.ceil((UNLOCK_SEC - beginnerSec(n)) / 60));
+  return realUnlocked(n) ? '' : `🔒 초보 독재자를 30분 넘게 해야 열립니다 (앞으로 ${left}분)`;
+}
+function refreshLock(){
+  const el = document.getElementById('pname'), btn = document.getElementById('realbtn'), ln = document.getElementById('lockline');
+  if (!el || !btn) return;
+  const t = lockInfo(el.value);
+  btn.classList.toggle('locked', !!t); ln.textContent = t;
+}
 function savedName(){ try{ return localStorage.getItem('ttalkkak_name')||''; }catch(e){ return ''; } }
 
 // ───────── 소리 (효과음은 8비트 합성, 배경음악은 audio 폴더) ─────────
@@ -1290,6 +1310,7 @@ function newGame(mode, name, motto){
   try{ localStorage.setItem('ttalkkak_name', name); }catch(e){}
   if (!SESSION) SESSION = {start:null, runs:[], best:0, falls:0, right:0, mode, name, net:null, card:false};
   if (!SESSION.start) SESSION.start = Date.now();
+  PLAYING = true;
   S = { mode, name:withTitle(name||'이름 없는'), motto, turn:0, gdp:GDP0, st:{...ST0},
         cap:{coal:35,lng:30,hydro:22,nuke:0,wind:0,solar:0,other:0}, demand:72, ess:0, grid:0, blackouts:0,
         decks:{1:shuffle(BASE.filter(c=>eraCard(c)===1)), 2:shuffle(BASE.filter(c=>eraCard(c)===2)), 3:shuffle(BASE.filter(c=>eraCard(c)===3))}, era:1, purges:0, falls:{}, aiStreak:0, boMark:0, gen:1, baseName:name||'이름 없는', medals:0, lastPlan:null, coupPending:null, nation:NATION, rankMove:null, gdpHist:[GDP0], slump:0, slumpNow:false, aiAsked:0, aiRefused:0, advice:(TURNS === 50 ? 7 : 3), adviceUsed:0, adviceText:null, noAi:0, maxNoAi:0, everSlump:false, plansOk:0, pending:[], flags:{}, plants:{}, events:shuffle(EVENTS.slice()),
@@ -1712,7 +1733,7 @@ function dexHTML(){
     : `<div class="no"><b>???</b>아직 만나지 못한 결말</div>`).join('')}</div>`;
 }
 function renderStart(){
-  clearTimers();
+  clearTimers(); PLAYING = false;
   SND.music(null); SND.drawButtons();
   const bs = document.getElementById('backsel'); if (bs) bs.hidden = !NET_OK;
   document.getElementById('topnote').textContent = '시연용 프로토타입 · 가상 학급 23명';
@@ -1726,18 +1747,30 @@ function renderStart(){
     ${titleSelect()}
     ${NET_OK ? `<label class="f">방 코드 <span style="font-size:12px">(선생님이 알려 준 4자리 · 혼자 연습하려면 비워 두세요)</span><input type="text" id="rcode" inputmode="numeric" maxlength="4" placeholder="예: 3825"></label>` : ''}
     <div class="mode">
-      <button onclick="startMode(1)"><b>2차시 · 첫 번째 통치</b><span>미션은 GDP 최대화. 화면에는 GDP, 순위, 전력 수급만 보입니다.</span></button>
-      <button onclick="startMode(2)"><b>3차시 · 두 번째 통치</b><span>국민 생활 지표가 모두 보입니다. 내가 정한 방향대로 나라를 운영합니다.</span></button>
+      <button onclick="startMode(1)"><b>초보 독재자</b><span>미션은 GDP 최대화. 화면에는 GDP, 순위, 전력 수급만 보입니다.</span></button>
+      <button onclick="startMode(2)" id="realbtn"><b>진짜 독재자</b><span>국민 생활 지표가 모두 보입니다. 내가 정한 방향대로 나라를 운영합니다.</span><span class="lockline" id="lockline"></span></button>
     </div>
     <div class="row" style="flex-wrap:wrap">통치 기간 <label class="row"><input type="radio" name="len" value="50" checked> 50년 (수업용, 30분 동안 여러 판)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (시연용)</label></div>
     <label class="row"><input type="checkbox" id="fast"> 시연용 빠르게 (대기 시간 줄이기)</label>
     <div class="box"><h3>배지 모음 <em>${loadBadges().length}/${BADGES.length}</em></h3><div class="in badges">${BADGES.map(b => badgeHTML(b, loadBadges().includes(b.id))).join('')}</div></div>
     <div class="box"><h3>결말 도감 <em>${loadDex().length}/${ENDINGS.length}</em></h3><div class="in">${dexHTML()}</div></div>
   </div>`;
+  document.getElementById('pname').addEventListener('input', refreshLock);
+  refreshLock();
 }
 function startMode(m){
   const name = (document.getElementById('pname').value||'').trim();
   if (!name){ const el=document.getElementById('pname'); el.focus(); el.style.borderColor='var(--x)'; el.placeholder='지도자 이름을 먼저 지어 주세요'; return; }
+  if (m === 2 && !realUnlocked(name)){
+    // 같은 방에서 초보 독재자를 끝까지 한 기록이 있으면 열어 준다
+    const rc0 = NET_OK && document.getElementById('rcode') ? document.getElementById('rcode').value.trim() : '';
+    const no = () => { const ln = document.getElementById('lockline'); ln.textContent = lockInfo(name) + ' · 먼저 초보 독재자를 충분히 플레이하세요'; SND.unlockAudio(); SND.sfx('x'); };
+    if (!rc0) return no();
+    supaRpc('tk_board', {p_code:rc0, p_mode:1}).then(rows => {
+      if ((rows || []).some(r => r.name === name && r.done)){ setBeginner(name, UNLOCK_SEC); startMode(2); } else no();
+    }).catch(no);
+    return;
+  }
   NATION = (document.getElementById('nname').value||'').trim() || '누리국';
   readTitle();
   SESSION = {start:null, runs:[], best:0, falls:0, right:0, mode:m, name, net:null, card:false};
@@ -1981,18 +2014,22 @@ function rankList(){
   return {rank, total:all.length, html:`<div class="rank">${show.map(r=>`<div class="${r.me?'me':''}"><span>${all.indexOf(r)+1}</span><span>${esc(r.name)}</span><span>${fmt(r.gdp)}조</span></div>`).join('')}</div>`};
 }
 function endGame(){
-  clearTimers();
+  clearTimers(); PLAYING = false;
+  const wasLocked = S.mode === 1 && !realUnlocked(S.baseName);
+  if (S.mode === 1 && left() <= 0) setBeginner(S.baseName, Math.max(beginnerSec(S.baseName), UNLOCK_SEC));
+  S.justUnlocked = wasLocked && realUnlocked(S.baseName);
   recordRun();
-  // 2차시 공개 화면과 투표는 이번 수업에서 GDP가 가장 높았던 판으로 보여 준다
+  // 초보 독재자 공개 화면과 투표는 이번 수업에서 GDP가 가장 높았던 판으로 보여 준다
   if (S.mode === 1 && SESSION.runs.length){ const top = SESSION.runs.slice().sort((a, b) => b.gdp - a.gdp)[0].S; if (top !== S) S = top; }
   netPush({done:true, ending:endingOf(S).id, motto:S.motto || null});
   if (S.net && S.mode === 1) setTimeout(() => waitRoom('revealed', reveal), 300);
   SND.music('end'); SND.sfx('end');
   const R = rankList();
   app.innerHTML = `<div class="screen">
-    <span class="badge" style="justify-self:start">${S.mode===1?'2차시 · 1막: GDP 순위':'3차시 · 임기 종료'}</span>
+    <span class="badge" style="justify-self:start">${S.mode===1?'초보 독재자 · GDP 순위':'진짜 독재자 · 수업 시간 끝'}</span>
     <h1>${esc(S.name)}의 수업 시간이 끝났습니다</h1>
     <div class="box"><div class="in"><div class="lead">최종 국가소득</div><div class="big">${fmt(S.gdp)}조 원</div><div class="lead">시작 ${GDP0}조 원 · 증가 ${growth(S)}% · 세계 ${worldRank(S.gdp)}위 (처음 ${START_RANK}위) · 우리 반 ${R.rank}등 / ${R.total}명 · 정전 ${S.blackouts}번 · 숙청 ${S.purges}번</div></div></div>
+    ${S.justUnlocked ? '<div class="power up"><b>진짜 독재자가 열렸습니다!</b> 이제 국민 생활 지표가 모두 보이는 진짜 독재자를 할 수 있습니다.</div>' : ''}
     <div class="box"><h3>우리 반 GDP 순위</h3>${R.html}</div>
     ${runsTable(S.mode === 1)}
     ${gradeBox(S, S.mode === 1)}
@@ -2066,6 +2103,7 @@ function runEnd(){
     ${gradeBox(S, hide)}
     ${runsTable(hide)}
     <div class="power">남은 수업 시간 <b class="clock">${clock()}</b> · 시간이 남았으니 새 나라를 세워 다시 도전할 수 있습니다.</div>
+    ${S.mode === 1 ? `<div class="power ${realUnlocked(S.baseName) ? 'up' : ''}">${realUnlocked(S.baseName) ? '진짜 독재자가 열려 있습니다.' : lockInfo(S.baseName)}</div>` : ''}
     ${S.mode === 2 ? `<button class="ghost" onclick="nationCard()">이 나라를 투표용 대표 나라로 내기</button>` : ''}
     <button class="primary" id="again" disabled>결말을 읽어 보세요…</button></div>`;
   tickClock();
@@ -2092,7 +2130,7 @@ function renderNewRun(){
     renderDice(SESSION.mode, SESSION.name, SESSION.right);
   };
 }
-// ───────── 진짜 지도자 랭킹 (3차시 끝: GDP와 국민 생활 지표를 모두 합친 점수) ─────────
+// ───────── 진짜 지도자 랭킹 (진짜 독재자 끝: GDP와 국민 생활 지표를 모두 합친 점수) ─────────
 function leaderMeta(s){ const G = gradeOf(s); return {score:G.total, grade:G.g, years:s.turn, parts:G.it.map(x => x.v)}; }
 const PART_NAMES = ['경제 성장', '국민 삶', '공정함', '환경과 기후', '스스로 판단', '통치 기간'];
 async function leaderRows(){
@@ -2114,7 +2152,7 @@ async function renderLeaders(){
   let rows = [];
   try { rows = await leaderRows(); } catch(e){ console.warn(e); }
   if (S.net && !rows.length){
-    app.innerHTML = `<div class="screen"><span class="badge" style="justify-self:start">3차시 · 진짜 지도자 랭킹</span><h1>진짜 지도자 랭킹</h1><div class="power">선생님이 랭킹을 공개하면 여기에 나타납니다…</div></div>`;
+    app.innerHTML = `<div class="screen"><span class="badge" style="justify-self:start">진짜 독재자 · 진짜 지도자 랭킹</span><h1>진짜 지도자 랭킹</h1><div class="power">선생님이 랭킹을 공개하면 여기에 나타납니다…</div></div>`;
     return waitRoom('revealed', renderLeaders);
   }
   const byGdp = rows.slice().sort((a, b) => b.gdp - a.gdp);
@@ -2124,7 +2162,7 @@ async function renderLeaders(){
   const move = r => { const g = byGdp.indexOf(r) + 1, t = rows.indexOf(r) + 1; return g === t ? '<span class="lmv">–</span>' : g > t ? `<span class="lmv up">▲${g - t}</span>` : `<span class="lmv dn">▼${t - g}</span>`; };
   const endName = id => (ENDINGS.find(e => e.id === id) || {name:''}).name;
   app.innerHTML = `<div class="screen" style="max-width:960px">
-    <span class="badge" style="justify-self:start">3차시 · 50년 통치를 마치며</span>
+    <span class="badge" style="justify-self:start">진짜 독재자 · 50년 통치를 마치며</span>
     <h1>진짜 지도자 랭킹</h1>
     <p class="lead">GDP만 보지 않았습니다. 경제 성장, 국민 삶, 공정함, 환경과 기후, 스스로 판단, 통치 기간 여섯 가지를 모두 합친 점수입니다.</p>
     ${me ? `<div class="power up">GDP 순위 <b>${myGdp}위</b> → 진짜 지도자 순위 <b>${myReal}위</b> (${rows.length}명 중)</div>` : ''}
@@ -2151,7 +2189,7 @@ function reveal(){
   const logs=S.log.slice().reverse();
   const cards=S.log.filter(l=>l.type==='card').length;
   app.innerHTML = `<div class="screen">
-    <span class="badge" style="justify-self:start">2차시 · 2막: 숨겨진 지표 공개</span>
+    <span class="badge" style="justify-self:start">초보 독재자 · 숨겨진 지표 공개</span>
     <h1>GDP 말고, 나라는 어떻게 되었을까요?</h1>
     ${endingBox()}
     ${SESSION && SESSION.runs.some(r => r.S.newTitles && r.S.newTitles.length) ? `<div class="power up">이번 수업에서 얻은 칭호: ${[...new Set(SESSION.runs.flatMap(r => r.S.newTitles || []))].map(id => `<b>${esc(titleOf(id))}</b>`).join(' · ')}</div>` : ''}
@@ -2171,7 +2209,7 @@ function reveal(){
 function nationCard(){
   SND.sfx('end');
   app.innerHTML = `<div class="screen">
-    <span class="badge" style="justify-self:start">3차시 · 투표용 나라 카드 (이름 가림)</span>
+    <span class="badge" style="justify-self:start">진짜 독재자 · 투표용 나라 카드 (이름 가림)</span>
     <h1>나라 ${String.fromCharCode(65+Math.floor(Math.random()*20))}</h1>
     <div class="ending"><small>이 나라의 결말</small><b>${endingOf(S).name}</b><small>${endingOf(S).sub}</small></div>
     <div class="box"><div class="in"><div class="lead">이 나라의 통치 이념</div><div style="font-size:18px;font-weight:700">“${esc(S.motto||'방향 없음')}”</div></div></div>
@@ -2195,7 +2233,7 @@ async function renderVote(){
   const endName = id => (ENDINGS.find(e => e.id === id) || {name:'-'}).name;
   const bars = st => st ? STATS.map(x => `<span>${x.n} ${st[x.k]}</span>`).join(' · ') : '';
   app.innerHTML = `<div class="screen" style="max-width:900px">
-    <span class="badge" style="justify-self:start">3차시 · 이름을 가린 나라 카드 투표</span>
+    <span class="badge" style="justify-self:start">진짜 독재자 · 이름을 가린 나라 카드 투표</span>
     <h1>가장 좋은 나라에 한 표를</h1>
     <p class="lead">자기 나라에는 투표할 수 없습니다. 고른 까닭을 한 줄로 적어 주세요.</p>
     <div class="vcards">${cards.map(c => `<label class="vcard"><input type="radio" name="vt" value="${c.label}"><b>나라 ${c.label}</b>

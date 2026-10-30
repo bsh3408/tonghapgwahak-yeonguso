@@ -78,7 +78,7 @@ function openRoom(room){
         <button class="btn sub" id="bCsv">결과 엑셀(CSV) 받기</button>
         <button class="btn sub" id="bHome">방 목록으로</button>
       </div></div></div>
-    <div class="tabs"><button data-t="1">2차시 · 첫 번째 통치</button><button data-t="2">3차시 · 두 번째 통치와 투표</button></div>
+    <div class="tabs"><button data-t="1">초보 독재자</button><button data-t="2">진짜 독재자와 투표</button></div>
     <div id="board"></div>`;
   document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { TAB = +b.dataset.t; draw(); });
   document.getElementById('bReveal').onclick = () => act(ROOMSTATE.revealed ? 'hide' : 'reveal');
@@ -100,8 +100,8 @@ function draw(){
   if (!ROOM) return;
   document.querySelectorAll('[data-t]').forEach(b => b.classList.toggle('on', +b.dataset.t === TAB));
   const bR = document.getElementById('bReveal'), bV = document.getElementById('bVote');
-  if (bR) bR.textContent = ROOMSTATE.revealed ? (TAB === 2 ? '진짜 지도자 랭킹 다시 숨기기' : '숨겨진 지표 다시 숨기기') : (TAB === 2 ? '3차시 · 진짜 지도자 랭킹 공개' : '2차시 · 숨겨진 지표 공개');
-  if (bV) bV.textContent = ROOMSTATE.voting ? '3차시 · 투표 닫기' : '3차시 · 투표 열기';
+  if (bR) bR.textContent = ROOMSTATE.revealed ? (TAB === 2 ? '진짜 지도자 랭킹 다시 숨기기' : '숨겨진 지표 다시 숨기기') : (TAB === 2 ? '진짜 독재자 · 진짜 지도자 랭킹 공개' : '초보 독재자 · 숨겨진 지표 공개');
+  if (bV) bV.textContent = ROOMSTATE.voting ? '진짜 독재자 · 투표 닫기' : '진짜 독재자 · 투표 열기';
   const el = document.getElementById('board'); if (!el) return;
   if (!DATA || !DATA.ok){ el.innerHTML = `<p class="lead">${DATA && DATA.msg ? esc(DATA.msg) : '불러오는 중…'}</p>`; return; }
   const ps = DATA.players.filter(p => p.mode === TAB).sort((a, b) => b.gdp - a.gdp);
@@ -119,7 +119,7 @@ function draw(){
     extra = `<div class="box"><h3>진짜 지도자 랭킹 <em>GDP·국민 삶·공정함·환경과 기후·스스로 판단·통치 기간 종합 · ${ROOMSTATE.revealed ? '학생 화면에 공개됨' : '아직 학생에게 비공개'}</em></h3><div class="in"><table><tr><th>순위</th><th>이름</th><th>나라</th><th>등급</th><th>점수</th><th>GDP 순위</th><th>통치</th></tr>${lead.map((p, i) => `<tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${esc(p.nation)}</td><td><b>${esc(p.st.grade || '')}</b></td><td class="n">${p.st.score}</td><td class="n">${gRank(p)}위</td><td class="n">${p.st.years ?? '-'}년</td></tr>`).join('') || '<tr><td colspan="7">아직 점수가 올라온 학생이 없습니다.</td></tr>'}</table></div></div>` + `<div class="box"><h3>투표 이유 <em>${rs.length}표</em></h3><div class="in reasons">${rs.length ? rs.map(r => `<div><b>${esc(r.target)}</b> ← ${esc(r.voter)}: ${esc(r.reason || '(이유 없음)')}</div>`).join('') : '<p class="lead">아직 투표가 없습니다.</p>'}</div></div>
       <div class="box"><h3>통치 이념과 가장 고민한 선택</h3><div class="in reasons">${ps.filter(p => p.motto || p.reflection).map(p => `<div><b>${esc(p.name)}</b> (${esc(p.nation)}) “${esc(p.motto || '')}” · ${esc(p.reflection || '')}</div>`).join('') || '<p class="lead">아직 제출된 카드가 없습니다.</p>'}</div></div>`;
   }
-  el.innerHTML = `<div class="box"><h3>${TAB === 1 ? '2차시 반 GDP 순위' : '3차시 반 GDP 순위'} <em>${ps.length}명 · 4초마다 새로 고침${TAB === 1 && !ROOMSTATE.revealed ? ' · 숨겨진 지표는 공개 전이라 표시하지 않음' : ''}</em></h3><div class="tw"><table>${head}${rows || '<tr><td colspan="12" class="lead">아직 들어온 학생이 없습니다.</td></tr>'}</table></div></div>${extra}`;
+  el.innerHTML = `<div class="box"><h3>${TAB === 1 ? '초보 독재자 반 GDP 순위' : '진짜 독재자 반 GDP 순위'} <em>${ps.length}명 · 4초마다 새로 고침${TAB === 1 && !ROOMSTATE.revealed ? ' · 숨겨진 지표는 공개 전이라 표시하지 않음' : ''}</em></h3><div class="tw"><table>${head}${rows || '<tr><td colspan="12" class="lead">아직 들어온 학생이 없습니다.</td></tr>'}</table></div></div>${extra}`;
 }
 function csv(){
   if (!DATA || !DATA.ok) return;

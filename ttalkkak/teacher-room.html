@@ -53,7 +53,7 @@ function renderHome(){
   const list = saved();
   app.innerHTML = `
     <div class="box"><h3>새 방 만들기</h3><div class="in row">
-      통치 기간 <label class="row"><input type="radio" name="len" value="30" checked> 30년 (약 30분)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (약 12분)</label>
+      통치 기간 <label class="row"><input type="radio" name="len" value="50" checked> 50년 (수업 30분 동안 여러 판)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (약 12분)</label>
       <button class="btn" id="mk">방 만들기</button></div></div>
     <div class="box"><h3>이전에 만든 방 다시 열기</h3><div class="in">${list.length ? list.map(r => `<button class="btn sub" data-c="${r.code}" style="margin:0 6px 6px 0">${r.code} · ${r.turns}년 · ${esc(r.when || '')}</button>`).join('') : '<p class="lead">아직 만든 방이 없습니다.</p>'}</div></div>`;
   document.getElementById('mk').onclick = async () => {

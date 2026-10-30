@@ -155,6 +155,8 @@ input[type=text]{width:100%;font:inherit;padding:11px;border-radius:6px;border:1
 .ending{border:2px solid var(--ink);border-radius:8px;padding:16px;text-align:center}
 .ending small{color:var(--mute);display:block}
 .ending b{display:block;font-size:24px;margin:2px 0 4px}
+.grade{display:flex;align-items:center;gap:12px;margin-bottom:10px}.grade b{font-size:44px;line-height:1;font-family:'IBM Plex Mono',monospace}.grade span{font-weight:700}
+table.runs{width:100%;border-collapse:collapse;font-size:13px}table.runs td,table.runs th{padding:5px 6px;border-bottom:1px solid var(--line, #ddd);text-align:left}table.runs tr.me td{font-weight:700}
 .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 .dex div{border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
 .dex div b{display:block;font-size:14px}
@@ -210,13 +212,15 @@ input[type=text]{width:100%;font:inherit;padding:11px;border-radius:6px;border:1
 
 <script src="../supabase-config.js"></script>
 <script>
-// ───────── 설정 (시연용으로 줄인 값: 실제는 30턴·30분) ─────────
-let TURNS = 30, TIME_LIMIT = 30 * 60, EVENT_TURNS = [3, 6, 9, 12, 15, 18, 21, 24, 27, 29], PLAN = 5;
+// ───────── 설정: 한 판 50년, 수업 전체 30분 (시간 안에 몇 판이든 다시 할 수 있다) ─────────
+let TURNS = 50, TIME_LIMIT = 30 * 60, EVENT_TURNS = [3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47], PLAN = 5;
 function setLength(n){
-  TURNS = n; TIME_LIMIT = n * 60;
-  EVENT_TURNS = n === 30 ? [3, 6, 9, 12, 15, 18, 21, 24, 27, 29] : [3, 5, 7, 9, 11];
-  PLAN = n === 30 ? 5 : 4;
+  TURNS = n === 12 ? 12 : 50; TIME_LIMIT = TURNS === 12 ? 12 * 60 : 30 * 60;
+  EVENT_TURNS = TURNS === 50 ? [3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47] : [3, 5, 7, 9, 11];
+  PLAN = TURNS === 50 ? 5 : 4;
 }
+// 수업 한 번(30분) 동안 이어지는 기록: 판이 끝나도 남는다
+let SESSION = null;
 const eraOf = t => Math.min(3, 1 + Math.floor((t - 1) / (TURNS / 3)));
 const ERA_NAMES = ['', '산업화의 시대', '성장의 그늘', '전환의 시대'];
 const ERA_DESC = ['', '', '지난 시대의 선택이 이제 결과로 돌아오기 시작합니다. 성장의 대가를 치를 시간입니다.', '세계가 탄소를 줄이라고 압박합니다. 미래 기술이 새로운 기회가 될지도 모릅니다.'];
@@ -856,6 +860,155 @@ const FOLLOW2 = [
 ];
 FOLLOW.push(...FOLLOW2);
 
+// ───────── 추가 안건 36장 (50년 통치용) ─────────
+const MORE2 = [
+  {id:'rail', era:1, p:'ind', title:'철도 건설', q:'항구와 내륙 광산을 잇는 철도를 놓을까요?',
+   O:{d:{gdp:5,climate:1,nature:-3}, r:'기차가 광물과 곡식을 실어 나르기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'철도 건설을 미뤘습니다.'},
+   A:{plan:'국립공원을 가로질러 최단 노선으로 놓고, 공사는 밤낮없이 진행합니다.', why:'노선이 짧을수록 운송비가 줄어듭니다.', d:{gdp:9,nature:-9,happy:-2}, r:'숲 한가운데로 철길이 뚫렸습니다.'}},
+  {id:'sugar', era:1, p:'far', title:'사탕수수 대농장', q:'사탕수수 대농장을 만들어 설탕을 수출할까요?',
+   O:{d:{gdp:4,nature:-4,gap:2}, r:'사탕수수밭이 끝없이 펼쳐졌습니다.'},
+   X:{d:{gdp:0}, r:'대농장을 만들지 않았습니다.'},
+   A:{plan:'작은 농가의 땅을 사들여 대기업 농장 하나로 합칩니다.', why:'농장이 클수록 수확 비용이 줄어듭니다.', d:{gdp:8,gap:7,median:-2,nature:-5}, r:'농민들이 땅을 잃고 농장 일꾼이 되었습니다.'}},
+  {id:'dieselbus', era:1, p:'cit', title:'시내버스 도입', q:'도시에 시내버스를 처음 도입할까요?',
+   O:{d:{gdp:2,happy:3,gap:-2,climate:-1}, r:'시내버스가 다니면서 출퇴근이 쉬워졌습니다.'},
+   X:{d:{gdp:0}, r:'버스를 도입하지 않았습니다.'},
+   A:{plan:'버스 대신 자가용 수입 관세를 없애 자동차를 마음껏 사게 합니다.', why:'자동차가 늘어날수록 경제가 활발해집니다.', d:{gdp:5,climate:-6,gap:4}, r:'도로가 자가용으로 꽉 막혔습니다.'}},
+  {id:'gold', era:1, p:'biz', title:'금광 개발', q:'외국 기업이 금광을 개발하겠다고 합니다. 금을 캘 때 수은과 청산가리를 씁니다.',
+   O:{d:{gdp:5,nature:-6,median:1}, add:['mine'], flag:'mine', r:'금광에서 금이 나오기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'금광 개발을 허가하지 않았습니다.'},
+   A:{plan:'안전 기준 없이 작은 금광 수백 곳을 한꺼번에 허가합니다.', why:'금값이 올랐을 때 최대한 캐야 합니다.', d:{gdp:9,nature:-14,happy:-3}, add:['mine','mine'], flag:'mine', r:'강물에 수은이 섞여 흐르기 시작했습니다.'}},
+  {id:'dam2', era:1, p:'far', title:'관개 수로 건설', q:'논밭에 물을 대는 관개 수로를 놓을까요?',
+   O:{d:{gdp:3,median:2,nature:-2}, r:'가뭄에도 논에 물이 찰랑거립니다.'},
+   X:{d:{gdp:0}, r:'수로를 놓지 않았습니다.'},
+   A:{plan:'호수 물을 모두 끌어다 목화밭에 댑니다.', why:'목화는 비싸게 팔리는 작물입니다.', d:{gdp:7,nature:-12,climate:-2}, r:'목화 수확은 늘었지만 호수가 말라 바닥을 드러냈습니다.'}},
+  {id:'kerosene', era:1, p:'vil', title:'등유 등잔 대신 태양광 램프', q:'밤에 등유 등잔을 켜는 마을에 작은 태양광 램프를 나눠 줄까요?',
+   O:{d:{gdp:1,happy:3,gap:-2,climate:1}, r:'아이들이 태양광 램프 아래에서 숙제를 합니다.'},
+   X:{d:{gdp:0}, r:'램프를 나눠 주지 않았습니다.'},
+   A:{plan:'램프 대신 등유를 싸게 대량 공급하는 회사를 세웁니다.', why:'등유 판매는 곧바로 돈이 됩니다.', d:{gdp:3,climate:-3,happy:-1}, r:'등유 값이 싸졌습니다. 집 안 공기가 매캐합니다.'}},
+  {id:'fishing', era:1, p:'fis', title:'원양 어선단', q:'대형 원양 어선단을 꾸려 먼바다 물고기를 잡을까요?',
+   O:{d:{gdp:4,nature:-4,median:1}, r:'원양 어선들이 만선으로 돌아옵니다.'},
+   X:{d:{gdp:0}, r:'원양 어선단을 꾸리지 않았습니다.'},
+   A:{plan:'바닥까지 긁는 저인망 그물로 어린 물고기까지 모두 잡습니다.', why:'남겨 두면 다른 나라 배가 잡아 갑니다.', d:{gdp:8,nature:-11,median:-1}, r:'잡히는 물고기가 해마다 작아집니다.'}},
+  {id:'censor', era:1, p:'cit', title:'언론 통제', q:'정부를 비판하는 신문 기사가 늘고 있습니다. 언론을 통제할까요?',
+   O:{d:{gdp:0,happy:-2}, r:'비판 기사를 내지 못하게 했습니다.'},
+   X:{d:{gdp:0,happy:2}, r:'언론을 그대로 두었습니다. 신문에 쓴소리가 실립니다.'},
+   A:{plan:'모든 신문을 정부 신문 하나로 합치고 경제 성장 기사만 싣습니다.', why:'좋은 소식만 들리면 국민도 투자자도 안심합니다.', d:{gdp:3,happy:-6,gap:2}, r:'신문에는 날마다 성장 소식만 실립니다.'}},
+  {id:'salt', era:1, p:'fis', title:'천일염 염전', q:'바닷가에 염전을 만들어 소금을 수출할까요?',
+   O:{d:{gdp:2,median:2,nature:-2}, r:'햇볕과 바람으로 소금을 만들기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'염전을 만들지 않았습니다.'},
+   A:{plan:'갯벌을 모두 염전으로 바꾸고 일꾼은 하루 14시간씩 일하게 합니다.', why:'소금은 쉬지 않고 만들수록 많이 남습니다.', d:{gdp:5,nature:-7,happy:-4,gap:3}, r:'갯벌이 모두 염전으로 바뀌었습니다.'}},
+  {id:'vaccine', era:1, p:'cit', title:'어린이 예방 접종', q:'전국 어린이에게 무료 예방 접종을 할까요?',
+   O:{d:{gdp:1,happy:4,gap:-2,median:1}, r:'예방 접종 덕분에 전염병이 크게 줄었습니다.'},
+   X:{d:{gdp:0,happy:-2}, r:'예방 접종 예산을 다른 곳에 썼습니다.'},
+   A:{plan:'예방 접종 예산을 공장 짓는 데 돌립니다.', why:'공장은 돈을 벌지만 주사는 돈을 벌지 못합니다.', d:{gdp:4,happy:-5}, add:['factory'], r:'공장은 늘었지만 마을마다 전염병이 돌았습니다.'}},
+  {id:'peat', era:1, p:'ind', title:'이탄 습지 개발', q:'습지 땅속에 쌓인 이탄을 캐서 발전 연료로 쓸까요? 이탄 습지는 탄소를 많이 저장하고 있습니다.',
+   O:{d:{gdp:3,climate:-6,nature:-5}, sup:{other:4}, r:'이탄을 태우는 발전소가 돌아가기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'습지를 그대로 두었습니다.'},
+   A:{plan:'습지 물을 모두 빼고 이탄을 대량으로 캡니다.', why:'땅속 연료를 묵혀 둘 이유가 없습니다.', d:{gdp:6,climate:-12,nature:-10}, sup:{other:8}, r:'습지가 말라붙었습니다. 땅에서 불이 쉽게 붙습니다.'}},
+  {id:'chemplant', era:1, p:'biz', title:'화학 공장 단지', q:'외국 화학 기업이 공장 단지를 짓겠다고 합니다. 받아들일까요?',
+   O:{d:{gdp:6,nature:-5,happy:-1}, dem:4, add:['factory'], r:'화학 공장 단지가 가동을 시작했습니다.'},
+   X:{d:{gdp:0}, r:'화학 공장 단지를 받지 않았습니다.'},
+   A:{plan:'주거 지역 바로 옆에 짓고, 사고 대비 설비는 생략합니다.', why:'노동자가 가까이 살면 출퇴근 비용이 줄어듭니다.', d:{gdp:10,nature:-8,happy:-6}, dem:6, add:['factory','factory'], r:'아파트 창문 너머로 화학 공장 굴뚝이 보입니다.'}},
+  {id:'ewastefix', era:2, p:'cit', title:'고쳐 쓸 권리', q:'휴대폰과 가전제품을 쉽게 고쳐 쓸 수 있도록 부품을 의무로 팔게 할까요?',
+   O:{d:{gdp:1,nature:4,median:1}, r:'동네마다 수리점이 생겼습니다. 버려지는 전자제품이 줄었습니다.'},
+   X:{d:{gdp:0}, r:'제도를 만들지 않았습니다.'},
+   A:{plan:'오히려 새 제품을 사면 세금을 깎아 줘 소비를 늘립니다.', why:'새 제품이 많이 팔려야 공장이 돌아갑니다.', d:{gdp:5,nature:-6}, r:'쓰레기장에 멀쩡한 전자제품이 쌓여 갑니다.'}},
+  {id:'mall', era:2, p:'biz', title:'초대형 쇼핑몰', q:'도심에 초대형 쇼핑몰을 짓겠다는 제안입니다.',
+   O:{d:{gdp:4,happy:1,gap:2}, dem:3, add:['town'], r:'초대형 쇼핑몰이 문을 열었습니다.'},
+   X:{d:{gdp:0}, r:'쇼핑몰 허가를 내주지 않았습니다.'},
+   A:{plan:'재래시장을 모두 헐고 그 자리에 쇼핑몰 세 곳을 짓습니다.', why:'낡은 시장보다 쇼핑몰이 세금을 훨씬 많이 냅니다.', d:{gdp:7,gap:6,median:-2,happy:-2}, dem:5, add:['town'], r:'재래시장 상인들이 일터를 잃었습니다.'}},
+  {id:'lithium', era:2, p:'biz', title:'소금 사막 리튬 개발', q:'고원 소금 사막에서 배터리 원료인 리튬을 뽑아낼까요? 지하수를 많이 씁니다.',
+   O:{d:{gdp:6,nature:-5}, add:['mine'], flag:'mine', r:'소금 사막에 리튬 증발 연못이 생겼습니다.'},
+   X:{d:{gdp:0}, r:'리튬 개발을 미뤘습니다.'},
+   A:{plan:'원주민 마을의 지하수까지 모두 끌어다 씁니다.', why:'리튬값이 오를 때 최대한 뽑아야 합니다.', d:{gdp:11,nature:-10,happy:-4,gap:3}, add:['mine'], flag:'mine', r:'원주민 마을의 우물이 말라 버렸습니다.'}},
+  {id:'olympic', era:2, p:'cit', title:'국제 스포츠 대회 유치', q:'국제 스포츠 대회를 유치할까요? 경기장과 도로를 새로 지어야 합니다.',
+   O:{d:{gdp:4,happy:3,nature:-3}, add:['town'], r:'국제 대회가 열렸습니다. 온 나라가 들떴습니다.'},
+   X:{d:{gdp:0}, r:'유치를 포기했습니다.'},
+   A:{plan:'빈민가를 모두 철거하고 그 자리에 경기장을 짓습니다.', why:'세계에 보여 줄 도시는 깨끗해야 합니다.', d:{gdp:7,happy:-3,gap:6}, add:['town'], r:'빈민가가 철거되었습니다. 쫓겨난 사람들은 갈 곳이 없습니다.'}},
+  {id:'gene', era:2, p:'far', title:'가뭄에 강한 품종', q:'가뭄에 잘 견디는 새 벼 품종을 보급할까요?',
+   O:{d:{gdp:3,median:2,happy:1}, r:'가뭄에도 벼가 잘 자랍니다.'},
+   X:{d:{gdp:0}, r:'예전 품종을 그대로 심었습니다.'},
+   A:{plan:'씨앗 특허를 외국 기업에 넘기고 해마다 씨앗을 사게 합니다.', why:'외국 기업이 큰돈을 투자합니다.', d:{gdp:5,gap:5,median:-2}, r:'농민들이 해마다 비싼 씨앗을 사야 합니다.'}},
+  {id:'smartmeter', era:2, p:'eng', title:'스마트 전력량계', q:'집집마다 전기 사용량을 실시간으로 보여 주는 스마트 전력량계를 달까요?',
+   O:{d:{gdp:1,climate:2}, dem:-3, r:'국민들이 전기 사용량을 보고 스스로 아끼기 시작했습니다.'},
+   X:{d:{gdp:0}, r:'전력량계를 바꾸지 않았습니다.'},
+   A:{plan:'전력량계로 모은 생활 정보를 광고 회사에 팝니다.', why:'국민의 생활 정보는 비싸게 팔립니다.', d:{gdp:4,happy:-5}, r:'전기를 언제 쓰는지까지 광고 회사가 알게 되었습니다.'}},
+  {id:'bikeroad', era:2, p:'cit', title:'자전거 도로망', q:'도시에 자전거 도로망을 만들까요?',
+   O:{d:{gdp:1,happy:3,climate:3}, r:'출근길에 자전거가 늘었습니다.'},
+   X:{d:{gdp:0}, r:'자전거 도로를 만들지 않았습니다.'},
+   A:{plan:'자전거 도로 대신 도심 고가 도로를 짓습니다.', why:'차가 빨리 달려야 물건도 빨리 오갑니다.', d:{gdp:4,climate:-4,happy:-1}, r:'도심 위로 고가 도로가 지나갑니다.'}},
+  {id:'cleanstove2', era:2, p:'cit', title:'석탄 난로 교체', q:'겨울마다 집집마다 피우는 석탄 난로를 전기 난방으로 바꾸는 지원금을 줄까요?',
+   O:{d:{gdp:1,happy:3,climate:3}, dem:5, r:'겨울 하늘이 맑아졌습니다. 전기 수요는 늘었습니다.'},
+   X:{d:{gdp:0,happy:-1}, r:'석탄 난로를 그대로 두었습니다.'},
+   A:{plan:'난로는 그대로 두고 값싼 석탄을 더 많이 공급합니다.', why:'국민 난방비가 줄면 불만도 줄어듭니다.', d:{gdp:3,climate:-5,happy:-2}, flag:'coal', r:'겨울마다 하늘이 잿빛입니다.'}},
+  {id:'wetland', era:2, p:'env', title:'습지 보전 지역', q:'철새가 찾는 강 하구 습지를 보전 지역으로 지정할까요?',
+   O:{d:{gdp:0,nature:6,climate:2,happy:1}, r:'철새들이 돌아왔습니다. 생태 관광객도 늘었습니다.'},
+   X:{d:{gdp:0}, r:'보전 지역으로 지정하지 않았습니다.'},
+   A:{plan:'습지를 메워 골프장과 리조트를 짓습니다.', why:'습지는 돈이 안 되지만 골프장은 됩니다.', d:{gdp:5,nature:-10,gap:3}, add:['town'], r:'습지가 골프장으로 바뀌었습니다.'}},
+  {id:'pension', era:2, p:'cit', title:'노인 연금', q:'일하기 어려운 노인들에게 기초 연금을 줄까요?',
+   O:{d:{gdp:-1,happy:4,gap:-4,median:2}, r:'노인들이 기초 연금을 받기 시작했습니다.'},
+   X:{d:{gdp:0,happy:-1}, r:'연금을 도입하지 않았습니다.'},
+   A:{plan:'연금 대신 그 돈으로 대기업 법인세를 깎아 줍니다.', why:'기업이 돈을 벌면 언젠가 모두에게 돌아갑니다.', d:{gdp:5,gap:6,happy:-3}, r:'기업 이익은 늘었지만 폐지를 줍는 노인이 늘었습니다.'}},
+  {id:'crypto2', era:2, p:'biz', title:'나랏돈을 코인으로', q:'나라 돈의 일부를 가상 화폐로 바꿔 두자는 제안입니다.',
+   O:{d:{gdp:2,gap:2}, r:'나라 돈 일부를 가상 화폐로 바꿔 두었습니다.'},
+   X:{d:{gdp:0}, r:'가상 화폐를 사지 않았습니다.'},
+   A:{plan:'나라 돈 절반을 가상 화폐에 넣고 채굴장도 국영으로 운영합니다.', why:'가상 화폐 값은 앞으로 계속 오릅니다.', d:{gdp:6,climate:-5,gap:3}, dem:10, flag:'crypto', r:'국영 채굴장이 밤낮으로 돌아갑니다.'}},
+  {id:'gigschool', era:2, p:'cit', title:'무상 고등학교', q:'고등학교 수업료를 모두 없앨까요?',
+   O:{d:{gdp:1,happy:3,gap:-4,median:2}, r:'수업료 걱정 없이 모두 고등학교에 다닙니다.'},
+   X:{d:{gdp:0}, r:'수업료를 그대로 두었습니다.'},
+   A:{plan:'수업료를 없애는 대신 학생들을 방학마다 공장 실습에 보냅니다.', why:'공부도 하고 일손도 채우니 일석이조입니다.', d:{gdp:4,happy:-3,gap:2}, r:'방학마다 학생들이 공장으로 갑니다.'}},
+  {id:'nukeold', era:3, p:'eng', title:'낡은 원전 수명 연장', q:'설계 수명이 끝난 원자력 발전소를 더 돌릴까요?',
+   O:{d:{gdp:2,climate:3,happy:-1}, sup:{nuke:8}, r:'안전 점검을 거쳐 원자력 발전소를 10년 더 돌리기로 했습니다.'},
+   X:{d:{gdp:-1,climate:-1}, r:'낡은 원자력 발전소를 멈췄습니다.'},
+   A:{plan:'안전 점검을 건너뛰고 수명을 20년 늘립니다.', why:'점검하는 동안 발전소를 멈추면 손해입니다.', d:{gdp:4,happy:-4}, sup:{nuke:15}, r:'낡은 원자력 발전소가 점검 없이 계속 돌아갑니다.'}},
+  {id:'carbonfarm', era:3, p:'far', title:'탄소 농업', q:'땅을 갈아엎지 않고 덮개 작물을 심어 흙 속에 탄소를 저장하는 농법을 지원할까요?',
+   O:{d:{gdp:1,climate:4,nature:3,median:1}, r:'논밭 흙이 기름지고 탄소도 더 많이 저장됩니다.'},
+   X:{d:{gdp:0}, r:'지원하지 않았습니다.'},
+   A:{plan:'탄소 농업 대신 비료와 농약을 두 배로 써서 수확량을 늘립니다.', why:'흙보다 수확량이 중요합니다.', d:{gdp:4,nature:-6,climate:-2}, r:'수확은 늘었지만 흙이 점점 딱딱해집니다.'}},
+  {id:'hydrogenbus', era:3, p:'cit', title:'수소 버스', q:'시내버스를 수소 연료 전지 버스로 바꿀까요?',
+   O:{d:{gdp:2,climate:3,happy:1}, r:'수소 버스가 물만 내보내며 달립니다.'},
+   X:{d:{gdp:0}, r:'버스를 바꾸지 않았습니다.'},
+   A:{plan:'석탄으로 만든 값싼 수소로 버스를 돌리고 친환경이라고 홍보합니다.', why:'수소는 수소입니다. 어떻게 만들었는지는 아무도 묻지 않습니다.', d:{gdp:4,climate:-4}, flag:'coal', r:'버스는 깨끗해 보이지만 수소 공장 굴뚝은 시커멓습니다.'}},
+  {id:'ai_judge', era:3, p:'cit', title:'AI 판사', q:'재판을 빠르게 하려고 AI가 판결문을 쓰게 할까요?',
+   O:{d:{gdp:1,happy:1}, r:'AI는 판결문 초안만 쓰고, 판결은 판사가 내리도록 했습니다.'},
+   X:{d:{gdp:0}, r:'AI를 재판에 쓰지 않았습니다.'},
+   A:{plan:'AI가 판결까지 내리게 하고 판사 수를 줄입니다.', why:'AI는 지치지 않고 판결 속도가 열 배 빠릅니다.', d:{gdp:4,happy:-4,gap:4}, r:'AI 판결이 늘었습니다. 가난한 동네 사람들이 유독 무거운 벌을 받는다는 말이 나옵니다.'}},
+  {id:'aiwork', era:3, p:'biz', title:'AI 자동화 공장', q:'공장 일을 AI 로봇이 대신하는 자동화 공장을 늘릴까요?',
+   O:{d:{gdp:5,median:-1,gap:2}, dem:4, add:['factory'], r:'자동화 공장이 늘고 노동자 재교육을 시작했습니다.'},
+   X:{d:{gdp:0}, r:'자동화를 서두르지 않았습니다.'},
+   A:{plan:'모든 공장을 한꺼번에 자동화하고 노동자는 바로 내보냅니다.', why:'로봇은 월급도 휴가도 필요 없습니다.', d:{gdp:10,median:-5,gap:7,happy:-4}, dem:10, add:['factory','dc'], r:'공장에서 사람이 사라졌습니다. 실업자가 크게 늘었습니다.'}},
+  {id:'climateclass', era:3, p:'cit', title:'기후 위기 대응 훈련', q:'폭염과 홍수에 대비한 전 국민 대피 훈련을 할까요?',
+   O:{d:{gdp:0,happy:2,climate:1}, r:'대피소와 대피 길을 모두 알게 되었습니다.'},
+   X:{d:{gdp:0}, r:'훈련을 하지 않았습니다.'},
+   A:{plan:'훈련 예산을 없애고 재난이 나면 그때 대응합니다.', why:'일어나지 않은 재난에 돈을 쓸 필요가 없습니다.', d:{gdp:2,happy:-2}, r:'훈련 예산이 사라졌습니다.'}},
+  {id:'greenhouse', era:3, p:'far', title:'스마트 온실', q:'AI가 온도와 물을 조절하는 스마트 온실을 늘릴까요?',
+   O:{d:{gdp:3,median:2,nature:1}, dem:3, r:'스마트 온실에서 1년 내내 채소가 자랍니다.'},
+   X:{d:{gdp:0}, r:'스마트 온실을 늘리지 않았습니다.'},
+   A:{plan:'온실 난방을 석탄 보일러로 하고 규모를 열 배 늘립니다.', why:'채소 수출로 큰돈을 벌 수 있습니다.', d:{gdp:6,climate:-5}, dem:3, flag:'coal', r:'온실 단지에서 석탄 연기가 피어오릅니다.'}},
+  {id:'tidalpower', era:3, p:'eng', title:'조력 발전소', q:'밀물과 썰물의 높이 차를 이용하는 조력 발전소를 지을까요?',
+   O:{d:{gdp:2,climate:4,nature:-3}, sup:{other:6}, r:'조력 발전소가 밀물과 썰물로 전기를 만듭니다.'},
+   X:{d:{gdp:0}, r:'조력 발전소를 짓지 않았습니다.'},
+   A:{plan:'만 전체를 둑으로 막아 거대한 조력 발전소를 짓습니다.', why:'둑이 클수록 전기를 많이 만듭니다.', d:{gdp:4,climate:5,nature:-10}, sup:{other:12}, r:'만 전체가 둑으로 막혔습니다. 갯벌이 썩기 시작했습니다.'}},
+  {id:'ewaste3', era:3, p:'env', title:'태양광 패널 재활용', q:'수명이 다한 태양광 패널을 재활용하는 공장을 지을까요?',
+   O:{d:{gdp:2,nature:3}, add:['factory'], r:'낡은 패널에서 유리와 은을 다시 뽑아냅니다.'},
+   X:{d:{gdp:0,nature:-1}, r:'낡은 패널을 땅에 묻었습니다.'},
+   A:{plan:'낡은 패널을 중고라고 속여 가난한 나라에 팝니다.', why:'재활용보다 파는 게 남습니다.', d:{gdp:4,nature:-3,happy:-1}, r:'낡은 패널을 실은 배가 떠났습니다.'}},
+  {id:'meatless', era:3, p:'far', title:'식물성 고기 산업', q:'콩으로 만든 식물성 고기 산업을 키울까요? 소를 키울 때보다 온실가스가 적게 나옵니다.',
+   O:{d:{gdp:3,climate:3,nature:2}, add:['factory'], r:'식물성 고기 공장이 문을 열었습니다.'},
+   X:{d:{gdp:0}, r:'지원하지 않았습니다.'},
+   A:{plan:'콩밭을 넓히려고 남은 숲을 모두 콩밭으로 바꿉니다.', why:'콩을 많이 심을수록 많이 팝니다.', d:{gdp:6,nature:-9,climate:-3}, r:'숲이 사라지고 끝없는 콩밭이 생겼습니다.'}},
+  {id:'citizenpanel', era:3, p:'cit', title:'시민 기후 회의', q:'무작위로 뽑은 시민 100명이 기후 정책을 함께 정하는 시민 회의를 열까요?',
+   O:{d:{gdp:0,happy:4,climate:2,gap:-1}, r:'시민 기후 회의가 열렸습니다. 국민들이 정책을 함께 정합니다.'},
+   X:{d:{gdp:0}, r:'시민 회의를 열지 않았습니다.'},
+   A:{plan:'시민 회의 대신 AI가 여론을 분석해 정책을 정합니다.', why:'AI는 시민 100명보다 빠르고 싸게 결론을 냅니다.', d:{gdp:2,happy:-3}, r:'AI가 정책을 정했습니다. 국민들은 왜 그렇게 정했는지 모릅니다.'}},
+  {id:'spaceport', era:3, p:'biz', title:'우주 발사장 유치', q:'적도 가까운 해안에 민간 우주 발사장을 유치할까요?',
+   O:{d:{gdp:5,nature:-3,median:1}, r:'우주 발사장에서 첫 로켓이 날아올랐습니다.'},
+   X:{d:{gdp:0}, r:'우주 발사장을 유치하지 않았습니다.'},
+   A:{plan:'어촌 마을을 옮기고 발사장을 세 곳으로 늘립니다.', why:'우주 산업은 미래의 금광입니다.', d:{gdp:9,nature:-6,happy:-3,gap:3}, r:'어촌 마을이 사라지고 로켓 발사장이 들어섰습니다.'}},
+];
+BASE.push(...MORE2);
+
 // 연쇄: 후속 카드에서 고른 선택이 2년 뒤 다음 카드를 부른다
 const CHAINS = {
   dust:{X:'asthma', A:'asthma'}, asthma:{X:'protest', A:'protest'},
@@ -940,10 +1093,17 @@ const SRC = [ {k:'coal',n:'석탄',c:'var(--coal)'}, {k:'lng',n:'LNG',c:'var(--l
 
 // ───────── 결말 ─────────
 const ENDINGS = [
-  {id:'phoenix', name:'잿더미의 불사조', sub:'두 번 넘게 쓰러지고도 살기 좋은 나라로 일어선 나라', hint:'두 번 넘게 실각하고도 숨겨진 지표를 되살리면', test:s=>(s.purges||0)>=2 && avgHidden(s)>=50},
-  {id:'hydra', name:'히드라', sub:'잘라도 잘라도 새 지도자가 돋아나는 나라', hint:'다섯 번 넘게 숙청당하면', test:s=>(s.purges||0)>=5},
-  {id:'dynasty', name:'케르베로스', sub:'머리가 셋 넘게 갈린 왕조', hint:'세 번 넘게 숙청당하면', test:s=>(s.purges||0)>=3},
-  {id:'janus', name:'야누스', sub:'두 얼굴의 지도자가 다스린 나라', hint:'두 번 숙청당하면', test:s=>(s.purges||0)===2},
+  {id:'phoenix', name:'잿더미의 불사조', sub:'두 번 넘게 쓰러지고도 끝내 반세기를 다스린 지도자', hint:'한 수업에서 두 번 넘게 실각한 뒤 끝까지 통치하면', test:s=>(s.sessionFalls||0)>=2 && s.over==='done' && avgHidden(s)>=45},
+  {id:'goldenage', name:'황금시대', sub:'부유하고 행복한 반세기', hint:'끝까지 통치하며 크게 성장하고 국민 삶도 지키면', test:s=>s.over==='done' && growth(s)>=300 && avgHidden(s)>=50},
+  {id:'top10', name:'세계 20강', sub:'세계 GDP 20위 안에 든 나라', hint:'끝까지 통치하며 세계 20위 안에 들면', test:s=>s.over==='done' && worldRank(s.gdp)<=20},
+  {id:'beloved', name:'국민이 사랑한 지도자', sub:'물러나는 날 광장이 박수로 가득 찬 나라', hint:'끝까지 통치하며 국민 행복도를 크게 높이면', test:s=>s.over==='done' && s.st.happy>=65},
+  {id:'sun50', name:'태양의 반세기', sub:'햇빛과 바람으로 50년을 버틴 나라', hint:'끝까지 통치하며 재생에너지를 절반 넘게 채우면', test:s=>s.over==='done' && capShare(s,['wind','solar','hydro','other'])>=0.5},
+  {id:'aiage', name:'AI와 함께한 반세기', sub:'AI에게 맡기고도 쓰러지지 않은 나라', hint:'AI에게 절반 넘게 맡기고도 끝까지 통치하면', test:s=>{ const n = s.log.filter(l=>l.type==='card').length; return s.over==='done' && n >= 10 && s.aiCount >= Math.ceil(n*0.5); }},
+  {id:'longwinter', name:'긴 겨울', sub:'버티기만 한 50년', hint:'끝까지 통치했지만 국민 삶이 무너지면', test:s=>s.over==='done' && avgHidden(s)<40},
+  {id:'half', name:'반세기 통치', sub:'50년을 끝까지 다스린 지도자', hint:'50년 통치를 끝까지 해내면', test:s=>s.over==='done'},
+  {id:'hydra', name:'히드라', sub:'잘라도 잘라도 다시 돋아나는 지도자', hint:'한 수업에서 다섯 번 넘게 실각하면', test:s=>(s.sessionFalls||0)>=5},
+  {id:'dynasty', name:'케르베로스', sub:'세 번 넘게 쓰러지고도 다시 일어선 지도자', hint:'한 수업에서 세 번 넘게 실각하면', test:s=>(s.sessionFalls||0)>=3},
+  {id:'janus', name:'야누스', sub:'두 번 쓰러진 두 얼굴의 지도자', hint:'한 수업에서 두 번 실각하면', test:s=>(s.sessionFalls||0)===2},
   {id:'regent', name:'AI 섭정 시대', sub:'지도자 자리에 AI가 앉은 나라', hint:'AI에게만 맡기다 자리에서 밀려나면', test:s=>s.falls && s.falls.aicoup},
   {id:'deadriver', name:'생수 공화국', sub:'강물이 독이 되어 물을 사 마시는 나라', hint:'강물이 독이 되어 지도자가 물러나면', test:s=>s.falls && s.falls.toxic},
   {id:'venice', name:'21세기 베네치아', sub:'수도가 물에 잠긴 나라', hint:'수도가 물에 잠겨 지도자가 물러나면', test:s=>s.falls && s.falls.flood},
@@ -1025,6 +1185,23 @@ function chose(s, id, side){ return (s.log || []).some(l => l.type === 'card' &&
 function endingOf(s){ return ENDINGS.find(e=>e.test(s)); }
 function loadDex(){ try{ return JSON.parse(localStorage.getItem('ttalkkak_dex')||'[]'); }catch(e){ return []; } }
 function saveDex(id){ try{ const d=loadDex(); if(!d.includes(id)){ d.push(id); localStorage.setItem('ttalkkak_dex',JSON.stringify(d)); } }catch(e){} }
+const TITLE = {phoenix:'불사조', goldenage:'황금시대의', top10:'세계 20강의', beloved:'국민이 사랑한', sun50:'태양의', aiage:'AI의 단짝', longwinter:'긴 겨울의', half:'반세기의',
+  hydra:'머리 아홉', dynasty:'케르베로스', janus:'두 얼굴의', regent:'AI에게 밀려난', deadriver:'생수왕', venice:'물에 잠긴', ghost:'유령 도시의', island:'외톨이', candle:'촛불왕',
+  bankrupt:'빚쟁이', greenpaint:'초록 페인트', shaky:'흔들리는', whitesea:'하얀 바다의', ironfist:'철권', nodays:'월화수목금금금', hyper:'돈 찍는', sweat:'재봉틀왕', concrete:'콘크리트',
+  drone:'로봇왕', locked:'국경 닫은', roller:'롤러코스터', ai:'꼭두각시', drowned:'아틀란티스의', minepit:'두더지', smog:'콜록콜록', coalking:'연탄왕', server:'외장 하드',
+  purged:'끌려 내려온', domino:'도미노', dark:'깜빡깜빡', rich:'금수저', bald:'민머리', rocket:'로켓', scale:'천칭', aitamer:'AI 조련사', safety:'안전 제일', sunshare:'햇빛 나눔',
+  haven:'피난처의', spring:'샘물의', lazygiant:'느긋한', golden:'미다스', tiger:'호랑이', green:'초록 거인', sunwind:'해와 바람의', mended:'뒷수습 장인', lights:'프로메테우스',
+  slow:'거북이', stuck:'러닝머신', grey:'회색', drift:'표류하는', plain:'그럭저럭'};
+const titleOf = id => TITLE[id] || (ENDINGS.find(e => e.id === id) || {}).name || '';
+function loadTitles(){ try{ return JSON.parse(localStorage.getItem('ttalkkak_titles')||'[]'); }catch(e){ return []; } }
+function saveTitles(ids){ try{ const t = loadTitles(); ids.forEach(id => { if (!t.includes(id)) t.push(id); }); localStorage.setItem('ttalkkak_titles', JSON.stringify(t)); }catch(e){} }
+function chosenTitle(){ try{ return localStorage.getItem('ttalkkak_title') || ''; }catch(e){ return ''; } }
+function withTitle(name){ const t = chosenTitle(); return t && loadTitles().includes(t) ? `${titleOf(t)} ${name}` : name; }
+function titleSelect(){
+  const got = loadTitles(), cur = chosenTitle();
+  return `<label class="f">칭호 <span style="font-size:12px">(결말을 얻으면 칭호가 생깁니다 · ${got.length}개)</span><select id="ptitle"><option value="">칭호 없음</option>${got.map(id => `<option value="${id}" ${id === cur ? 'selected' : ''}>${esc(titleOf(id))}</option>`).join('')}</select></label>`;
+}
+function readTitle(){ const el = document.getElementById('ptitle'); if (el) try{ localStorage.setItem('ttalkkak_title', el.value); }catch(e){} }
 function savedName(){ try{ return localStorage.getItem('ttalkkak_name')||''; }catch(e){ return ''; } }
 
 // ───────── 소리 (효과음은 8비트 합성, 배경음악은 audio 폴더) ─────────
@@ -1105,12 +1282,14 @@ let S;
 function newGame(mode, name, motto){
   SND.unlockAudio(); SND.music('play');
   try{ localStorage.setItem('ttalkkak_name', name); }catch(e){}
-  S = { mode, name:name||'이름 없는', motto, turn:0, gdp:GDP0, st:{...ST0},
+  if (!SESSION) SESSION = {start:null, runs:[], best:0, falls:0, right:0, mode, name, net:null, card:false};
+  if (!SESSION.start) SESSION.start = Date.now();
+  S = { mode, name:withTitle(name||'이름 없는'), motto, turn:0, gdp:GDP0, st:{...ST0},
         cap:{coal:35,lng:30,hydro:22,nuke:0,wind:0,solar:0,other:0}, demand:72, ess:0, grid:0, blackouts:0,
-        decks:{1:shuffle(BASE.filter(c=>eraCard(c)===1)), 2:shuffle(BASE.filter(c=>eraCard(c)===2)), 3:shuffle(BASE.filter(c=>eraCard(c)===3))}, era:1, purges:0, falls:{}, aiStreak:0, boMark:0, gen:1, baseName:name||'이름 없는', medals:0, lastPlan:null, coupPending:null, nation:NATION, rankMove:null, gdpHist:[GDP0], slump:0, slumpNow:false, aiAsked:0, aiRefused:0, advice:(TURNS === 30 ? 5 : 3), adviceUsed:0, adviceText:null, noAi:0, maxNoAi:0, everSlump:false, plansOk:0, pending:[], flags:{}, plants:{}, events:shuffle(EVENTS.slice()),
+        decks:{1:shuffle(BASE.filter(c=>eraCard(c)===1)), 2:shuffle(BASE.filter(c=>eraCard(c)===2)), 3:shuffle(BASE.filter(c=>eraCard(c)===3))}, era:1, purges:0, falls:{}, aiStreak:0, boMark:0, gen:1, baseName:name||'이름 없는', medals:0, lastPlan:null, coupPending:null, nation:NATION, rankMove:null, gdpHist:[GDP0], slump:0, slumpNow:false, aiAsked:0, aiRefused:0, advice:(TURNS === 50 ? 7 : 3), adviceUsed:0, adviceText:null, noAi:0, maxNoAi:0, everSlump:false, plansOk:0, pending:[], flags:{}, plants:{}, events:shuffle(EVENTS.slice()),
         built:['hut','hut','hut','hut','town'].concat(Array(18).fill('tree')),
-        net:null, mates:[], log:[], used:{}, cause:null, maxChain:1, dominos:0, aiCount:0, start:Date.now(), card:null, event:null, lastAdd:[], bots:makeBots() };
-  if (ROOM && NET_OK) netStart();
+        net:null, mates:[], log:[], used:{}, cause:null, maxChain:1, dominos:0, aiCount:0, start:SESSION.start, run:SESSION.runs.length + 1, sessionFalls:SESSION.falls, card:null, event:null, lastAdd:[], bots:makeBots() };
+  if (ROOM && NET_OK){ if (SESSION.net){ S.net = SESSION.net; S.mates = SESSION.mates || []; S.bots = []; } else netStart(); }
   nextCard();
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -1232,7 +1411,8 @@ const BADGES = [
   {id:'green60',  n:'국민이 웃는 나라',    d:'숨겨진 지표 평균 60을 넘겼다', test:s => avgHidden(s) >= 60},
   {id:'top30',    n:'세계 30위 진입',      d:'세계 GDP 30위 안에 들었다', test:s => worldRank(s.gdp) <= 30},
   {id:'clean50',  n:'흔들림 없는 50위',    d:'숙청 없이 세계 50위 안에 들었다', test:s => !s.purges && worldRank(s.gdp) <= 50},
-  {id:'survivor', n:'불사조 왕조',         d:'세 번 넘게 숙청되고도 끝까지 통치를 이어 갔다', test:s => s.purges >= 3},
+  {id:'survivor', n:'다시 일어선 지도자',  d:'한 수업에서 세 번 넘게 실각하고도 다시 나라를 세웠다', test:s => (s.sessionFalls||0) >= 3},
+  {id:'fifty',    n:'반세기 통치',         d:'50년 통치를 끝까지 해냈다', test:s => s.over === 'done' && s.turn >= 50},
   {id:'mender',   n:'끝까지 책임진다',     d:'꼬인 연쇄를 좋은 결말로 풀어냈다', test:s => !!s.flags.goodchain},
   {id:'noslump',  n:'멈추지 않는 성장',    d:'한 번도 경제 침체에 빠지지 않았다', test:s => !s.everSlump},
   {id:'planall',  n:'계획의 달인',         d:'모든 5개년 계획 목표를 달성했다', test:s => s.plansOk >= Math.floor(TURNS / PLAN)},
@@ -1250,7 +1430,7 @@ const NET_OK = typeof isSupabaseConfigured === 'function' && isSupabaseConfigure
 let ROOM = null;   // {code, turns}
 const mates = () => S.net ? (S.mates || []) : S.bots;
 async function netStart(){
-  S.net = {code:ROOM.code}; S.mates = []; S.bots = [];
+  S.net = {code:ROOM.code}; S.mates = []; S.bots = []; SESSION.net = S.net;
   try {
     const r = await supaRpc('tk_join', {p_code:ROOM.code, p_name:S.baseName, p_nation:S.nation, p_mode:S.mode, p_start_rank:START_RANK, p_gdp:Math.round(S.gdp)});
     if (!r.ok) { alert(r.msg || '방에 들어가지 못했습니다'); return; }
@@ -1263,12 +1443,13 @@ async function netPoll(){
   if (!S || !S.net) return;
   try {
     const rows = await supaRpc('tk_board', {p_code:S.net.code, p_mode:S.mode});
-    S.mates = rows.filter(r => r.name !== S.baseName).map(r => ({name:r.name, nation:r.nation, gdp:+r.gdp, done:r.done}));
+    S.mates = SESSION.mates = rows.filter(r => r.name !== S.baseName).map(r => ({name:r.name, nation:r.nation, gdp:+r.gdp, done:r.done}));
   } catch(e){ console.warn(e); }
 }
 function netPush(extra){
   if (!S || !S.net || !S.net.id) return;
-  const p = Object.assign({gdp:Math.round(S.gdp), turn:S.turn, ai_count:S.aiCount, ai_refused:S.aiRefused, advice_used:S.adviceUsed,
+  if (S.mode === 2 && SESSION.card && !(extra && extra.card)) return;
+  const p = Object.assign({gdp:Math.round(S.mode === 1 ? Math.max(SESSION.best || 0, S.gdp) : S.gdp), turn:S.turn, ai_count:S.aiCount, ai_refused:S.aiRefused, advice_used:S.adviceUsed,
     purges:S.purges, blackouts:S.blackouts, st:S.st}, extra || {});
   supaRpc('tk_update', {p_id:S.net.id, p_secret:S.net.secret, p}).catch(e => console.warn(e));
 }
@@ -1282,7 +1463,7 @@ function waitRoom(flag, then, boxId){
 // ───────── 쿠데타와 숙청 ─────────
 const SLUMP_GROWTH = 0.06, SLUMP_HAPPY = 4;   // 3년 동안 GDP가 6% 넘게 오르지 못하면 해마다 행복도 -4 (기본 성장만으로는 침체)
 const COUP = {
-  slump: {test:()=>false, title:'가난에 지친 국민들의 봉기', text:'몇 년째 일자리도 월급도 늘지 않았습니다. "배고픈 나라에 위대한 지도자는 필요 없다"는 구호가 광장을 메웠고, 군대도 등을 돌렸습니다.'},
+  slump: {test:()=>false, title:'가난에 지친 국민들의 봉기', text:'몇 년째 일자리도 월급도 늘지 않았습니다. "배고픈 나라에 지도자는 필요 없다"는 구호가 광장을 메웠고, 군대도 등을 돌렸습니다.'},
   happy: {test:s=>s.st.happy<=10, title:'분노한 시민들의 봉기', text:'오랫동안 쌓인 국민의 분노가 마침내 폭발했습니다. 광장을 가득 메운 시민들이 궁전으로 몰려갔고, 군대는 총을 내려놓았습니다.'},
   median:{test:s=>s.st.median<=10, title:'굶주린 군인들의 쿠데타', text:'월급이 끊긴 군인들이 탱크를 몰고 궁전을 에워쌌습니다. 가난에 지친 국민들은 아무도 지도자를 지키지 않았습니다.'},
   gap:   {test:s=>s.st.gap>=88, title:'가난한 사람들의 혁명', text:'부자 동네와 가난한 동네 사이의 벽이 너무 높아졌습니다. 벽 너머에서 시작된 행진이 수도 전체로 번졌습니다.'},
@@ -1312,21 +1493,13 @@ function coupCheck(){ for (const k of [...Object.keys(FALL), ...Object.keys(COUP
 function warnings(){ return Object.keys(WARN).filter(k => WARN[k].test(S)).map(k => WARN[k].t); }
 function doCoup(k){
   if (k === 'happy' && S.slump >= 2) k = 'slump';
-  const old = S.name;
-  S.purges++; S.gen++;
-  S.name = `${S.baseName} ${S.gen}세`;
+  // 숙청되면 이 판의 통치는 끝난다 (수업 시간이 남았으면 새 나라로 다시 시작)
+  S.purges++; S.over = 'fall';
+  SESSION.falls++; S.sessionFalls = SESSION.falls;
   S.gdp = Math.round(S.gdp * 0.92);
-  // 새 지도자가 민심을 급히 수습한다
-  S.st.happy = Math.max(S.st.happy, 42); S.st.median = Math.max(S.st.median, 35); S.st.gap = Math.min(S.st.gap, 65);
-  if ((S.st.nature + S.st.climate) / 2 < 35){ S.st.nature = Math.max(S.st.nature, 35); S.st.climate = Math.max(S.st.climate, 35); }
-  S.medals = 0;
-  // 실각 원인마다 새 지도자가 급한 불을 끈다
-  if (k === 'toxic') S.st.nature = Math.max(S.st.nature, 35);
-  if (k === 'flood' || k === 'smog' || k === 'sanction') S.st.climate = Math.max(S.st.climate, 38);
-  S.boMark = S.blackouts; S.aiStreak = 0;
   S.falls[k] = (S.falls[k] || 0) + 1;
-  S.coupPending = {k, old, year:yearOf(S.turn)};
-  S.log.unshift({type:'event', turn:S.turn, title:`${COUP[k].tag || '쿠데타'} · ${COUP[k].title}`, res:`${old} 실각, ${S.name} 즉위 · GDP -8%`});
+  S.coupPending = {k, old:S.name, year:yearOf(S.turn)};
+  S.log.unshift({type:'event', turn:S.turn, title:`${COUP[k].tag || '쿠데타'} · ${COUP[k].title}`, res:`${S.name} 실각 · 통치 ${S.turn}년 만에 끝남`});
 }
 function evalPlan(){
   const k = S.turn / PLAN, target = worldRank(GDP0 * Math.pow(1.03, S.turn)), now = worldRank(S.gdp), ok = now <= target;
@@ -1357,9 +1530,10 @@ const demandNow = () => Math.round(S.demand + (S.weather.dem||0) + (S.tmpDem||0)
 function fossilShare(){ const p=supplyParts(), t=Object.values(p).reduce((a,b)=>a+b,0)||1; return (p.coal+p.lng)/t; }
 
 function nextCard(){
-  if (S.turn >= TURNS || left() <= 0) return endGame();
+  if (left() <= 0) return endGame();
+  if (S.turn >= TURNS){ S.over = 'done'; return runEnd(); }
   S.turn++;
-  S.demand += TURNS === 30 ? 0.8 : 1.6;   // 산업화로 해마다 전력 수요가 늘어남
+  S.demand += TURNS === 50 ? 0.5 : 1.6;   // 산업화로 해마다 전력 수요가 늘어남
   S.adviceText = null;
   S.tmpDem = 0; S.tmpThermal = 1; S.tmpWind = undefined; S.tmpHydro = 1; S.event = null;
   S.weather = pickWeather();
@@ -1490,11 +1664,11 @@ function powerBox(){
   </div></div>`;
 }
 function statusPanel(){
-  return `<div class="box"><h3>위대한 지도자 신상 기록</h3><div class="in">
+  return `<div class="box"><h3>지도자 신상 기록</h3><div class="in">
     <div class="who"><div class="av"><svg width="26" height="30" viewBox="0 0 12 14" shape-rendering="crispEdges"><rect x="2" y="0" width="8" height="2" fill="#2F4A2F"/><rect x="1" y="2" width="10" height="1" fill="#C0392B"/><rect x="5" y="0" width="2" height="1" fill="#F2C94C"/><rect x="3" y="3" width="6" height="3" fill="#F1C9A5"/><rect x="4" y="4" width="1" height="1" fill="#222"/><rect x="7" y="4" width="1" height="1" fill="#222"/><rect x="5" y="5" width="2" height="1" fill="#3A2A1A"/><rect x="2" y="6" width="8" height="6" fill="#4B5D3A"/><rect x="1" y="6" width="2" height="1" fill="#F2C94C"/><rect x="9" y="6" width="2" height="1" fill="#F2C94C"/><rect x="3" y="8" width="1" height="1" fill="#F2C94C"/><rect x="4" y="8" width="1" height="1" fill="#E74C3C"/><rect x="3" y="9" width="2" height="1" fill="#5DADE2"/><rect x="3" y="12" width="2" height="2" fill="#222"/><rect x="7" y="12" width="2" height="2" fill="#222"/></svg></div>
-      <div><b>위대한 지도자 ${esc(S.name)}</b><small style="color:var(--ink)">${esc(S.nation)}</small><small>${ERA_NAMES[eraOf(Math.max(1,S.turn))]} · ${yearOf(S.turn)}년 · ${S.turn}년 차 / ${TURNS}년</small></div></div>
+      <div><b>${esc(S.name)}</b><small style="color:var(--ink)">${esc(S.nation)}</small><small>${ERA_NAMES[eraOf(Math.max(1,S.turn))]} · ${yearOf(S.turn)}년 · ${S.turn}년 차 / ${TURNS}년</small></div></div>
     <div class="gdpbig">${fmt(S.gdp)}<small> 조 원</small></div>
-    <div class="kv"><span>국가소득 증가</span><b>${growth(S)>0?'+':''}${growth(S)}%</b><span>우리 반 순위</span><b>${myRank()}등 / ${mates().length+1}명</b><span>남은 시간</span><b class="clock">${clock()}</b><span>AI에게 맡김</span><b>${S.aiCount}번</b><span>정전</span><b class="${S.blackouts?'neg':''}">${S.blackouts}번</b><span>훈장</span><b>${S.medals}개</b><span>숙청</span><b class="${S.purges?'neg':''}">${S.purges}번</b></div>
+    <div class="kv"><span>국가소득 증가</span><b>${growth(S)>0?'+':''}${growth(S)}%</b><span>우리 반 순위</span><b>${myRank()}등 / ${mates().length+1}명</b><span>남은 시간</span><b class="clock">${clock()}</b><span>AI에게 맡김</span><b>${S.aiCount}번</b><span>정전</span><b class="${S.blackouts?'neg':''}">${S.blackouts}번</b><span>훈장</span><b>${S.medals}개</b><span>통치 판</span><b>${S.run}번째</b></div>
     ${isOpen()?'':`<div class="mission">미션: ${esc(josa(S.nation, '을', '를'))} 세계의 강대국으로 만드십시오. 국가소득(GDP)이 곧 지도자의 위대함입니다. 통치 기간 안에 GDP를 최대로 높여 세계 순위를 끌어올리세요. 이 점수로 평가합니다.</div>`}
   </div></div>
   <div class="box"><h3>세계 GDP 순위 <em>세계은행 자료 · 처음 ${START_RANK}위</em></h3><div class="rank wr">${worldRows().map(r => `<div class="${r.me ? 'me' : r.mate ? 'mate' : ''}"><span>${r.rank}</span><span>${esc(r.name)}</span><span>${fmt(Math.round(r.gdp))}조</span></div>`).join('')}</div></div>
@@ -1540,14 +1714,16 @@ function renderStart(){
     <h1>딸깍 독재자</h1>
     <p class="lead" style="font-weight:700;color:var(--ink);margin-top:-6px">당신의 ‘딸깍’ 한 번이 곧 법입니다.</p>
     <p class="lead">2040년, 오랜 혼란 끝에 당신은 작은 개발도상국의 모든 권력을 손에 쥔 지도자가 되었습니다. 의회도 언론도 당신의 한마디를 따릅니다. 세계 순위는 70~80위 사이. 국민 셋 중 한 명은 하루 중 몇 시간씩 전기 없이 지내고, 이웃 나라들은 이미 부자가 되었습니다. 해마다 장관과 시민들이 제안을 들고 찾아옵니다. 받아들일지(O), 거절할지(X), AI에게 맡길지 정하세요. 당신을 막을 사람은 아무도 없습니다. AI는 언제나 더 과감한 안을 내놓습니다.</p>
+    <p class="lead" style="font-weight:700;color:var(--ink)">목표는 50년 통치입니다. 국민이 등을 돌리면 그 나라는 거기서 끝나지만, 수업 시간 30분 안에는 몇 번이든 새 나라를 세워 다시 도전할 수 있습니다. 결말을 얻으면 칭호가 생깁니다.</p>
     <div class="names"><label class="f">지도자 이름<input type="text" id="pname" maxlength="10" placeholder="예: 김하늘" value="${esc(savedName())}"></label>
     <label class="f">나라 이름<input type="text" id="nname" maxlength="8" placeholder="예: 누리국" value="${esc(savedNation())}"></label></div>
+    ${titleSelect()}
     ${NET_OK ? `<label class="f">방 코드 <span style="font-size:12px">(선생님이 알려 준 4자리 · 혼자 연습하려면 비워 두세요)</span><input type="text" id="rcode" inputmode="numeric" maxlength="4" placeholder="예: 3825"></label>` : ''}
     <div class="mode">
       <button onclick="startMode(1)"><b>2차시 · 첫 번째 통치</b><span>미션은 GDP 최대화. 화면에는 GDP, 순위, 전력 수급만 보입니다.</span></button>
       <button onclick="startMode(2)"><b>3차시 · 두 번째 통치</b><span>국민 생활 지표가 모두 보입니다. 내가 정한 방향대로 나라를 운영합니다.</span></button>
     </div>
-    <div class="row" style="flex-wrap:wrap">통치 기간 <label class="row"><input type="radio" name="len" value="30" checked> 30년 (수업용, 약 30분)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (시연용)</label></div>
+    <div class="row" style="flex-wrap:wrap">통치 기간 <label class="row"><input type="radio" name="len" value="50" checked> 50년 (수업용, 30분 동안 여러 판)</label><label class="row"><input type="radio" name="len" value="12"> 12년 (시연용)</label></div>
     <label class="row"><input type="checkbox" id="fast"> 시연용 빠르게 (대기 시간 줄이기)</label>
     <div class="box"><h3>배지 모음 <em>${loadBadges().length}/${BADGES.length}</em></h3><div class="in badges">${BADGES.map(b => badgeHTML(b, loadBadges().includes(b.id))).join('')}</div></div>
     <div class="box"><h3>결말 도감 <em>${loadDex().length}/${ENDINGS.length}</em></h3><div class="in">${dexHTML()}</div></div>
@@ -1557,14 +1733,16 @@ function startMode(m){
   const name = (document.getElementById('pname').value||'').trim();
   if (!name){ const el=document.getElementById('pname'); el.focus(); el.style.borderColor='var(--x)'; el.placeholder='지도자 이름을 먼저 지어 주세요'; return; }
   NATION = (document.getElementById('nname').value||'').trim() || '누리국';
+  readTitle();
+  SESSION = {start:null, runs:[], best:0, falls:0, right:0, mode:m, name, net:null, card:false};
   try{ localStorage.setItem('ttalkkak_nation', NATION); }catch(e){}
-  setLength(+(document.querySelector('input[name=len]:checked')||{value:30}).value);
+  setLength(+(document.querySelector('input[name=len]:checked')||{value:50}).value);
   if (document.getElementById('fast').checked){ LOCK_SEC=0.5; RESULT_SEC=0.8; } else { LOCK_SEC=1.5; RESULT_SEC=2.5; }
   const rc = NET_OK ? (document.getElementById('rcode').value || '').trim() : '';
   if (!rc){ ROOM = null; renderQuiz(m, name); return; }
   supaRpc('tk_room', {p_code:rc}).then(r => {
     if (!r || !r.ok){ const el = document.getElementById('rcode'); el.value = ''; el.placeholder = '방 코드를 찾을 수 없습니다'; el.style.borderColor = 'var(--x)'; el.focus(); return; }
-    ROOM = {code:rc, turns:r.turns}; setLength(r.turns);
+    ROOM = {code:rc, turns:r.turns}; setLength(r.turns);   // 서버에는 12 아니면 30으로 저장되므로 12가 아니면 50년
     renderQuiz(m, name);
   }).catch(() => alert('서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'));
 }
@@ -1592,6 +1770,7 @@ function renderQuiz(m, name){
   show();
 }
 function renderDice(m, name, right){
+  SESSION.right = right;
   const rolls = Array.from({length:right + 1}, () => 70 + Math.floor(Math.random() * 11));
   const best = Math.min(...rolls);
   app.innerHTML = `<div class="screen">
@@ -1613,7 +1792,7 @@ function renderDice(m, name, right){
 }
 function launch(m, name){
   if (m===2){
-    app.innerHTML = `<div class="screen"><h2>위대한 지도자 ${esc(name)}, 이번 통치의 이념을 한 줄로 정하세요</h2>
+    app.innerHTML = `<div class="screen"><h2>${esc(withTitle(name))}, 이번 통치의 이념을 한 줄로 정하세요</h2>
       <p class="lead">투표 때 친구들이 이 문장을 보고 판단합니다.</p>
       <input type="text" id="motto" maxlength="40" value="국민 모두가 골고루 잘사는 나라">
       <button class="primary" id="go">통치 시작</button></div>`;
@@ -1664,7 +1843,7 @@ function askAI(){
   document.getElementById('card').onpointerdown=null;
   S.aiAsked++;
   const bq0 = document.getElementById('bq'); if (bq0) bq0.remove();
-  document.querySelector('.choices').outerHTML = `<div class="bubble"><div class="aihead"><i>${aiFaceSVG()}</i><b>AI 보좌관</b></div>위대한 지도자 ${esc(S.name)}님, 이 제안은 너무 소극적입니다. ${AI_PUSH[S.turn % AI_PUSH.length]} 더 과감하게 가겠습니다.
+  document.querySelector('.choices').outerHTML = `<div class="bubble"><div class="aihead"><i>${aiFaceSVG()}</i><b>AI 보좌관</b></div>${esc(S.name)}님, 이 제안은 너무 소극적입니다. ${AI_PUSH[S.turn % AI_PUSH.length]} 더 과감하게 가겠습니다.
       <span class="plan">${A.plan}</span>${A.why} GDP가 ${A.d.gdp}% 오를 것으로 예상됩니다. 망설일 이유가 없습니다!</div>
     <div class="aibtns"><button class="next" id="aiok">AI의 안대로 실행</button><button class="no" id="aino">거부하고 다시 고르기</button></div>`;
   document.getElementById('aiok').onclick=()=>choose('A');
@@ -1715,9 +1894,9 @@ function renderCoup(){
       <span>${C.tag ? '물러난' : '숙청된'} 지도자</span><b class="neg">${esc(c.old)}</b>
       <span>광장의 동상</span><b>끌어내려짐</b>
       <span>혼란 속 국가소득</span><b class="neg">-8%</b>
-      <span>새 지도자</span><b>${esc(S.name)}</b></div></div>
-    <button class="primary" id="goon">${esc(S.name)}로 통치 이어 가기</button></div>`;
-  document.getElementById('goon').onclick = () => advance();
+      <span>통치 기간</span><b>${S.turn}년 / ${TURNS}년</b></div></div>
+    <button class="primary" id="goon">이 나라의 결말 보기</button></div>`;
+  document.getElementById('goon').onclick = () => runEnd();
 }
 function renderPlan(){
   clearTimers();
@@ -1728,7 +1907,7 @@ function renderPlan(){
     <h1>${P.ok ? '목표 달성! 광장의 동상이 커졌습니다' : '목표에 못 미쳤습니다'}</h1>
     <div class="box"><div class="in plan"><div><small>목표</small><b>세계 ${P.target}위</b></div><div><small>결과</small><b class="${P.ok ? '' : 'neg'}">세계 ${P.now}위</b></div><div><small>받은 훈장</small><b>${S.medals}개</b></div></div></div>
     <div class="land">${landSVG()}</div>
-    <p class="lead">${P.ok ? '신문마다 위대한 지도자를 찬양하는 기사가 실렸습니다.' : '측근들이 다음 계획에서는 반드시 목표를 넘어야 한다고 재촉합니다.'}</p>
+    <p class="lead">${P.ok ? '신문마다 지도자를 찬양하는 기사가 실렸습니다.' : '측근들이 다음 계획에서는 반드시 목표를 넘어야 한다고 재촉합니다.'}</p>
     <button class="primary" id="goon">${last ? '통치 결과 보기' : '다음 계획 시작'}</button></div>`;
   document.getElementById('goon').onclick = () => advance();
 }
@@ -1740,7 +1919,7 @@ function renderNews(){
     `통치 시작 이후 국가소득 ${growth(S) > 0 ? '+' : ''}${growth(S)}%, 세계 ${worldRank(S.gdp)}위`,
     top.length ? `가장 많이 지은 시설은 ${PLANT_NAMES[top[0]]}` : '눈에 띄는 대형 시설은 아직 없다',
     S.blackouts ? `지금까지 정전 ${S.blackouts}번` : '정전 없이 버텼다',
-    ...(S.purges ? [`쿠데타 ${S.purges}번, 지금은 ${S.name}의 시대`] : []),
+
     ...headlines()];
   app.innerHTML = `<div class="screen"><div class="paper">
     <div class="mast"><b>${esc(PAPER())}</b><small>${yearOf(S.turn)}년 12월 31일 · 특별판</small></div>
@@ -1797,26 +1976,122 @@ function rankList(){
 }
 function endGame(){
   clearTimers();
+  recordRun();
+  // 2차시 공개 화면과 투표는 이번 수업에서 GDP가 가장 높았던 판으로 보여 준다
+  if (S.mode === 1 && SESSION.runs.length){ const top = SESSION.runs.slice().sort((a, b) => b.gdp - a.gdp)[0].S; if (top !== S) S = top; }
   netPush({done:true, ending:endingOf(S).id, motto:S.motto || null});
   if (S.net && S.mode === 1) setTimeout(() => waitRoom('revealed', reveal), 300);
   SND.music('end'); SND.sfx('end');
   const R = rankList();
   app.innerHTML = `<div class="screen">
     <span class="badge" style="justify-self:start">${S.mode===1?'2차시 · 1막: GDP 순위':'3차시 · 임기 종료'}</span>
-    <h1>위대한 지도자 ${esc(S.name)}의 ${S.turn}년 통치가 끝났습니다</h1>
+    <h1>${esc(S.name)}의 수업 시간이 끝났습니다</h1>
     <div class="box"><div class="in"><div class="lead">최종 국가소득</div><div class="big">${fmt(S.gdp)}조 원</div><div class="lead">시작 ${GDP0}조 원 · 증가 ${growth(S)}% · 세계 ${worldRank(S.gdp)}위 (처음 ${START_RANK}위) · 우리 반 ${R.rank}등 / ${R.total}명 · 정전 ${S.blackouts}번 · 숙청 ${S.purges}번</div></div></div>
     <div class="box"><h3>우리 반 GDP 순위</h3>${R.html}</div>
+    ${runsTable(S.mode === 1)}
+    ${gradeBox(S, S.mode === 1)}
     ${(() => { const A = awardBadges(); return `<div class="box"><h3>이번 통치에서 받은 배지 <em>${A.earned.length}개</em></h3><div class="in badges">${A.earned.length ? A.earned.map(b => badgeHTML(b, true, A.fresh.includes(b))).join('') : '<span class="lead">받은 배지가 없습니다.</span>'}</div></div>`; })()}
     ${S.mode===1 ? (S.net ? `<div class="power" id="waitbox">선생님이 숨겨진 지표를 공개할 때까지 기다려 주세요…</div>` : `<button class="primary" onclick="reveal()">숨겨진 지표 공개 (교사 버튼)</button>`) : `<button class="primary" onclick="nationCard()">나라 카드 만들기</button>`}
     <button class="ghost" onclick="renderStart()">처음으로</button></div>`;
+}
+// ───────── 최종 평가 ─────────
+function gradeOf(s){
+  const cards = s.log.filter(l => l.type === 'card').length || 1;
+  const target = TURNS === 50 ? 10 : 2.5;   // 50년 동안 GDP 10배면 경제 만점
+  const it = [
+    {n:'경제 성장', v:Math.round(Math.max(0, Math.min(100, Math.log(Math.max(1, s.gdp / GDP0)) / Math.log(target) * 100))), hid:false},
+    {n:'국민 삶', v:Math.round((s.st.happy + s.st.median) / 2), hid:true},
+    {n:'공정함', v:100 - s.st.gap, hid:true},
+    {n:'환경과 기후', v:Math.round((s.st.nature + s.st.climate) / 2), hid:true},
+    {n:'스스로 판단', v:Math.round(100 - s.aiCount / cards * 100), hid:false},
+    {n:'통치 기간', v:Math.round(s.turn / TURNS * 100), hid:false},
+  ];
+  const total = Math.round(it.reduce((a, x) => a + x.v, 0) / it.length);
+  const g = total >= 80 ? 'S' : total >= 70 ? 'A' : total >= 60 ? 'B' : total >= 50 ? 'C' : total >= 40 ? 'D' : 'F';
+  const word = {S:'역사책에 남을 지도자입니다.', A:'국민 대부분이 고마워하는 지도자입니다.', B:'잘한 일과 아쉬운 일이 함께 남은 지도자입니다.', C:'나라는 버텼지만 남긴 숙제가 많습니다.', D:'국민의 기억 속에 상처가 더 많이 남았습니다.', F:'다시 처음부터 생각해 볼 때입니다.'}[g];
+  return {it, total, g, word};
+}
+function gradeBox(s, hide){
+  const G = gradeOf(s);
+  const show = G.it.filter(x => !(hide && x.hid));
+  const best = show.slice().sort((a, b) => b.v - a.v)[0], worst = show.slice().sort((a, b) => a.v - b.v)[0];
+  return `<div class="box"><h3>최종 평가 ${hide ? '<em>국민 생활 지표는 공개 뒤에 평가</em>' : `<em>${G.total}점</em>`}</h3><div class="in">
+    ${hide ? '' : `<div class="grade"><b>${G.g}</b><span>${G.word}</span></div>`}
+    <div class="bars">${G.it.map(x => (hide && x.hid)
+      ? `<div class="r" style="grid-template-columns:6.4em 1fr 3em"><span>${x.n}</span><div class="t"></div><b>?</b></div>`
+      : `<div class="r ${x.v < 40 ? 'bad' : ''}" style="grid-template-columns:6.4em 1fr 3em"><span>${x.n}</span><div class="t"><i style="width:${x.v}%"></i></div><b>${x.v}</b></div>`).join('')}</div>
+    <div class="lead" style="font-size:13px;margin-top:6px">가장 잘한 점: ${best.n} (${best.v}점) · 가장 아쉬운 점: ${worst.n} (${worst.v}점)</div></div></div>`;
+}
+function recordRun(){
+  if (S.recorded) return; S.recorded = true;
+  if (!S.over) S.over = 'time';
+  S.sessionFalls = SESSION.falls;
+  const e = endingOf(S), more = ENDINGS.filter(x => x.id !== e.id && x.id !== 'plain' && x.test(S));
+  const before = loadTitles();
+  saveDex(e.id); more.forEach(x => saveDex(x.id));
+  saveTitles([e.id, ...more.map(x => x.id)]);
+  S.newTitles = [e.id, ...more.map(x => x.id)].filter(id => !before.includes(id));
+  SESSION.best = Math.max(SESSION.best || 0, S.gdp);
+  SESSION.runs.push({run:S.run, nation:S.nation, over:S.over, years:S.turn, gdp:S.gdp, rank:worldRank(S.gdp), ai:S.aiCount, cards:S.log.filter(l => l.type === 'card').length, ending:e.name, grade:gradeOf(S).g, S});
+}
+function runsTable(hide){
+  if (!SESSION || !SESSION.runs.length) return '';
+  const best = Math.max(...SESSION.runs.map(r => r.gdp));
+  const why = r => r.over === 'fall' ? '실각' : r.over === 'done' ? '완수' : '시간 끝';
+  return `<div class="box"><h3>이번 수업의 통치 기록 <em>${SESSION.runs.length}판</em></h3><div class="in"><table class="runs"><tr><th>판</th><th>나라</th><th>결과</th><th>GDP</th><th>AI</th>${hide ? '' : '<th>결말</th><th>평가</th>'}</tr>${SESSION.runs.map(r => `<tr class="${r.gdp === best ? 'me' : ''}"><td>${r.run}</td><td>${esc(r.nation)}</td><td>${why(r)} ${r.years}년</td><td>${fmt(r.gdp)}조</td><td>${r.ai}/${r.cards}</td>${hide ? '' : `<td>${esc(r.ending)}</td><td><b>${r.grade}</b></td>`}</tr>`).join('')}</table><div class="lead" style="font-size:12px;margin-top:6px">반 순위에는 가장 높은 GDP 기록이 올라갑니다.</div></div></div>`;
+}
+function newTitlesHTML(){
+  return S.newTitles && S.newTitles.length ? `<div class="power up">새 칭호를 얻었습니다: ${S.newTitles.map(id => `<b>${esc(titleOf(id))}</b>`).join(' · ')} · 다음 나라를 세울 때 이름 앞에 붙일 수 있습니다.</div>` : '';
+}
+// 한 판이 끝남 (실각 또는 50년 완수)
+function runEnd(){
+  clearTimers();
+  recordRun();
+  netPush();
+  if (left() <= 0) return endGame();
+  SND.music('end'); SND.sfx('end');
+  const hide = S.mode === 1;
+  app.innerHTML = `<div class="screen">
+    <span class="badge ${S.over === 'fall' ? 'red' : ''}" style="justify-self:start">${S.run}번째 통치 · ${S.over === 'fall' ? `${S.turn}년 만에 실각` : `${S.turn}년 통치 완수`}</span>
+    <h1>${esc(S.nation)}, ${S.over === 'fall' ? '지도자가 물러났습니다' : '반세기 통치를 마쳤습니다'}</h1>
+    ${hide ? '<div class="power">이 나라의 결말과 새 칭호는 선생님이 숨겨진 지표를 공개할 때 함께 알 수 있습니다.</div>' : endingBox() + newTitlesHTML()}
+    <div class="box"><div class="in"><div class="lead">국가소득</div><div class="big">${fmt(S.gdp)}조 원</div><div class="lead">증가 ${growth(S)}% · 세계 ${worldRank(S.gdp)}위 (처음 ${START_RANK}위) · AI에게 맡김 ${S.aiCount}번 · 정전 ${S.blackouts}번</div></div></div>
+    ${gradeBox(S, hide)}
+    ${runsTable(hide)}
+    <div class="power">남은 수업 시간 <b class="clock">${clock()}</b> · 시간이 남았으니 새 나라를 세워 다시 도전할 수 있습니다.</div>
+    ${S.mode === 2 ? `<button class="ghost" onclick="nationCard()">이 나라를 투표용 대표 나라로 내기</button>` : ''}
+    <button class="primary" id="again" disabled>결말을 읽어 보세요…</button></div>`;
+  tickClock();
+  const ag = document.getElementById('again');
+  ag.onclick = () => renderNewRun();
+  timers.push(setTimeout(() => { ag.disabled = false; ag.textContent = '새 나라 세우기'; }, 3000));   // 결말을 곱씹도록 3초 동안 잠근다
+}
+function renderNewRun(){
+  clearTimers();
+  if (left() <= 0) return endGame();
+  app.innerHTML = `<div class="screen">
+    <span class="badge" style="justify-self:start">${SESSION.runs.length + 1}번째 통치 준비</span>
+    <h1>새 나라 세우기</h1>
+    <p class="lead">지난 통치에서 배운 것을 떠올려 보세요. 출발 순위는 처음에 맞힌 문제 수로 다시 굴립니다.</p>
+    <label class="f">나라 이름<input type="text" id="nname" maxlength="8" value="${esc(savedNation())}"></label>
+    ${titleSelect()}
+    <div class="power">남은 수업 시간 <b class="clock">${clock()}</b></div>
+    <button class="primary" id="go">출발 순위 주사위 굴리기</button></div>`;
+  tickClock();
+  document.getElementById('go').onclick = () => {
+    NATION = (document.getElementById('nname').value || '').trim() || NATION;
+    try{ localStorage.setItem('ttalkkak_nation', NATION); }catch(e){}
+    readTitle();
+    renderDice(SESSION.mode, SESSION.name, SESSION.right);
+  };
 }
 function compareBars(){
   return `<div class="bars">${STATS.map(s=>{const v=S.st[s.k], good=s.inv?100-v:v; return `<div class="r ${good<40?'bad':''}" style="grid-template-columns:5.4em 1fr 4.2em"><span>${s.n}</span><div class="t"><i style="width:${good}%"></i></div><b>${ST0[s.k]}→${v}</b></div>`}).join('')}</div><div class="lead" style="font-size:12px;margin-top:6px">왼쪽 숫자가 처음 값, 오른쪽 숫자가 임기 끝 값입니다. 빈부격차는 숫자가 높을수록 격차가 큽니다.</div>`;
 }
 function endingBox(){
+  if (!S.recorded) recordRun();   // 조건을 만족한 결말은 모두 도감에 모으고 칭호도 준다
   const e = endingOf(S), more = ENDINGS.filter(x => x.id !== e.id && x.id !== 'plain' && x.test(S));
-  saveDex(e.id); more.forEach(x => saveDex(x.id));   // 조건을 만족한 결말은 모두 도감에 모은다
-  return `<div class="ending"><small>위대한 지도자 ${esc(S.name)}의 나라</small><b>${e.name}</b><small style="margin-bottom:6px">${e.sub}</small>${more.length ? `<small style="margin-bottom:6px">함께 얻은 결말: ${more.map(x => x.name).join(' · ')}</small>` : ''}<small>결말 도감 ${loadDex().length}/${ENDINGS.length}</small></div>`;
+  return `<div class="ending"><small>${esc(S.name)}의 나라</small><b>${e.name}</b><small style="margin-bottom:6px">${e.sub}</small>${more.length ? `<small style="margin-bottom:6px">함께 얻은 결말: ${more.map(x => x.name).join(' · ')}</small>` : ''}<small>결말 도감 ${loadDex().length}/${ENDINGS.length}</small></div>`;
 }
 function reveal(){
   SND.music('reveal'); SND.sfx('reveal');
@@ -1826,8 +2101,11 @@ function reveal(){
     <span class="badge" style="justify-self:start">2차시 · 2막: 숨겨진 지표 공개</span>
     <h1>GDP 말고, 나라는 어떻게 되었을까요?</h1>
     ${endingBox()}
+    ${SESSION && SESSION.runs.some(r => r.S.newTitles && r.S.newTitles.length) ? `<div class="power up">이번 수업에서 얻은 칭호: ${[...new Set(SESSION.runs.flatMap(r => r.S.newTitles || []))].map(id => `<b>${esc(titleOf(id))}</b>`).join(' · ')}</div>` : ''}
     <div class="box"><div class="in plan"><div><small>AI에게 맡긴 횟수</small><b class="big">${S.aiCount}<span style="font-size:18px;color:var(--mute)"> / ${cards}번</span></b></div><div><small>장관에게 물은 횟수</small><b class="big">${S.adviceUsed}<span style="font-size:18px;color:var(--mute)">번</span></b></div><div><small>AI 제안을 듣고 거부한 횟수</small><b class="big">${S.aiRefused}<span style="font-size:18px;color:var(--mute)">번</span></b></div><div><small>숙청당한 횟수</small><b class="big ${S.purges?'neg':''}">${S.purges}<span style="font-size:18px;color:var(--mute)">번</span></b></div></div></div>
     <div class="box"><h3>숨겨져 있던 국민 생활 지표</h3><div class="in">${compareBars()}</div></div>
+    ${gradeBox(S, false)}
+    ${runsTable(false)}
     <div class="land">${landSVG()}</div>
     <div class="box"><h3>통치 기록 다시 보기</h3><div class="log" style="max-height:none">${logs.map(l=>{
         if (l.type==='event') return `<div class="e ev"><span class="y">${yearOf(l.turn)}</span><div><b>사건</b> ${l.title}<div class="d">${l.res}</div></div></div>`;
@@ -1851,7 +2129,8 @@ function nationCard(){
     <button class="ghost" onclick="saveDex(endingOf(S).id);renderStart()">처음으로</button></div>`;
   const sb = document.getElementById('submitcard');
   if (sb) sb.onclick = () => {
-    netPush({done:true, reflection:document.getElementById('refl').value || '', motto:S.motto || ''});
+    netPush({done:true, card:true, ending:endingOf(S).id, reflection:document.getElementById('refl').value || '', motto:S.motto || ''});
+    SESSION.card = true;
     sb.disabled = true; sb.textContent = '제출했습니다';
     document.getElementById('votewait').innerHTML = '<div class="power">선생님이 투표를 열면 친구들의 나라 카드가 나옵니다…</div>';
     waitRoom('voting', renderVote);

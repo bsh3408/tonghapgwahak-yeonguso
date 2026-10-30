@@ -106,7 +106,26 @@ function codex() {
     <h3>상태 이상 (${cx.status.length}/12)</h3><div class="grid">${Object.entries(STATUS).filter(([id]) => id !== 'stolen').map(([id, s]) => `<div class="relic ${cx.status.includes(id) ? '' : 'off'}"><b>${s.icon} ${s.name}</b><small>${cx.status.includes(id) ? `${s.effect}<br>${s.reason}` : '아직 걸려 본 적 없음'}</small></div>`).join('')}</div>`);
 }
 
-async function rank() {
+// ---------- 막차 순위 (2026-10-30): 통합 1~5등(직업 상관없음, 가산점 대상) · 직업 이름을 누르면 그 직업 1~5등 ----------
+const MK_JOBS = { driver: '지하철 기관사', geo: '지질학자', eco: '생태학자', chem: '화학 연구원', weather: '기상 연구원', medic: '응급 구조사' };
+const mkTime = s => { s = +s || 0; const m = Math.floor(s / 60); return m + '분 ' + String(Math.floor(s - m * 60)).padStart(2, '0') + '초'; };
+let MK = null, mkTab = '';
+async function makchaBoard(force) {
+  const box = $('mkRank'); if (!box) return;
+  if (!MK || force) { box.innerHTML = '<div class="mkhead"><b>🚇 막차 순위</b></div><p class="mknote">불러오는 중…</p>'; MK = await labRpc('makcha_rank').catch(() => null); }
+  if (!MK?.ok) { box.innerHTML = '<div class="mkhead"><b>🚇 막차 순위</b></div><p class="mknote">' + esc(MK?.error || '순위를 아직 불러올 수 없어요.') + '</p>'; return; }
+  const me = CURRENT_STUDENT.name, rows = mkTab ? (MK.byJob[mkTab] || []) : MK.overall, mine = mkTab ? MK.meByJob?.[mkTab] : MK.me;
+  const tabs = ['', ...Object.keys(MK_JOBS)].map(j => '<button class="mktab' + (j === mkTab ? ' on' : '') + '" data-mk="' + j + '">' + (j ? MK_JOBS[j] : '전체') + '</button>').join('');
+  const tbl = rows.length ? '<table><tr><th>순위</th><th>이름</th>' + (mkTab ? '' : '<th>직업</th>') + '<th>통과한 역</th><th>걸린 시간</th></tr>' + rows.map(r => '<tr class="' + (r.name === me ? 'me' : '') + '"><td>' + r.rank + '등</td><td>' + esc(r.name) + '</td>' + (mkTab ? '' : '<td>' + esc(MK_JOBS[r.job] || r.job) + '</td>') + '<td>' + r.stages + ' / 24</td><td>' + mkTime(r.secs) + '</td></tr>').join('') + '</table>' : '<p class="mknote">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</p>';
+  box.innerHTML = '<div class="mkhead"><b>🚇 막차 순위 · ' + (mkTab ? MK_JOBS[mkTab] + ' 1~5등' : '전체 1~5등') + '</b><button class="mktab" data-mkr="1">새로 고침</button></div>'
+    + '<div class="mktabs">' + tabs + '</div>' + tbl
+    + '<p class="mknote">' + (mine ? '내 순위: ' + mine.rank + '등 · ' + mine.stages + ' / 24역 · ' + mkTime(mine.secs) : (mkTab ? '이 직업으로 남긴 기록이 없어요.' : '아직 내 기록이 없어요.')) + '</p>'
+    + '<p class="mknote">통과한 역이 많을수록, 같으면 걸린 시간이 짧을수록 위예요. 학생마다 가장 좋은 판 하나로 매기며, <b>전체 1~5등</b>이 가산점을 받아요.</p>';
+  box.querySelectorAll('[data-mk]').forEach(b => b.onclick = () => { mkTab = b.dataset.mk; makchaBoard(); });
+  box.querySelector('[data-mkr]').onclick = () => makchaBoard(true);
+}
+async function rank() { $('mkRank')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); makchaBoard(true); }
+async function rankOld() {
   sheet('<h2>🏆 순위</h2><p>불러오는 중…</p>');
   const out = await labRpc('subway_rank').catch(() => null);
   if (!out?.ok) { sheet(`<h2>🏆 순위</h2><p>${esc(out?.error || '순위를 불러오지 못했어요.')}</p>`); return; }
@@ -158,11 +177,11 @@ $('logoutBtn').onclick = logout;
 
 window.LAB_ON_LOGIN = async () => {
   $('loginScreen').classList.add('hide'); $('labApp').classList.remove('hide');
-  render(); await load();
+  render(); makchaBoard(true); await load();
   let last = null; try { last = sessionStorage.getItem('lastDeptId'); sessionStorage.removeItem('lastDeptId'); } catch {}
   if (last) notes();   // 단원 평가에서 돌아왔으면 연구 노트실을 다시 연다
 };
-window.addEventListener('focus', () => { if (CURRENT_STUDENT) load(); });
+window.addEventListener('focus', () => { if (CURRENT_STUDENT) { load(); makchaBoard(true); } });
 $('hoursNote').textContent = isWithinServiceHours() ? '이용 시간: 평일 오전 8시 30분 ~ 월·화·금 오후 4시, 수·목 오후 5시' : '🕐 지금은 이용 시간이 아니에요. 평일 오전 8시 30분부터 ' + serviceCloseLabel() + '까지 열려요.';
 wireLoginForm();
 tryAutoLogin();

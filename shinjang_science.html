@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>신장고 통합과학연구소</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=IBM+Plex+Mono:wght@500;700&display=swap">
 <style>
 :root{--bg:#15171b;--panel:#22252c;--panel2:#2b2f38;--ink:#ece6d6;--sub:#a59f90;--acc:#e0b04a;--good:#6ad07a;--bad:#e0604a;--line:#3a3f4a;--blue:#5ab0e0}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171b}}
@@ -64,8 +65,8 @@ tr.me td{color:var(--acc);font-weight:700}
 .score{font-size:30px;font-weight:800;color:var(--acc)}
 /* ===== 첫 화면: 왼쪽 딸깍 독재자 · 오른쪽 막차 · 아래 연구소(문제 풀기·순위) ===== */
 html,body{word-break:keep-all}
-body{background:#0F1617 url(assets/lab_bg.svg) center top/cover no-repeat fixed;image-rendering:pixelated}
-.portal{min-height:100vh;background:linear-gradient(rgba(10,14,15,.25),rgba(10,14,15,.55) 40%,rgba(10,14,15,.9) 75%);padding:22px 16px 30px}
+body{background:#fbfbf9 url(assets/lab_bg_ink.jpg) center bottom/cover no-repeat fixed}
+.portal{min-height:100vh;background:rgba(251,251,249,.35);padding:22px 16px 30px}
 .phead{text-align:center;margin:6px 0 18px}
 .phead small{display:block;font-size:12px;letter-spacing:.2em;color:#C9B37A}
 .phead h1{margin:4px 0 0;font-size:28px;text-shadow:0 2px 0 #000}.phead h1 span{color:var(--acc)}
@@ -89,6 +90,38 @@ body{background:#0F1617 url(assets/lab_bg.svg) center top/cover no-repeat fixed;
 .portal:has(#labApp.hide) .games{display:none}
 .portal:has(#labApp.hide) .labpanel{max-width:460px;margin-top:8px}
 @media (max-width:640px){.games{grid-template-columns:1fr}.phead h1{font-size:23px}}
+/* ===== 잉크 단면도 테마: 흰 종이 위 먹선, 흑백·회색만 ===== */
+:root,:root[data-theme="dark"]{--bg:#fbfbf9;--panel:#ffffff;--panel2:#f3f3ef;--ink:#161616;--sub:#5c5c5c;--acc:#161616;--good:#2e6b38;--bad:#b0362b;--line:#161616;--blue:#2a5f86}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#fbfbf9}}
+html,body{font-family:"Noto Sans KR","Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.phead small,.gcard em,.pill,#coinPill{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+.phead small{color:#161616;font-weight:600}
+.phead h1,.gcard b,.top h1,.card h2{font-weight:900;color:#161616;paint-order:stroke;-webkit-text-stroke:5px #fbfbf9}
+.phead h1{-webkit-text-stroke:7px #fbfbf9}
+.phead h1 span{color:#fff}
+.phead h1{display:inline-block;background:#161616;color:#fff;-webkit-text-stroke:0;border-radius:999px;padding:8px 26px;margin-top:6px}
+.phead small{display:table;margin:0 auto;background:#fbfbf9;padding:2px 10px;border-radius:999px}
+.gcard{background:#fff;border:5px solid #161616;border-radius:12px;color:#161616}
+.gcard:hover,.gcard:focus-visible{border-color:#161616;box-shadow:6px 6px 0 #161616}
+.gcard span{color:#3c3c3c}
+.gcard.tk .art,.gcard.mk .art{background:#fbfbf9;border:3px solid #161616;filter:grayscale(1) contrast(1.15)}
+.gcard em,.gcard.mk em{background:#161616;color:#fff;border-radius:999px}
+.labpanel{background:#fff;border:5px solid #161616;border-radius:12px}
+.labpanel .ptitle{color:#161616}
+.labpanel .ptitle span{display:inline-block;background:#161616;color:#fff;border-radius:999px;padding:4px 14px}
+.loginwrap .logincard{background:transparent}
+.logincard input{background:#fff;border:3px solid #161616;color:#161616}
+.btn{background:#161616;color:#fff;border-radius:999px}
+.btn.ghost{background:#fff;color:#161616;border:3px solid #161616}
+.mi{border:3px solid #161616;border-radius:10px;background:#fff}
+.mi:hover,.mi:focus{box-shadow:4px 4px 0 #161616}
+.pill{background:#fff;border:3px solid #161616}
+#sheet{background:rgba(251,251,249,.88)}
+.card{border:5px solid #161616;border-radius:12px}
+.it,.relic{border:3px solid #161616}
+.tag{background:#ececE8;color:#3c3c3c}.tag.ok{background:#161616;color:#fff}.tag.lock{background:#fff;color:#5c5c5c;border:2px dashed #5c5c5c}
+.g1{color:#5c5c5c}.g2{color:#2a5f86}.g3{color:#161616;font-weight:900}
+td,th{border-bottom:2px solid #161616}
 </style>
 </head>
 <body>
@@ -112,7 +145,7 @@ body{background:#0F1617 url(assets/lab_bg.svg) center top/cover no-repeat fixed;
   </a>
 </div>
 <div class="labpanel">
-<div class="ptitle">🔬 연구소 로그인</div>
+<div class="ptitle"><span>연구소 로그인</span></div>
 <!-- 로그인 -->
 <div class="loginwrap" id="loginScreen">
   <div class="logincard">

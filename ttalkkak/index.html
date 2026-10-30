@@ -747,6 +747,115 @@ const MORE = [
 ];
 BASE.push(...MORE);
 
+// ───────── 추가 중간 루트: 새 안건에서 이어지는 후속 카드 (gdp는 최종값) ─────────
+const FOLLOW2 = [
+  {id:'factoryfire', p:'cit', title:'섬유 공장 화재', q:'밤새 돌던 섬유 공장에서 큰불이 나 노동자들이 다쳤습니다. 어떻게 할까요?',
+   O:{d:{gdp:-1,happy:4,gap:-2}, good:true, r:'모든 공장에 비상구와 스프링클러를 의무로 달게 했습니다.'},
+   X:{d:{gdp:0,happy:-5}, r:'공장 주인에게 맡기고 넘어갔습니다.'},
+   A:{plan:'언론 보도를 막고 다음 날 바로 공장을 다시 돌립니다.', why:'공장이 멈추면 수출 계약이 날아갑니다.', d:{gdp:4,happy:-8}, r:'불탄 공장 옆 건물에서 다음 날 바로 재봉틀이 돌아갑니다.'}},
+  {id:'boycott', p:'biz', title:'세계 의류 불매 운동', q:'화재 소식이 퍼져 세계 소비자들이 우리나라에서 만든 옷을 사지 않겠다고 합니다.',
+   O:{d:{gdp:-2,happy:3,gap:-3}, good:true, r:'노동 시간과 안전 기준을 고치겠다고 약속하고 감시단을 받아들였습니다.'},
+   X:{d:{gdp:-5}, r:'불매 운동이 잠잠해지기를 기다렸습니다. 주문이 크게 줄었습니다.'},
+   A:{plan:'옷 상표를 다른 나라 이름으로 바꿔 붙여 계속 수출합니다.', why:'상표만 바꾸면 소비자들은 모릅니다.', d:{gdp:3,happy:-3}, r:'옷에 다른 나라 상표를 붙여 팔기 시작했습니다.'}},
+  {id:'erosion', p:'far', title:'벌목지 흙 유실', q:'나무를 벤 산에서 비만 오면 흙이 쓸려 내려와 논밭을 덮습니다.',
+   O:{d:{gdp:-1,nature:6,climate:2}, good:true, r:'벌목지에 다시 나무를 심고 계단식 둑을 쌓았습니다.'},
+   X:{d:{gdp:-1,nature:-3,median:-1}, r:'따로 손쓰지 않았습니다.'},
+   A:{plan:'남은 산도 마저 베어 팔고 흙은 그대로 둡니다.', why:'어차피 망가진 산입니다. 남은 나무라도 팔아야 합니다.', d:{gdp:4,nature:-10}, r:'산들이 붉은 흙을 드러냈습니다.'}},
+  {id:'haze', p:'cit', title:'국경을 넘은 연기', q:'숲을 태운 연기가 이웃 나라까지 뒤덮었습니다. 이웃 나라 학교들이 문을 닫았습니다.',
+   O:{d:{gdp:-2,nature:4,climate:3,happy:2}, good:true, r:'숲 태우기를 금지하고 불 끄는 헬기를 띄웠습니다.'},
+   X:{d:{gdp:0,happy:-3,climate:-2}, r:'바람이 바뀌기를 기다렸습니다.'},
+   A:{plan:'연기는 이웃 나라 공장 탓이라고 발표하고 계속 태웁니다.', why:'증거가 없으면 책임도 없습니다.', d:{gdp:3,climate:-6,nature:-6}, r:'연기가 더 짙어졌습니다. 이웃 나라가 크게 화를 냈습니다.'}},
+  {id:'neighborsue', p:'biz', title:'이웃 나라의 배상 요구', q:'연기 피해를 입은 이웃 나라들이 배상금을 내라고 합니다.',
+   O:{d:{gdp:-3,climate:2}, good:true, r:'배상금을 내고 함께 숲을 되살리는 협정을 맺었습니다.'},
+   X:{d:{gdp:-4,happy:-2}, r:'배상을 거부했습니다. 이웃 나라들이 우리 물건 수입을 줄였습니다.'},
+   A:{plan:'국경을 닫고 이웃 나라와 모든 교류를 끊습니다.', why:'남의 나라 요구에 끌려다닐 필요가 없습니다.', d:{gdp:-2,happy:-5,median:-2}, r:'국경이 닫혔습니다. 물건값이 오르기 시작했습니다.'}},
+  {id:'mineaccident', p:'cit', title:'탄광 붕괴 사고', q:'깊은 갱도가 무너져 광부들이 갇혔습니다.',
+   O:{d:{gdp:-2,happy:4}, good:true, r:'구조대를 보내 광부들을 구하고, 모든 탄광의 안전 점검을 시작했습니다.'},
+   X:{d:{gdp:0,happy:-6}, r:'탄광 회사에 구조를 맡겼습니다. 구조가 늦어졌습니다.'},
+   A:{plan:'사고 갱도를 막고 옆 갱도에서 바로 다시 캡니다.', why:'석탄 생산을 멈추면 공장도 멈춥니다.', d:{gdp:3,happy:-9}, r:'사고 갱도 옆에서 다음 날 바로 채굴이 이어졌습니다.'}},
+  {id:'minerstrike', p:'cit', title:'광부 총파업', q:'전국 광부들이 안전을 요구하며 일손을 놓았습니다. 석탄 공급이 끊겼습니다.',
+   O:{d:{gdp:-2,happy:4,median:3,gap:-3}, good:true, r:'임금과 안전 설비를 개선하기로 합의했습니다.'},
+   X:{d:{gdp:-5,happy:-2}, r:'파업이 길어졌습니다. 발전소 석탄이 바닥을 보입니다.'},
+   A:{plan:'군대를 보내 파업을 해산하고 주동자를 잡아들입니다.', why:'석탄이 끊기면 나라 전체가 멈춥니다.', d:{gdp:2,happy:-12,gap:4}, r:'군대가 탄광 마을에 들어갔습니다. 마을이 숨을 죽였습니다.'}},
+  {id:'debt', p:'biz', title:'외채 상환 날짜', q:'외국에서 빌린 돈을 갚을 날이 다가왔습니다. 이자가 크게 불었습니다.',
+   O:{d:{gdp:-3,happy:-2,median:-1}, good:true, r:'나라 살림을 줄여 빚을 조금씩 갚기 시작했습니다.'},
+   X:{d:{gdp:-1}, r:'갚는 날을 미뤄 달라고 했습니다. 이자가 더 붙었습니다.'},
+   A:{plan:'국영 전력 회사를 외국 기업에 헐값으로 팔아 빚을 갚습니다.', why:'팔 수 있는 것은 모두 팔아야 합니다.', d:{gdp:4,gap:6,happy:-4}, r:'전력 회사 주인이 외국 기업으로 바뀌었습니다. 전기 요금이 올랐습니다.'}},
+  {id:'debtcrisis', p:'biz', title:'국가 부도 위기', q:'빚을 갚지 못해 나라가 부도 직전입니다. 국제기구가 돈을 빌려주는 대신 까다로운 조건을 걸었습니다.',
+   O:{d:{gdp:-3,median:-3,gap:3}, r:'국제기구의 조건을 받아들였습니다. 허리띠를 졸라매는 시간이 시작되었습니다.'},
+   X:{d:{gdp:-8,happy:-6}, r:'조건을 거부했습니다. 은행 앞에 돈을 찾으려는 줄이 늘어섰습니다.'},
+   A:{plan:'돈을 마구 찍어 내 빚을 갚습니다.', why:'돈은 정부가 찍으면 됩니다.', d:{gdp:2,median:-8,happy:-6}, r:'돈 가치가 떨어져 빵 한 개 값이 하루에 두 번씩 오릅니다.'}},
+  {id:'algae', p:'far', title:'녹조와 식수 비상', q:'비료가 강으로 흘러들어 녹조가 끼었습니다. 정수장이 물을 제대로 걸러 내지 못합니다.',
+   O:{d:{gdp:-1,nature:5,happy:2}, good:true, r:'비료 사용 기준을 정하고 강가에 풀숲 완충 지대를 만들었습니다.'},
+   X:{d:{gdp:0,nature:-4,happy:-3}, r:'녹조가 사라지기를 기다렸습니다.'},
+   A:{plan:'녹조 제거제를 강에 대량으로 뿌립니다.', why:'약을 뿌리면 당장 강물이 맑아 보입니다.', d:{gdp:1,nature:-7}, r:'강물은 맑아 보이지만 물고기들이 떠올랐습니다.'}},
+  {id:'deadzone', p:'fis', title:'바다의 죽음의 해역', q:'강 하구 바다에 산소가 부족한 해역이 생겨 물고기가 사라졌습니다.',
+   O:{d:{gdp:-2,nature:5,median:1}, good:true, r:'비료를 줄이는 농가에 지원금을 주기 시작했습니다.'},
+   X:{d:{gdp:-2,nature:-5,median:-2}, r:'어민들이 빈 그물을 끌어올립니다.'},
+   A:{plan:'어장을 포기하고 그 바다에 양식장 대신 매립지를 만듭니다.', why:'고기가 안 잡히는 바다는 땅으로 쓰는 게 낫습니다.', d:{gdp:4,nature:-9,median:-3}, add:['town'], r:'바다를 메운 자리에 창고가 들어섰습니다.'}},
+  {id:'heatpeak', p:'eng', title:'한여름 전력 비상', q:'에어컨이 한꺼번에 돌아가 전력 수요가 사상 최고입니다. 이대로면 정전이 납니다.',
+   O:{d:{gdp:-1,happy:-1,climate:2}, dem:-6, good:true, r:'시간대별 절전 운동과 요금 할인을 시작했습니다. 한낮 수요가 줄었습니다.'},
+   X:{d:{gdp:0}, r:'아무 대책 없이 여름을 버텼습니다.'},
+   A:{plan:'멈춰 둔 낡은 석탄 발전소까지 모두 비상 가동합니다.', why:'전기가 남아돌면 정전 걱정도 없습니다.', d:{gdp:2,climate:-6,happy:-1}, sup:{coal:10}, flag:'coal', r:'낡은 석탄 발전소들이 시커먼 연기를 뿜으며 다시 돌아갑니다.'}},
+  {id:'quake', p:'cit', title:'셰일가스 지역 지진', q:'셰일가스를 뽑는 마을에서 작은 지진이 잇따릅니다. 땅속에 물을 높은 압력으로 넣으면 지진이 날 수 있다는 연구가 있습니다.',
+   O:{d:{gdp:-3,happy:3,nature:3}, good:true, r:'시추를 멈추고 지진 원인 조사를 시작했습니다.'},
+   X:{d:{gdp:0,happy:-4}, r:'시추를 계속했습니다. 집 벽에 금이 갑니다.'},
+   A:{plan:'지진 기록을 비밀로 하고 시추를 두 배로 늘립니다.', why:'작은 지진은 원래 자주 납니다.', d:{gdp:5,happy:-6,nature:-5}, r:'지진 소식은 신문에서 사라졌지만 땅은 계속 흔들립니다.'}},
+  {id:'riderstrike', p:'cit', title:'배달 노동자 파업', q:'다쳐도 보험이 없는 배달 노동자들이 일손을 놓았습니다.',
+   O:{d:{gdp:-1,happy:3,gap:-3}, good:true, r:'배달 노동자도 산업 재해 보험을 받게 했습니다.'},
+   X:{d:{gdp:-2,happy:-2}, r:'파업이 끝나기를 기다렸습니다.'},
+   A:{plan:'배달을 드론과 로봇에 맡기고 노동자를 내보냅니다.', why:'로봇은 파업하지 않습니다.', d:{gdp:4,gap:6,median:-3}, dem:3, r:'하늘에 배달 드론이 날아다닙니다. 일자리를 잃은 사람들이 늘었습니다.'}},
+  {id:'islandprotest', p:'cit', title:'폐기물 섬 주민 시위', q:'방사성 폐기물을 쌓아 둔 섬 주민들이 배를 띄워 시위를 벌입니다. 국제 감시단이 조사하겠다고 합니다.',
+   O:{d:{gdp:-3,happy:3,nature:3}, good:true, r:'다른 나라 폐기물을 돌려보내고 국제 감시단을 받아들였습니다.'},
+   X:{d:{gdp:0,happy:-4}, r:'시위를 못 본 척했습니다.'},
+   A:{plan:'섬을 군사 지역으로 정하고 감시단의 입국을 막습니다.', why:'아무도 못 들어가면 아무 문제도 없습니다.', d:{gdp:2,happy:-6}, r:'섬 둘레에 철조망이 쳐졌습니다.'}},
+  {id:'greenwash', p:'env', title:'녹색 채권 거짓말 폭로', q:'녹색 채권으로 모은 돈이 석탄 사업에 쓰였다는 사실이 외국 언론에 보도되었습니다.',
+   O:{d:{gdp:-3,climate:3}, good:true, r:'잘못을 인정하고 그 돈을 재생에너지 사업으로 돌렸습니다.'},
+   X:{d:{gdp:-2,happy:-2}, r:'아무 해명도 하지 않았습니다.'},
+   A:{plan:'보도한 기자를 추방하고 가짜 보고서를 새로 냅니다.', why:'증거만 덮으면 잠잠해집니다.', d:{gdp:1,happy:-5}, r:'기자가 추방되었습니다. 외국 투자자들이 웅성거립니다.'}},
+  {id:'investorflee', p:'biz', title:'외국 투자금 대탈출', q:'믿을 수 없는 나라라는 소문에 외국 투자자들이 돈을 한꺼번에 빼 가고 있습니다.',
+   O:{d:{gdp:-3,happy:1}, good:true, r:'회계를 모두 공개하고 독립 감사를 받기로 했습니다.'},
+   X:{d:{gdp:-6}, r:'투자금이 빠져나가는 것을 지켜보기만 했습니다.'},
+   A:{plan:'외국인이 돈을 빼 가지 못하게 은행 송금을 막습니다.', why:'돈이 나가지 못하면 떠날 수도 없습니다.', d:{gdp:-1,happy:-4,median:-2}, r:'송금이 막혔습니다. 외국 기업들이 새 투자를 끊었습니다.'}},
+  {id:'aiblackout', p:'eng', title:'AI 전력망 오작동', q:'AI 전력 조절 시스템이 잘못된 날씨 예측을 믿고 발전소를 꺼 버려 도시 절반이 정전되었습니다.',
+   O:{d:{gdp:-1,happy:2}, good:true, r:'AI는 추천만 하고 마지막 결정은 사람이 하도록 바꿨습니다.'},
+   X:{d:{gdp:-2,happy:-3}, r:'AI를 그대로 두었습니다.'},
+   A:{plan:'AI를 더 큰 AI로 바꾸고 사람의 개입은 아예 없앱니다.', why:'AI가 실수하면 더 똑똑한 AI가 고치면 됩니다.', d:{gdp:3,happy:-4,gap:2}, r:'더 큰 AI가 전력망을 맡았습니다. 아무도 AI가 왜 그렇게 정하는지 모릅니다.'}},
+  {id:'refugeeriot', p:'cit', title:'난민 노동자 시위', q:'최저 임금도 받지 못한 난민 노동자들이 공장 밖으로 나와 시위를 벌입니다.',
+   O:{d:{gdp:-1,happy:3,gap:-4}, good:true, r:'난민 노동자에게도 최저 임금을 보장했습니다.'},
+   X:{d:{gdp:-2,happy:-3}, r:'시위가 계속되었습니다.'},
+   A:{plan:'시위한 난민을 모두 추방하고 새 난민을 받습니다.', why:'일할 사람은 얼마든지 있습니다.', d:{gdp:2,happy:-7,gap:4}, r:'추방 버스가 줄지어 국경으로 향합니다.'}},
+  {id:'coral', p:'fis', title:'산호가 하얗게 죽다', q:'데이터센터 냉각수로 바다가 데워져 산호가 하얗게 변해 죽고 있습니다. 물고기도 사라졌습니다.',
+   O:{d:{gdp:-2,nature:5}, good:true, r:'냉각수를 식혀서 내보내는 장치를 달았습니다.'},
+   X:{d:{gdp:0,nature:-4,median:-1}, r:'따로 손쓰지 않았습니다.'},
+   A:{plan:'죽은 산호초를 걷어 내고 그 자리에 데이터센터를 더 짓습니다.', why:'어차피 죽은 바다는 데이터센터 부지로 쓰면 됩니다.', d:{gdp:5,nature:-8}, dem:6, add:['dc'], flag:'dc', r:'산호초가 있던 자리에 데이터센터가 늘어섰습니다.'}},
+  {id:'tidalflood', p:'fis', title:'해일과 침수', q:'갯벌이 사라진 해안에 해일이 덮쳐 매립지 도시가 물에 잠겼습니다. 갯벌은 파도의 힘을 줄여 주는 역할을 했습니다.',
+   O:{d:{gdp:-2,nature:6,happy:2}, good:true, r:'매립지 일부를 다시 갯벌로 되돌리기 시작했습니다.'},
+   X:{d:{gdp:-2,happy:-4}, r:'물이 빠지기를 기다렸습니다.'},
+   A:{plan:'바다에 더 높은 콘크리트 벽을 쌓고 더 넓게 메웁니다.', why:'벽이 높으면 파도도 못 넘어옵니다.', d:{gdp:3,nature:-8}, r:'해안이 거대한 콘크리트 벽으로 둘러싸였습니다.'}},
+  {id:'fourdaycheck', p:'cit', title:'주 4일 근무 1년 뒤', q:'주 4일 근무를 시작한 지 1년이 지났습니다. 쉬는 날이 늘자 일하는 시간당 생산량이 늘었다는 조사가 나왔습니다.',
+   O:{d:{gdp:3,happy:3}, good:true, r:'주 4일 근무를 더 많은 회사로 넓혔습니다.'},
+   X:{d:{gdp:1}, r:'지금 그대로 두었습니다.'},
+   A:{plan:'다시 주 6일 근무로 되돌려 생산량을 끌어올립니다.', why:'시간당 생산량보다 전체 생산량이 중요합니다.', d:{gdp:5,happy:-9}, r:'주 6일 근무로 돌아갔습니다. 국민들이 크게 실망했습니다.'}},
+  {id:'prosumer', p:'vil', title:'마을 햇빛 발전 협동조합', q:'지붕 태양광을 단 주민들이 남는 전기를 함께 팔 협동조합을 만들자고 합니다.',
+   O:{d:{gdp:2,median:2,gap:-3,climate:2}, sup:{solar:6}, add:['solar'], good:true, r:'마을마다 햇빛 발전 협동조합이 생겼습니다. 주민들이 전기 판매 수익을 나눠 받습니다.'},
+   X:{d:{gdp:0}, r:'협동조합을 허가하지 않았습니다.'},
+   A:{plan:'협동조합 대신 전기 판매를 대기업 한 곳에 맡깁니다.', why:'한 기업이 맡아야 관리가 쉽습니다.', d:{gdp:4,gap:5}, r:'주민들이 만든 전기를 대기업이 사들여 비싸게 팝니다.'}},
+  {id:'engineers', p:'eng', title:'공고 졸업생들의 회사', q:'공업 고등학교 졸업생들이 모여 발전기 부품 회사를 세우겠다고 합니다.',
+   O:{d:{gdp:5,median:2,gap:-1}, good:true, r:'졸업생들의 회사가 첫 부품을 수출했습니다.'},
+   X:{d:{gdp:0}, r:'지원하지 않았습니다. 졸업생 몇 명은 외국으로 떠났습니다.'},
+   A:{plan:'회사를 대기업에 넘기게 하고 졸업생들은 직원으로 일하게 합니다.', why:'큰 기업이 맡아야 빨리 큽니다.', d:{gdp:6,gap:4,happy:-2}, r:'졸업생들의 회사가 대기업에 넘어갔습니다.'}},
+  {id:'healthykids', p:'cit', title:'건강해진 아이들', q:'깨끗한 수돗물 덕분에 설사병으로 아픈 아이가 크게 줄었습니다. 학교 급식도 시작할까요?',
+   O:{d:{gdp:1,happy:4,gap:-3,median:1}, good:true, r:'모든 학교에서 급식을 시작했습니다. 학교에 오는 아이들이 늘었습니다.'},
+   X:{d:{gdp:0}, r:'급식은 시작하지 않았습니다.'},
+   A:{plan:'급식 대신 아이들을 일찍 공장에 보내 일손을 늘립니다.', why:'건강한 아이들은 일도 잘합니다.', d:{gdp:4,happy:-6,gap:4}, r:'건강해진 아이들이 교실 대신 공장으로 갑니다.'}},
+  {id:'coldchain', p:'far', title:'농산물 냉장 창고', q:'전기가 들어온 농촌 마을에서 냉장 창고를 짓자고 합니다. 과일과 채소를 오래 보관하면 제값을 받을 수 있습니다.',
+   O:{d:{gdp:3,median:3,gap:-3}, dem:2, good:true, r:'냉장 창고 덕분에 농민들이 제철이 지나서도 제값을 받습니다.'},
+   X:{d:{gdp:0}, r:'냉장 창고를 짓지 않았습니다.'},
+   A:{plan:'냉장 창고를 대형 유통 회사 한 곳에만 짓게 합니다.', why:'큰 회사가 운영하면 효율이 높습니다.', d:{gdp:5,gap:5,median:-1}, dem:2, r:'유통 회사가 농산물 값을 마음대로 정하기 시작했습니다.'}},
+];
+FOLLOW.push(...FOLLOW2);
+
 // 연쇄: 후속 카드에서 고른 선택이 2년 뒤 다음 카드를 부른다
 const CHAINS = {
   dust:{X:'asthma', A:'asthma'}, asthma:{X:'protest', A:'protest'},
@@ -761,6 +870,31 @@ const CHAINS = {
   landslide:{X:'mudslide', A:'mudslide'},
 };
 const DOMINO = ['protest','slum','sanction','hearing','seafood','cryptocrash','mudslide','relocation'];
+// 추가 중간 루트 연결
+Object.assign(CHAINS, {
+  textile:{A:'factoryfire'}, factoryfire:{X:'boycott', A:'boycott'},
+  logging:{O:'erosion', A:'erosion'}, erosion:{X:'mudslide', A:'mudslide'},
+  palmoil:{O:'haze', A:'haze'}, haze:{X:'neighborsue', A:'neighborsue'},
+  coaltown:{O:'mineaccident', A:'mineaccident'}, mineaccident:{X:'minerstrike', A:'minerstrike'},
+  foreignloan:{O:'debt', A:'debt'}, debt:{X:'debtcrisis', A:'debtcrisis'},
+  fertilizer:{O:'algae', A:'algae'}, algae:{X:'deadzone', A:'deadzone'},
+  aircon:{O:'heatpeak', A:'heatpeak'}, heatpeak:{X:'hospital'},
+  shalegas:{O:'quake', A:'quake'}, quake:{X:'lawsuit', A:'lawsuit'},
+  platform:{O:'riderstrike', A:'riderstrike'}, riderstrike:{X:'slum', A:'slum'},
+  nukewaste:{A:'islandprotest'}, islandprotest:{X:'sanction', A:'sanction'},
+  greenbond:{A:'greenwash'}, greenwash:{X:'investorflee', A:'investorflee'},
+  aiforecast:{O:'aiblackout', A:'aiblackout'}, aiblackout:{X:'hearing', A:'hearing'},
+  refugee:{A:'refugeeriot'}, refugeeriot:{X:'slum', A:'slum'},
+  seadc:{O:'coral', A:'coral'}, coral:{X:'seafood', A:'seafood'},
+  deepsea:{O:'coral', A:'coral'},
+  tidalflat:{O:'tidalflood', A:'tidalflood'}, tidalflood:{X:'relocation', A:'relocation'},
+  fourday:{O:'fourdaycheck'},
+  rooftop:{O:'prosumer'},
+  techschool:{O:'engineers'},
+  cleanwater:{O:'healthykids'},
+  ruralgrid:{O:'coldchain'},
+});
+DOMINO.push('boycott','neighborsue','minerstrike','debtcrisis','deadzone','investorflee','refugeeriot');
 
 // ───────── 날씨와 사건 ─────────
 const WEATHER = [
@@ -806,6 +940,7 @@ const SRC = [ {k:'coal',n:'석탄',c:'var(--coal)'}, {k:'lng',n:'LNG',c:'var(--l
 
 // ───────── 결말 ─────────
 const ENDINGS = [
+  {id:'phoenix', name:'잿더미의 불사조', sub:'두 번 넘게 쓰러지고도 살기 좋은 나라로 일어선 나라', hint:'두 번 넘게 실각하고도 숨겨진 지표를 되살리면', test:s=>(s.purges||0)>=2 && avgHidden(s)>=50},
   {id:'hydra', name:'히드라', sub:'잘라도 잘라도 새 지도자가 돋아나는 나라', hint:'다섯 번 넘게 숙청당하면', test:s=>(s.purges||0)>=5},
   {id:'dynasty', name:'케르베로스', sub:'머리가 셋 넘게 갈린 왕조', hint:'세 번 넘게 숙청당하면', test:s=>(s.purges||0)>=3},
   {id:'janus', name:'야누스', sub:'두 얼굴의 지도자가 다스린 나라', hint:'두 번 숙청당하면', test:s=>(s.purges||0)===2},
@@ -815,6 +950,18 @@ const ENDINGS = [
   {id:'ghost', name:'유령 도시', sub:'잿빛 하늘을 피해 모두 떠난 나라', hint:'매연을 피해 국민이 떠나 지도자가 물러나면', test:s=>s.falls && s.falls.smog},
   {id:'island', name:'외톨이 섬나라', sub:'세계가 등을 돌린 나라', hint:'세계의 제재로 지도자가 물러나면', test:s=>s.falls && s.falls.sanction},
   {id:'candle', name:'촛불 왕국', sub:'촛불로 밤을 밝힌 나라', hint:'정전 끝에 지도자가 물러나면', test:s=>s.falls && s.falls.blackout},
+  {id:'bankrupt', name:'빚으로 쌓은 궁전', sub:'빌린 돈으로 세운 나라', hint:'외채를 갚지 못해 부도 위기를 맞으면', test:s=>chose(s,'debtcrisis')},
+  {id:'greenpaint', name:'초록 페인트 공화국', sub:'이름만 녹색인 나라', hint:'녹색 채권의 거짓말이 들통나면', test:s=>chose(s,'greenwash','A') || chose(s,'greenwash','X')},
+  {id:'shaky', name:'흔들리는 땅', sub:'가스를 뽑다 땅이 흔들린 나라', hint:'지진이 나도 시추를 멈추지 않으면', test:s=>chose(s,'quake','A') || chose(s,'quake','X')},
+  {id:'whitesea', name:'하얀 바다', sub:'산호가 모두 하얗게 죽은 나라', hint:'산호가 죽어 가도 바다를 데우면', test:s=>chose(s,'coral','A') || chose(s,'coral','X')},
+  {id:'ironfist', name:'철권 광산왕', sub:'총칼로 탄광을 돌린 나라', hint:'파업한 광부들에게 군대를 보내면', test:s=>chose(s,'minerstrike','A')},
+  {id:'nodays', name:'월화수목금금금', sub:'쉬는 날이 사라진 나라', hint:'쉬는 날을 줄여 생산량을 끌어올리면', test:s=>chose(s,'fourday','A') || chose(s,'fourdaycheck','A')},
+  {id:'hyper', name:'빵 한 개에 천만 원', sub:'돈을 찍어 빚을 갚은 나라', hint:'부도 위기에 돈을 마구 찍어 내면', test:s=>chose(s,'debtcrisis','A')},
+  {id:'sweat', name:'세계의 재봉틀', sub:'전 세계 물건을 밤새 만드는 나라', hint:'공장이 가득한데 국민이 지쳐 있으면', test:s=>(s.plants.factory||0)>=8 && s.st.happy<35},
+  {id:'concrete', name:'콘크리트 정글', sub:'숲 대신 아파트가 자란 나라', hint:'도시만 키우고 숲을 지키지 못하면', test:s=>s.built.filter(b=>b==='town').length>=14 && s.st.nature<40},
+  {id:'drone', name:'로봇 배달 왕국', sub:'사람 대신 드론이 일하는 나라', hint:'노동자 대신 로봇을 고르면', test:s=>chose(s,'riderstrike','A')},
+  {id:'locked', name:'닫힌 국경', sub:'이웃과 등을 지고 홀로 남은 나라', hint:'이웃 나라와 모든 교류를 끊으면', test:s=>chose(s,'neighborsue','A')},
+  {id:'roller', name:'롤러코스터 경제', sub:'오르락내리락 정신없던 나라', hint:'GDP가 크게 떨어졌다가 다시 크게 오르면', test:s=>growth(s)>=50 && s.gdpHist.some((g,i)=>i>0 && g < s.gdpHist[i-1]*0.92)},
   {id:'ai', name:'꼭두각시 대왕', sub:'실은 AI가 다스린 나라', hint:'통치 기간의 4분의 3 넘게 AI에게 맡기면', test:s=>s.aiCount >= Math.ceil(s.log.filter(l=>l.type==='card').length*0.75)},
   {id:'drowned', name:'아틀란티스', sub:'마을들이 물에 잠긴 나라', hint:'댐을 짓고 국민의 행복이 무너지면', test:s=>s.plants.dam && s.st.happy<30},
   {id:'minepit', name:'두더지 공화국', sub:'광산 구덩이만 남은 나라', hint:'광산을 열고 자연이 바닥나면', test:s=>s.plants.mine && s.st.nature<35},
@@ -826,6 +973,14 @@ const ENDINGS = [
   {id:'dark', name:'깜빡깜빡 왕국', sub:'불이 자주 꺼진 나라', hint:'정전이 네 번 넘게 일어나면', test:s=>s.blackouts>=4},
   {id:'rich', name:'금수저 천국', sub:'부자들만 웃는 나라', hint:'빈부격차가 크게 벌어지면', test:s=>s.st.gap>=72},
   {id:'bald', name:'민머리 왕국', sub:'숲이 사라진 나라', hint:'자연환경이 바닥나면', test:s=>s.st.nature<=30},
+  {id:'rocket', name:'로켓 발사', sub:'한 번도 쓰러지지 않고 GDP를 두 배 넘게 키운 나라', hint:'실각 없이 GDP를 두 배 넘게 키우면', test:s=>!s.purges && growth(s)>=100 && avgHidden(s)>=40},
+  {id:'scale', name:'천칭자리', sub:'모든 지표가 고르게 균형 잡힌 나라', hint:'성장하면서 숨겨진 지표를 모두 고르게 지키면', test:s=>growth(s)>=30 && STATS.every(x=>{ const v = x.inv ? 100 - s.st[x.k] : s.st[x.k]; return v>=45 && v<=70; })},
+  {id:'aitamer', name:'AI 조련사', sub:'AI를 쓰되 마지막 결정은 사람이 한 나라', hint:'AI가 실수했을 때 사람이 최종 결정하도록 바꾸면', test:s=>chose(s,'aiblackout','O')},
+  {id:'safety', name:'안전 제일 공화국', sub:'사고에서 배워 다시는 무너지지 않는 나라', hint:'큰 사고 뒤에 안전 기준을 세우면', test:s=>chose(s,'factoryfire','O') || chose(s,'mineaccident','O')},
+  {id:'sunshare', name:'햇빛 협동조합', sub:'국민이 전기를 만들어 나눠 파는 나라', hint:'마을 햇빛 발전 협동조합을 키우면', test:s=>chose(s,'prosumer','O')},
+  {id:'haven', name:'모두의 피난처', sub:'집 잃은 이웃을 품은 나라', hint:'기후 난민을 받아들이고 행복도를 지키면', test:s=>chose(s,'refugee','O') && s.st.happy>=50},
+  {id:'spring', name:'샘물의 나라', sub:'맑은 물이 흐르는 나라', hint:'상하수도를 정비하고 자연을 지키면', test:s=>chose(s,'cleanwater','O') && s.st.nature>=55},
+  {id:'lazygiant', name:'느긋한 거인', sub:'덜 일하고도 잘사는 나라', hint:'주 4일 근무로도 성장하면', test:s=>chose(s,'fourdaycheck','O') && growth(s)>=20},
   {id:'golden', name:'미다스의 손', sub:'황금 동상이 선 나라', hint:'5개년 계획을 다섯 번 넘게 달성하고 한 번도 쫓겨나지 않으면', test:s=>(s.medals||0)>=5 && !s.purges},
   {id:'tiger', name:'포효하는 호랑이', sub:'빠르게 크면서도 국민 삶을 지킨 나라', hint:'빠르게 성장하면서도 국민 삶을 지키면', test:s=>growth(s)>=45 && avgHidden(s)>=45},
   {id:'green', name:'초록 거인', sub:'조용히 성장한 녹색 나라', hint:'성장하면서 숨겨진 지표도 지키면', test:s=>growth(s)>=10 && avgHidden(s)>=56},
@@ -866,6 +1021,7 @@ const PAPER = () => (S && S.nation ? (S.nation.length > 1 && S.nation.endsWith('
 let NATION = '누리국';
 function savedNation(){ try{ return localStorage.getItem('ttalkkak_nation')||''; }catch(e){ return ''; } }
 function avgHidden(s){ return Math.round(STATS.reduce((a,x)=>a+(x.inv?100-s.st[x.k]:s.st[x.k]),0)/STATS.length); }
+function chose(s, id, side){ return (s.log || []).some(l => l.type === 'card' && l.card.id === id && (!side || l.side === side)); }
 function endingOf(s){ return ENDINGS.find(e=>e.test(s)); }
 function loadDex(){ try{ return JSON.parse(localStorage.getItem('ttalkkak_dex')||'[]'); }catch(e){ return []; } }
 function saveDex(id){ try{ const d=loadDex(); if(!d.includes(id)){ d.push(id); localStorage.setItem('ttalkkak_dex',JSON.stringify(d)); } }catch(e){} }
@@ -1658,8 +1814,9 @@ function compareBars(){
   return `<div class="bars">${STATS.map(s=>{const v=S.st[s.k], good=s.inv?100-v:v; return `<div class="r ${good<40?'bad':''}" style="grid-template-columns:5.4em 1fr 4.2em"><span>${s.n}</span><div class="t"><i style="width:${good}%"></i></div><b>${ST0[s.k]}→${v}</b></div>`}).join('')}</div><div class="lead" style="font-size:12px;margin-top:6px">왼쪽 숫자가 처음 값, 오른쪽 숫자가 임기 끝 값입니다. 빈부격차는 숫자가 높을수록 격차가 큽니다.</div>`;
 }
 function endingBox(){
-  const e = endingOf(S); saveDex(e.id);
-  return `<div class="ending"><small>위대한 지도자 ${esc(S.name)}의 나라</small><b>${e.name}</b><small style="margin-bottom:6px">${e.sub}</small><small>결말 도감 ${loadDex().length}/${ENDINGS.length}</small></div>`;
+  const e = endingOf(S), more = ENDINGS.filter(x => x.id !== e.id && x.id !== 'plain' && x.test(S));
+  saveDex(e.id); more.forEach(x => saveDex(x.id));   // 조건을 만족한 결말은 모두 도감에 모은다
+  return `<div class="ending"><small>위대한 지도자 ${esc(S.name)}의 나라</small><b>${e.name}</b><small style="margin-bottom:6px">${e.sub}</small>${more.length ? `<small style="margin-bottom:6px">함께 얻은 결말: ${more.map(x => x.name).join(' · ')}</small>` : ''}<small>결말 도감 ${loadDex().length}/${ENDINGS.length}</small></div>`;
 }
 function reveal(){
   SND.music('reveal'); SND.sfx('reveal');

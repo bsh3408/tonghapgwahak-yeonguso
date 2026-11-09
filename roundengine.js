@@ -107,8 +107,8 @@ function showNotice(msg){
   const el=document.createElement('div');
   el.textContent=msg;
   el.style.cssText='position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:999;'+
-    'background:#eef7f4;color:#3fae95;border:1.5px solid #bce3d8;border-radius:20px;padding:8px 16px;'+
-    'font-size:12.5px;font-weight:800;box-shadow:0 3px 10px rgba(90,70,50,.12)';
+    'background:#161616;color:#fff;border:3px solid #161616;border-radius:20px;padding:8px 16px;'+
+    'font-size:12.5px;font-weight:800;box-shadow:none';
   document.body.appendChild(el);
   setTimeout(()=>el.remove(), 3200);
 }
@@ -229,7 +229,7 @@ function renderLoginRequired(){
     <div class="card" style="text-align:center;line-height:1.8">
       <div style="margin-bottom:12px">아래 단추를 누르고 로그인하면 <b>이 과제로 바로 돌아와요.</b><br>풀던 답이 있으면 그대로 이어서 풀 수 있어요.</div>
       <button class="navbtn" onclick="goLoginAndReturn()">🔑 로그인하고 이 과제로 돌아오기</button>
-      <div style="margin-top:10px;font-size:12px;color:#8a7a67">연구소 창이 이미 열려 있다면, 그 창에서 이 과제를 다시 눌러도 돼요.</div>
+      <div style="margin-top:10px;font-size:12px;color:#5c5c5c">연구소 창이 이미 열려 있다면, 그 창에서 이 과제를 다시 눌러도 돼요.</div>
     </div>`;
 }
 

@@ -1,4 +1,4 @@
-@font-face{font-family:'PureunSup';src:url('https://cdn.jsdelivr.net/gh/Project-Noonnu/2607101517@font-2/font-2/font-2-700.woff2') format('woff2');font-weight:700;font-display:swap}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;700&display=swap');
 :root{--bg:#f3ece0;--paper:#fffdf8;--line:#e6dac6;--line2:#d8c9ae;--txt:#4b4037;--dim:#8d8175;--dim2:#b3a695;
  --mint:#5fc9b0;--mint2:#3fae95;--gold:#f5b93f;--red:#ef7a72}
 *{box-sizing:border-box}
@@ -124,3 +124,46 @@ textarea:focus{border-color:var(--mint)}
  margin:8px 0 2px;background:#f1ece2;color:var(--dim)}
 .syncbadge.ok{background:#e6f7ea;color:#3f9a5c}
 .syncbadge.err{background:#fdeeee;color:var(--red)}
+
+/* 연구소 첫 화면과 같은 잉크 선화 디자인: 흰 종이, 굵은 검정 테두리, 알약형 단추 (2026-11-09) */
+:root{--bg:#fbfbf9;--paper:#fff;--line:#161616;--line2:#161616;--txt:#161616;--dim:#3c3c3c;--dim2:#5c5c5c;
+ --mint:#161616;--mint2:#161616;--gold:#ffb800;--red:#b0362b;--pick:#fff2bf}
+body{font-family:"Noto Sans KR","Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;word-break:keep-all;overflow-wrap:break-word}
+#top{border-bottom:4px solid var(--line)}
+.title{color:var(--txt)}
+.leavebadge,.topback{border:3px solid var(--line);border-radius:999px;color:var(--txt);font-weight:700}
+.leavebadge{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+.leavebadge.warn{background:#fdeeee}
+.topreroll{border-color:var(--line);color:var(--txt)}
+.step{height:9px;border-radius:999px;background:#fff;border:2px solid var(--line)}
+.step.done{background:var(--line)}
+.step.now{background:var(--gold)}
+.stepcap{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+.card{border:5px solid var(--line);border-radius:12px;box-shadow:none}
+.notice,.finalnotice{background:#fff;border:3px solid var(--line);border-radius:12px;color:var(--txt);font-weight:500}
+.notice b{color:var(--txt);font-weight:900}
+.passagebox{background:var(--bg);border:3px dashed var(--line);border-radius:12px}
+h3{color:var(--dim)}
+h3.qtext{font-weight:900}
+h4{color:var(--dim)}
+.clsbtn,.pairbtn,.opt,.metric,.answerblock,.backlink,.seqwrap{border:3px solid var(--line);border-radius:10px;color:var(--txt)}
+.clsrow{border-bottom:2px solid var(--line)}
+.clsbtn.picked,.opt.picked{border-color:var(--line);background:var(--pick);color:var(--txt);box-shadow:4px 4px 0 var(--line)}
+.pairbtn.active{border-color:var(--line);background:var(--pick);box-shadow:4px 4px 0 var(--line)}
+.opt:hover,.clsbtn:hover,.pairbtn:hover{box-shadow:4px 4px 0 var(--line)}
+button.card{border:3px solid var(--line);border-radius:10px;box-shadow:none;color:var(--txt)}
+.seqrow,.statementbox{background:#f3f3ef;border-radius:10px}
+.seqrow button.rmbtn{border:2px solid var(--line);color:var(--txt)}
+.prevbtn,.resetbtn{border:3px solid var(--line);border-radius:999px;color:var(--txt)}
+textarea,.gateinput{border:3px solid var(--line);border-radius:10px;background:#fff}
+textarea:focus,.gateinput:focus{box-shadow:4px 4px 0 var(--line)}
+.counter{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+.navbtn{background:var(--line);border-radius:999px;box-shadow:none}
+.navbtn:disabled{background:#c9c9c4;color:#fff;box-shadow:none}
+.navbtn:not(:disabled):hover{box-shadow:4px 4px 0 var(--gold)}
+.navbtn:not(:disabled):active{box-shadow:none}
+.engmodal{background:rgba(251,251,249,.88)}
+.backlink{border-radius:999px}
+.syncbadge{border:2px solid var(--line);border-radius:999px;background:#fff;color:var(--txt)}
+.syncbadge.ok{background:var(--line);color:#fff}
+.syncbadge.err{border-color:var(--red);color:var(--red)}

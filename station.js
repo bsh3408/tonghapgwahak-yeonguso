@@ -1,4 +1,4 @@
-// 역무실(설계서 0-1절): 출발 · 연구 노트실 · 유물 뽑기 · 도감 · 순위 · 내 기록
+// 역무실(설계서 0-1절): 출발 · 연구 노트 · 유물 뽑기 · 도감 · 순위 · 내 기록
 import { RELICS } from './subway/sim/data/relics.js';
 import { JOBS } from './subway/sim/data/jobs.js';
 import { GEAR, SLOT_NAME } from './subway/sim/data/gear.js';
@@ -8,14 +8,15 @@ const $ = id => document.getElementById(id);
 const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 let ST = null, GAME = null, CFG = {};
 
-// 2학기 단원(설계서 11-1: 15·16·17·20단원이 2회 수행평가, 18·19단원은 성적 미반영)
+// 2회 수행평가 연구 노트 6영역(2026-11-05): 기본 8 + 영역 1~5 객관식·서술형 각 1점 + 영역 6 보고서 2점 = 20점
+// obj: 객관식 점수, essay: 서술형 점수(영역 6은 Q-사이클 보고서 2점). 서버 lab_t2_auto와 같게 고친다
 const CHAPTERS = [
-  { num: 15, slug: '지구환경의변화', t: '지구 환경의 변화', dept: 'd3', term: 2 },
-  { num: 16, slug: '태양에너지의생성과전환', t: '태양 에너지의 생성과 전환', dept: 'd4', term: 2 },
-  { num: 17, slug: '전기에너지생산과효율', t: '전기 에너지의 생산, 에너지 효율과 지구 환경', dept: 'd4', term: 2 },
-  { num: 20, slug: '물질변화와에너지의출입', t: '물질 변화와 에너지의 출입', dept: 'd2', term: 2 },
-  { num: 18, slug: '과학의유용성과빅데이터', t: '과학의 유용성과 빅데이터 활용', dept: 'd5', term: 0 },
-  { num: 19, slug: '과학기술의발전과윤리', t: '과학기술의 발전과 윤리', dept: 'd6', term: 0 },
+  { num: 16, slug: '태양에너지의생성과전환', t: '태양 에너지와 에너지 전환', dept: 'd4', term: 2, obj: 1, essay: 1 },
+  { num: 15, slug: '지구환경의변화', t: '지구 열수지, 온실 효과와 지구 온난화', dept: 'd3', term: 2, obj: 1, essay: 1 },
+  { num: 23, slug: '사막화와엘니뇨', t: '사막화와 엘니뇨', dept: 'd3', term: 2, obj: 1, essay: 1 },
+  { num: 17, slug: '전기에너지생산과효율', t: '발전의 원리와 신재생 에너지', dept: 'd4', term: 2, obj: 1, essay: 1 },
+  { num: 20, slug: '물질변화와에너지의출입', t: '열 출입', dept: 'd2', term: 2, obj: 1, essay: 1 },
+  { num: 24, slug: '통합과학총정리', t: '통합과학 총정리 (신장 Q-사이클 보고서)', dept: 'd4', term: 2, obj: 0, essay: 2 },
 ];
 const TERM_BASE = 8, TERM_EXTRA_MAX = 12;
 const key = (c, mode) => `ch${c.num}_seed_v1__${mode}`;
@@ -26,9 +27,9 @@ function chapterOpen(c) {
 }
 function term2Score() {
   const passed = GAME?.everPassed || {};
-  const ms = CHAPTERS.filter(c => c.term === 2).flatMap(c => [key(c, 'obj'), key(c, 'essay')]);
-  const got = ms.filter(k => passed[k]).length;
-  return { got, total: ms.length, extra: Math.round(got / ms.length * TERM_EXTRA_MAX), score: TERM_BASE + Math.round(got / ms.length * TERM_EXTRA_MAX) };
+  let got = 0, total = 0;
+  for (const c of CHAPTERS) { total += c.obj + c.essay; if (c.obj && passed[key(c, 'obj')]) got += c.obj; if (passed[key(c, 'essay')]) got += c.essay; }
+  return { got, total, extra: got, score: TERM_BASE + got };
 }
 
 async function load() {
@@ -64,11 +65,11 @@ function notes() {
     const open = chapterOpen(c), file = `챕터${c.num}_${c.slug}.html`;
     const btn = (mode, label) => { const ok = !!passed[key(c, mode)];
       return `<button class="btn ${ok ? 'ghost' : ''}" ${open ? '' : 'disabled'} data-go="${file}?mode=${mode}">${label} ${ok ? '✓' : ''}</button>`; };
-    return `<div class="it"><div><div class="nm">${c.num}단원 · ${esc(c.t)}</div><div class="ds">${c.term === 2 ? '2회 수행평가' : '성적 미반영(코인은 받음)'}</div></div>
-      <div class="row">${open ? '' : '<span class="tag lock">아직 잠김</span>'}${btn('obj', '객관식')}${btn('essay', '서술형')}</div></div>`;
+    return `<div class="it"><div><div class="nm">영역 ${CHAPTERS.indexOf(c) + 1}. ${esc(c.t)}</div></div>
+      <div class="row">${open ? '' : '<span class="tag lock">아직 잠김</span>'}${c.obj ? btn('obj', '객관식(1점)') : ''}${btn('essay', c.essay === 2 ? '보고서(2점)' : '서술형(1점)')}</div></div>`;
   };
-  sheet(`<h2>📓 연구 노트실</h2><p>단원마다 객관식(통과 기준 이상이면 1점)과 서술형(모든 문항을 정해진 글자 수 이상 쓰면 1점)이 있다. 처음 맞힌 객관식 1문항마다 🪙10, 처음 완성한 서술형 1문항마다 🪙30을 받는다.</p>
-    <p>지금 2회 수행평가: <b style="color:var(--acc)">${sc.score}점</b> / 20점 (기본 ${TERM_BASE} + 추가 ${sc.extra}, 받은 단원 점수 ${sc.got}/${sc.total})</p>
+  sheet(`<h2>📓 연구 노트</h2><p>영역 1~5는 객관식과 서술형이 1점씩, 영역 6은 신장 Q-사이클 보고서(질문→확장→탐구→표현→성찰)가 2점이다. 객관식(통과 기준 이상이면 1점)과 서술형(모든 문항을 정해진 글자 수 이상 쓰면 1점)이 있다. 처음 맞힌 객관식 1문항마다 🪙10, 처음 완성한 서술형 1문항마다 🪙30을 받는다.</p><p>🪙 모은 코인으로 <b>막차</b> 첫 화면의 「🎰 유물 뽑기」에서 유물을 뽑을 수 있다. 막차를 하면서 역을 통과하고 클리어해도 코인을 받는다.</p>
+    <p>지금 2회 수행평가: <b style="color:var(--acc)">${sc.score}점</b> / 20점 (기본 ${TERM_BASE} + 추가 ${sc.extra}, 받은 점수 ${sc.got}/${sc.total})</p>
     <div class="list">${CHAPTERS.map(row).join('')}</div>`);
   $('sheetCard').querySelectorAll('[data-go]').forEach(b => b.onclick = () => { try { sessionStorage.setItem('lastDeptId', 'notes'); } catch {} location.href = b.dataset.go; });
 }
@@ -106,7 +107,7 @@ function codex() {
     <h3>상태 이상 (${cx.status.length}/12)</h3><div class="grid">${Object.entries(STATUS).filter(([id]) => id !== 'stolen').map(([id, s]) => `<div class="relic ${cx.status.includes(id) ? '' : 'off'}"><b>${s.icon} ${s.name}</b><small>${cx.status.includes(id) ? `${s.effect}<br>${s.reason}` : '아직 걸려 본 적 없음'}</small></div>`).join('')}</div>`);
 }
 
-// ---------- 막차 순위 (2026-10-30): 통합 1~5등(직업 상관없음, 가산점 대상) · 직업 이름을 누르면 그 직업 1~5등 ----------
+// ---------- 막차 순위 (2026-10-30): 전체 1~5등(직업 상관없음) · 직업 이름을 누르면 그 직업 1~5등. 2026-11-05: 첫 화면에서 빼고 순위 단추에서만, 가산점 없음 ----------
 const MK_JOBS = { driver: '지하철 기관사', geo: '지질학자', eco: '생태학자', chem: '화학 연구원', weather: '기상 연구원', medic: '응급 구조사' };
 const mkTime = s => { s = +s || 0; const m = Math.floor(s / 60); return m + '분 ' + String(Math.floor(s - m * 60)).padStart(2, '0') + '초'; };
 let MK = null, mkTab = '';
@@ -120,7 +121,7 @@ async function makchaBoard(force, el) {
   box.innerHTML = '<div class="mkhead"><b>🚇 막차 순위 · ' + (mkTab ? MK_JOBS[mkTab] + ' 1~5등' : '전체 1~5등') + '</b><button class="mktab" data-mkr="1">새로 고침</button></div>'
     + '<div class="mktabs">' + tabs + '</div>' + tbl
     + '<p class="mknote">' + (mine ? '내 순위: ' + mine.rank + '등 · ' + mine.stages + ' / 24역 · ' + mkTime(mine.secs) : (mkTab ? '이 직업으로 남긴 기록이 없어요.' : '아직 내 기록이 없어요.')) + '</p>'
-    + '<p class="mknote">통과한 역이 많을수록, 같으면 걸린 시간이 짧을수록 위예요. 학생마다 가장 좋은 판 하나로 매기며, <b>전체 1~5등</b>이 가산점을 받아요.</p>';
+    + '<p class="mknote">통과한 역이 많을수록, 같으면 걸린 시간이 짧을수록 위예요. 학생마다 가장 좋은 판 하나로 매겨요.</p>';
   box.querySelectorAll('[data-mk]').forEach(b => b.onclick = () => { mkTab = b.dataset.mk; makchaBoard(false, box); });
   box.querySelector('[data-mkr]').onclick = () => makchaBoard(true, box);
 }
@@ -156,14 +157,27 @@ async function rankOld() {
     ${Object.entries(out.byJob).map(([j, rows]) => `<h3>${JOBS[j].name}</h3>${tbl(rows, false)}`).join('')}`);
 }
 
-function record() {
-  const sc = term2Score(), b = ST?.best;
-  const jobs = Object.entries(ST?.bestByJob || {});
-  sheet(`<h2>📋 내 기록</h2>
-    <h3>2회 수행평가</h3><div class="score">${sc.score}점 <small style="font-size:14px;color:var(--sub)">/ 20점</small></div>
-    <p>기본점수 ${TERM_BASE}점 + 추가점수 ${sc.extra}점 (단원 점수 ${sc.got}/${sc.total}: 15·16·17·20단원의 객관식·서술형 각 1점)</p>
-    <h3>지하철 노선 탈출</h3><p>지금까지 ${ST?.runs ?? 0}판 · 최고 기록 ${b ? `${b.lines}/9 노선, ${JOBS[b.job]?.name}${b.escaped ? ', 탈출 성공' : ''}` : '없음'}</p>
-    ${jobs.length ? `<div class="list">${jobs.map(([j, r]) => `<div class="it"><span class="nm">${JOBS[j].name}</span><span class="ds">${r.lines}/9 노선 · ${Math.round(r.ticks / 30 / 60)}분</span></div>`).join('')}</div>` : ''}`);
+// 내 점수(2026-11-05): 1회차는 교사가 확정한 점수, 2회차는 연구 노트 통과 수로 자동 계산 + 교사 조정
+const T1_LABELS = ['지질 시대 객관식', '지질 시대 서술형', '진화와 다양성 객관식', '진화와 다양성 서술형', '산화와 환원 객관식', '산화와 환원 서술형',
+  '산·염기·중화 객관식', '산·염기·중화 서술형', '생태계 객관식', '생태계 서술형', '기출 문제(18개 이상)', '연금술사 코드'];
+async function record() { // 총점만 크게 보이고, 「세부 점수」를 눌러야 내역이 열린다(2026-11-05)
+  sheet('<h2>📋 내 점수</h2><p>불러오는 중…</p>');
+  const out = await labRpc('lab_term_my').catch(() => null);
+  if (!out?.ok) { sheet('<h2>📋 내 점수</h2><p>' + esc(out?.error || '점수를 불러오지 못했어요.') + '</p>'); return; }
+  const t1 = out.t1, t2 = out.t2, it = t1?.items?.items || [], ded = t1?.items?.deduct || {}, passed = GAME?.everPassed || {}; // ded: 과제별 감점 사유
+  const box = (title, total, detail) => `<div class="it" style="display:block;padding:12px 14px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+      <b style="font-size:16px">${title}</b><span class="score" style="font-size:30px">${total}</span></div>
+      ${detail ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-weight:700">세부 점수</summary><div style="margin-top:8px">${detail}</div></details>` : ''}</div>`;
+  const row = (l, v) => `<div class="it"><span class="nm">${l}</span><span class="ds">${v}</span></div>`;
+  const t1detail = t1 ? `<p>기본점수 ${t1.items?.base ?? 8}점 + 해결점수 ${it.reduce((a, v) => a + v, 0)}점${+t1.bonus ? ` · 연구점수 랭킹 보너스 +${+t1.bonus}` : ''}</p>
+    <div class="list">${T1_LABELS.map((l, k) => ded[k] ? `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between"><span class="nm">${l}</span><span class="ds" style="color:var(--bad)">✗ 감점</span></div><div style="font-size:12.5px;color:var(--bad);margin-top:4px">사유: ${esc(ded[k])}</div></div>` : row(l, it[k] ? '✓ 1점' : '—')).join('')}</div>` : '';
+  const t2detail = `<p>기본점수 ${TERM_BASE}점 + 연구 노트 ${t2.auto - TERM_BASE}점${+t2.adjust ? ` + 선생님 조정 ${+t2.adjust > 0 ? '+' : ''}${+t2.adjust}점` : ''}</p>
+    <div class="list">${CHAPTERS.map((c, k) => row('영역 ' + (k + 1) + '. ' + esc(c.t), (c.obj ? `객관식 ${passed[key(c, 'obj')] ? '✓' : '—'} · ` : '') + `${c.essay === 2 ? '보고서' : '서술형'} ${passed[key(c, 'essay')] ? '✓ ' + c.essay + '점' : '—'}`)).join('')}</div>`;
+  sheet(`<h2>📋 내 점수</h2><div class="list">
+    ${Object.keys(ded).length ? `<p style="color:var(--bad);font-weight:700">⚠ 1회차에 감점된 과제가 ${Object.keys(ded).length}개 있어요. 「세부 점수」를 누르면 사유를 볼 수 있어요.</p>` : ''}${box('1회 수행평가', t1 ? `${+t1.total}<small style="font-size:14px;color:var(--sub)"> / 20점</small>` : '<small style="font-size:14px;color:var(--sub)">아직 없음</small>', t1detail)}
+    ${box('2회 수행평가 (지금까지)', `${t2.total}<small style="font-size:14px;color:var(--sub)"> / 20점</small>`, t2detail)}</div>
+    ${out.note ? '<p>선생님 메모: ' + esc(out.note) + '</p>' : ''}
+    <p style="font-size:12px;color:var(--sub)">최종 점수는 선생님이 확정해요.</p>`);
 }
 
 const OPEN = { notes, gacha: () => gacha(), codex, rank, record };
@@ -196,11 +210,11 @@ $('logoutBtn').onclick = logout;
 
 window.LAB_ON_LOGIN = async () => {
   $('loginScreen').classList.add('hide'); $('labApp').classList.remove('hide');
-  render(); makchaBoard(true); await load();
+  render(); await load();
   let last = null; try { last = sessionStorage.getItem('lastDeptId'); sessionStorage.removeItem('lastDeptId'); } catch {}
-  if (last) notes();   // 단원 평가에서 돌아왔으면 연구 노트실을 다시 연다
+  if (last) notes();   // 단원 평가에서 돌아왔으면 연구 노트을 다시 연다
 };
-window.addEventListener('focus', () => { if (CURRENT_STUDENT) { load(); makchaBoard(true); } });
+window.addEventListener('focus', () => { if (CURRENT_STUDENT) load(); });
 $('hoursNote').textContent = isWithinServiceHours() ? '이용 시간: 평일 오전 8시 30분 ~ 월·화·금 오후 4시, 수·목 오후 5시' : '🕐 지금은 이용 시간이 아니에요. 평일 오전 8시 30분부터 ' + serviceCloseLabel() + '까지 열려요.';
 wireLoginForm();
 tryAutoLogin();

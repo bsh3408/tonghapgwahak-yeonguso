@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>통합과학 총정리 (신장 Q-사이클 보고서)</title>
+<link rel="stylesheet" href="roundstyle.css">
+</head>
+<body>
+<div class="wrap">
+  <div id="top"></div>
+  <div id="app"></div>
+</div>
+<script src="supabase-config.js"></script>
+<script src="roundengine.js"></script>
+<script type="application/json" id="embeddedChapterData">{
+  "seedKey": "ch24_seed_v1",
+  "vars": {},
+  "meta": {
+    "title": "통합과학 총정리 (신장 Q-사이클 보고서)",
+    "targetMin": 40,
+    "passCount": 5,
+    "scoreNotice": "라운드별 정답률·소요시간·창 이탈 지표는 채점을 돕는 참고 자료일 뿐입니다. 실제 수행평가 점수는 선생님이 최종 확정합니다."
+  },
+  "rounds": [
+    {
+      "id": "q1",
+      "kind": "opinion",
+      "title": "① 질문 QUESTION",
+      "minLen": 50,
+      "prompt": "▶ 통합과학2를 배우면서 궁금했던 점이나 \"정말 그럴까?\" 하고 의문이 들었던 내용을 하나 떠올리시오. 그 궁금증을 하나의 질문으로 쓰고, 어느 단원(또는 수업 장면)에서 생긴 궁금증인지, 왜 궁금했는지도 함께 적으시오.",
+      "placeholder": "예) 엘니뇨를 배울 때, 무역풍이 왜 갑자기 약해지는지 궁금했다. → 질문: 무역풍이 약해지는 원인은 무엇일까?"
+    },
+    {
+      "id": "q2",
+      "kind": "opinion",
+      "title": "② 확장 EXPAND",
+      "minLen": 150,
+      "prompt": "▶ ①의 질문을 AI 챗봇에 물어보고 세 가지를 쓰시오. ㉠ AI에게 한 질문 ㉡ AI의 답을 내 말로 요약(2~3문장, 그대로 붙여 넣기 금지) ㉢ 그 답이 맞는지 확인한 방법과 결과(교과서·수업 자료와 대조하기 등). 그리고 답을 읽고 새로 생긴 궁금증을 바탕으로 처음 질문을 한 단계 더 깊게 고쳐 쓰시오.",
+      "placeholder": "㉠ 질문: … ㉡ AI의 답 요약: … ㉢ 확인 방법과 결과: … 더 깊어진 질문: …"
+    },
+    {
+      "id": "q3",
+      "kind": "opinion",
+      "title": "③ 탐구 EXPLORE",
+      "minLen": 150,
+      "prompt": "▶ 더 깊어진 질문에 답하기 위한 근거를 두 가지 이상 모으고, 근거마다 출처(교과서 내용, 표·그래프 자료, 수업 탐구, 믿을 만한 자료)를 적으시오. 내 생각과 다른 의견이나 아직 풀리지 않은 점도 한 가지 이상 쓰시오.",
+      "placeholder": "근거 1(출처): … 근거 2(출처): … 다른 의견 또는 아직 풀리지 않은 점: …"
+    },
+    {
+      "id": "q4",
+      "kind": "opinion",
+      "title": "④ 표현 EXPRESS",
+      "minLen": 250,
+      "prompt": "▶ 처음 궁금증에서 출발해 알아낸 내용을 「궁금했던 점 → 알아낸 사실과 근거 → 나의 결론」 순서로 하나의 글로 정리하시오. 통합과학2에서 배운 용어를 정확하게 쓰시오.",
+      "placeholder": "궁금했던 점: … 알아낸 사실과 근거: ① … ② … 나의 결론: …"
+    },
+    {
+      "id": "q5",
+      "kind": "opinion",
+      "title": "⑤ 성찰 REFLECT",
+      "minLen": 100,
+      "prompt": "▶ 처음 궁금증과 지금의 결론을 비교해 내 생각이 어떻게 바뀌었는지 쓰시오. AI를 활용하면서 도움이 된 점과 조심해야 할 점을 쓰고, 이어서 탐구하고 싶은 새 질문을 하나 적으시오.",
+      "placeholder": "처음 생각 → 바뀐 생각 / AI 활용에서 배운 점 / 새 질문: …"
+    }
+  ]
+}</script>
+<script src="chapterdata.js"></script>
+<script>
+loadChapterData('data/ch24.json').then(({ROUNDS, META}) => startSession(ROUNDS, META));
+</script>
+</body>
+</html>

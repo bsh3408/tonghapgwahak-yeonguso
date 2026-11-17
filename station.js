@@ -215,6 +215,6 @@ window.LAB_ON_LOGIN = async () => {
   if (last) notes();   // 단원 평가에서 돌아왔으면 연구 노트을 다시 연다
 };
 window.addEventListener('focus', () => { if (CURRENT_STUDENT) load(); });
-$('hoursNote').textContent = isWithinServiceHours() ? '이용 시간: 평일 오전 8시 30분 ~ 월·화·금 오후 4시, 수·목 오후 5시' : '🕐 지금은 이용 시간이 아니에요. 평일 오전 8시 30분부터 ' + serviceCloseLabel() + '까지 열려요.';
+$('hoursNote').textContent = closedNotice() || (isWithinServiceHours() ? '이용 시간: 평일 오전 8시 30분 ~ 월·화·금 오후 4시, 수·목 오후 5시' : '🕐 지금은 이용 시간이 아니에요. 평일 오전 8시 30분부터 ' + serviceCloseLabel() + '까지 열려요.');
 wireLoginForm();
 tryAutoLogin();

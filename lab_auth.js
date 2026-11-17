@@ -13,7 +13,13 @@ const SERVICE_CLOSE_MIN = { Mon: 16 * 60, Tue: 16 * 60, Wed: 17 * 60, Thu: 17 * 
 function serviceCloseLabel() { return '월·화·금 오후 4시, 수·목 오후 5시'; }
 const SCHOOL_HOLIDAYS = ['2026-08-15', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2026-10-03', '2026-10-04', '2026-10-05',
   '2026-10-09', '2026-10-10', '2026-10-11', '2026-11-19', '2026-11-20', '2026-12-25', '2027-01-01'];
+/* 접속 차단 기간(교사 요청, 2026-11-17): 11월 18일(수) 낮 12시부터 11월 23일(월) 오전 8시 전까지.
+   ⚠️ 서버 lab_service_open에도 같은 기간이 들어 있다(lab_block_1118.sql). */
+const CLOSED_RANGES = [['2026-11-18T12:00:00+09:00', '2026-11-23T08:00:00+09:00']];
+function inClosedRange() { const now = Date.now(); return CLOSED_RANGES.some(([a, b]) => now >= Date.parse(a) && now < Date.parse(b)); }
+function closedNotice() { return inClosedRange() ? '🔒 11월 23일(월) 오전 8시 30분까지 연구소 접속이 막혀 있어요.' : ''; }
 function isWithinServiceHours() {
+  if (inClosedRange()) return false;
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
   const get = t => parts.find(p => p.type === t).value;
   const weekday = get('weekday'), minutes = (+get('hour')) * 60 + (+get('minute')), dateStr = `${get('year')}-${get('month')}-${get('day')}`;
@@ -82,7 +88,7 @@ async function doLogin() {
   const name = document.getElementById('loginName').value.trim(), password = document.getElementById('loginPw').value;
   setLoginErr('');
   if (!name || !password) { setLoginErr('이름과 비밀번호를 모두 입력하세요.'); return; }
-  if (!canUseNow(name)) { setLoginErr('지금은 이용 가능한 시간이 아니에요. 평일 오전 8시 30분부터 ' + serviceCloseLabel() + '까지 열려요.'); return; }
+  if (!canUseNow(name)) { setLoginErr(closedNotice() || '지금은 이용 가능한 시간이 아니에요. 평일 오전 8시 30분부터 ' + serviceCloseLabel() + '까지 열려요.'); return; }
   try {
     const out = await supaRpc('lab_login', { p_name: name, p_password: password });
     if (!out.ok) { setLoginErr(out.error || '로그인에 실패했습니다.'); return; }

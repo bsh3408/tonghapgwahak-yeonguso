@@ -15,9 +15,14 @@ const SCHOOL_HOLIDAYS = ['2026-08-15', '2026-09-24', '2026-09-25', '2026-09-26',
   '2026-10-09', '2026-10-10', '2026-10-11', '2026-11-19', '2026-11-20', '2026-12-25', '2027-01-01'];
 /* 접속 차단 기간(교사 요청, 2026-11-17): 11월 18일(수) 낮 12시부터 11월 23일(월) 오전 8시 전까지.
    ⚠️ 서버 lab_service_open에도 같은 기간이 들어 있다(lab_block_1118.sql). */
-const CLOSED_RANGES = [['2026-11-18T12:00:00+09:00', '2026-11-23T08:00:00+09:00']];
-function inClosedRange() { const now = Date.now(); return CLOSED_RANGES.some(([a, b]) => now >= Date.parse(a) && now < Date.parse(b)); }
-function closedNotice() { return inClosedRange() ? '🔒 11월 23일(월) 오전 8시 30분까지 연구소 접속이 막혀 있어요.' : ''; }
+// 2026-11-25 교사 요청: 오늘 오후 5시에 운영 종료(서버 lab_service_open에도 같은 날짜, lab_close_1125.sql)
+const CLOSED_RANGES = [
+  ['2026-11-18T12:00:00+09:00', '2026-11-23T08:00:00+09:00', '🔒 11월 23일(월) 오전 8시 30분까지 연구소 접속이 막혀 있어요.'],
+  ['2026-11-25T17:00:00+09:00', '2100-01-01T00:00:00+09:00', '🔒 연구소 운영이 끝났어요. 그동안 열심히 참여해 줘서 고마워요!'],
+];
+function closedRange() { const now = Date.now(); return CLOSED_RANGES.find(([a, b]) => now >= Date.parse(a) && now < Date.parse(b)) || null; }
+function inClosedRange() { return !!closedRange(); }
+function closedNotice() { const r = closedRange(); return r ? r[2] : ''; }
 function isWithinServiceHours() {
   if (inClosedRange()) return false;
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
@@ -49,7 +54,7 @@ function startSessionWatch() {
   }
   _hourTimer = setInterval(() => {
     if (canUseNow(CURRENT_STUDENT && CURRENT_STUDENT.name)) return;
-    clearSessionAndReload('🕐 오늘 연구소 문을 닫습니다. 진행한 내용은 모두 저장됐어요. 다음 수업일 오전 8시 30분에 다시 만나요!');
+    clearSessionAndReload(closedNotice() || '🕐 오늘 연구소 문을 닫습니다. 진행한 내용은 모두 저장됐어요. 다음 수업일 오전 8시 30분에 다시 만나요!');
   }, 30000);
   _lastActivityAt = Date.now(); _hiddenSinceAt = null;
   _idleTimer = setInterval(() => {

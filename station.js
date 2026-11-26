@@ -216,6 +216,12 @@ window.LAB_ON_LOGIN = async () => {
 };
 window.addEventListener('focus', () => { if (CURRENT_STUDENT) load(); });
 if (Date.now() >= Date.parse('2026-11-25T17:00:00+09:00')) $('examDownload').classList.remove('hide'); // 운영 종료 뒤: 시험범위 파일 내려받기(2026-11-25 교사 요청)
+(() => { // 시험범위 파일을 내 메일로 보내기(크롬북은 한글이 안 열려서, 2026-11-26 교사 요청). 메일 앱 대신 Gmail 쓰기 창을 연다
+  const base = new URL('files/', location.href).href;
+  const body = '통합과학1~2 시험범위 파일입니다. 모두들 화이팅!\n\nPDF로 보기: ' + base + 'tonghap1-2_range.pdf\n한글 파일(hwpx): ' + base + 'tonghap1-2_range.hwpx\n';
+  const btn = $('examMailBtn');
+  if (btn) btn.href = 'https://mail.google.com/mail/?view=cm&fs=1&su=' + encodeURIComponent('[통합과학] 시험범위 파일') + '&body=' + encodeURIComponent(body);
+})();
 $('hoursNote').textContent = closedNotice() || (isWithinServiceHours() ? '이용 시간: 평일 오전 8시 30분 ~ 월·화·금 오후 4시, 수·목 오후 5시' : '🕐 지금은 이용 시간이 아니에요. 평일 오전 8시 30분부터 ' + serviceCloseLabel() + '까지 열려요.');
 wireLoginForm();
 tryAutoLogin();

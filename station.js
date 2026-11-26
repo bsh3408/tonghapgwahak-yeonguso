@@ -66,7 +66,7 @@ function notes() {
     const btn = (mode, label) => { const ok = !!passed[key(c, mode)];
       return `<button class="btn ${ok ? 'ghost' : ''}" ${open ? '' : 'disabled'} data-go="${file}?mode=${mode}">${label} ${ok ? '✓' : ''}</button>`; };
     return `<div class="it"><div><div class="nm">영역 ${CHAPTERS.indexOf(c) + 1}. ${esc(c.t)}</div></div>
-      <div class="row">${open ? '' : '<span class="tag lock">아직 잠김</span>'}${c.obj ? btn('obj', '객관식(1점)') : ''}${btn('essay', c.essay === 2 ? '보고서(2점)' : '서술형(1점)')}</div></div>`;
+      <div class="row">${open ? '' : '<span class="tag lock">마감</span>'}${c.obj ? btn('obj', '객관식(1점)') : ''}${btn('essay', c.essay === 2 ? '보고서(2점)' : '서술형(1점)')}</div></div>`;
   };
   sheet(`<h2>📓 연구 노트</h2><p>영역 1~5는 객관식과 서술형이 1점씩, 영역 6은 신장 Q-사이클 보고서(질문→확장→탐구→표현→성찰)가 2점이다. 객관식(통과 기준 이상이면 1점)과 서술형(모든 문항을 정해진 글자 수 이상 쓰면 1점)이 있다. 처음 맞힌 객관식 1문항마다 🪙10, 처음 완성한 서술형 1문항마다 🪙30을 받는다.</p><p>🪙 모은 코인으로 <b>막차</b> 첫 화면의 「🎰 유물 뽑기」에서 유물을 뽑을 수 있다. 막차를 하면서 역을 통과하고 클리어해도 코인을 받는다.</p>
     <p>지금 2회 수행평가: <b style="color:var(--acc)">${sc.score}점</b> / 20점 (기본 ${TERM_BASE} + 추가 ${sc.extra}, 받은 점수 ${sc.got}/${sc.total})</p>
@@ -175,9 +175,9 @@ async function record() { // 총점만 크게 보이고, 「세부 점수」를 
     <div class="list">${CHAPTERS.map((c, k) => row('영역 ' + (k + 1) + '. ' + esc(c.t), (c.obj ? `객관식 ${passed[key(c, 'obj')] ? '✓' : '—'} · ` : '') + `${c.essay === 2 ? '보고서' : '서술형'} ${passed[key(c, 'essay')] ? '✓ ' + c.essay + '점' : '—'}`)).join('')}</div>`;
   sheet(`<h2>📋 내 점수</h2><div class="list">
     ${Object.keys(ded).length ? `<p style="color:var(--bad);font-weight:700">⚠ 1회차에 감점된 과제가 ${Object.keys(ded).length}개 있어요. 「세부 점수」를 누르면 사유를 볼 수 있어요.</p>` : ''}${box('1회 수행평가', t1 ? `${+t1.total}<small style="font-size:14px;color:var(--sub)"> / 20점</small>` : '<small style="font-size:14px;color:var(--sub)">아직 없음</small>', t1detail)}
-    ${box('2회 수행평가 (지금까지)', `${t2.total}<small style="font-size:14px;color:var(--sub)"> / 20점</small>`, t2detail)}</div>
+    ${box(t2.final ? '2회 수행평가 (확정)' : '2회 수행평가 (지금까지)', `${t2.total}<small style="font-size:14px;color:var(--sub)"> / 20점</small>`, t2detail)}</div>
     ${out.note ? '<p>선생님 메모: ' + esc(out.note) + '</p>' : ''}
-    <p style="font-size:12px;color:var(--sub)">최종 점수는 선생님이 확정해요.</p>`);
+    <p style="font-size:12px;color:var(--sub)">${t2.final ? '2회 수행평가 점수는 선생님이 확정했어요. 연구 노트는 마감되어 점수가 더 바뀌지 않아요.' : '최종 점수는 선생님이 확정해요.'}</p>`);
 }
 
 const OPEN = { notes, gacha: () => gacha(), codex, rank, record };
